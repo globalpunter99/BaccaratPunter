@@ -78,12 +78,12 @@ supabase/migrations/  0001 sessions/rounds · 0002 boards/strategy_configs
 - Verify the SQL migrations in `supabase/migrations/` have been applied to the
   Supabase project (SQL Editor). `0001` and `0002` should both be run.
 - This `CLAUDE.md` was committed and pushed to `origin/main` from another
-  environment. The local repo is still on branch `master` at the initial commit,
-  with stale `.git/*.lock` files and a working tree full of uncommitted app work
-  (tabs, backtest engine, migration `0002`, etc.). To reconcile, once, on the
-  machine:
-  `rm -f .git/HEAD.lock .git/refs/heads/master.lock .git/objects/maintenance.lock`
-  then `git branch -M main`, then `git fetch origin && git reset --soft origin/main`
-  (absorbs the pushed CLAUDE.md commit without touching your working tree). Then
-  review and commit the remaining app changes.
+  environment. Locally you are on `main` at the app-work commit, and
+  `origin/main` is exactly one commit ahead (this file). `CLAUDE.md` sits in the
+  working tree as an untracked-but-identical file. To sync, once, on the machine:
+  `git fetch origin && git reset --soft origin/main`
+  (fast-forwards the branch pointer without touching your working tree; the
+  untracked CLAUDE.md becomes tracked and unmodified). If stale `.git/*.lock`
+  files block git first, remove them:
+  `rm -f .git/*.lock .git/refs/heads/*.lock .git/objects/*.lock`
 - Not yet done: user auth + RLS policies, Vercel env vars / first deploy, tests.
