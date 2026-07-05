@@ -1,0 +1,183 @@
+:root {
+  --bg: #0f1512;
+  --panel: #18211c;
+  --line: #26332b;
+  --text: #e7efe9;
+  --muted: #8ba396;
+  --player: #4f9cf9;
+  --banker: #f97066;
+  --tie: #d0a030;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.sub {
+  color: var(--muted);
+  margin: 0.25rem 0 1.5rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+select,
+button {
+  font: inherit;
+  background: #0f1512;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+button {
+  cursor: pointer;
+  background: #22c55e;
+  color: #06110a;
+  border: none;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #34d17b;
+}
+
+.suggestion {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #0f1512;
+}
+
+.suggestion p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.suggestion strong {
+  font-size: 1.15rem;
+}
+
+.suggestion .tag {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.suggestion .conf {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.bet-banker strong {
+  color: var(--banker);
+}
+.bet-player strong {
+  color: var(--player);
+}
+.bet-skip strong {
+  color: var(--muted);
+}
+
+.tallies {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.t {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  border: 1px solid var(--line);
+}
+.t.player {
+  color: var(--player);
+}
+.t.banker {
+  color: var(--banker);
+}
+.t.tie {
+  color: var(--tie);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.res {
+  text-transform: capitalize;
+  font-weight: 600;
+}
+.res.player {
+  color: var(--player);
+}
+.res.banker {
+  color: var(--banker);
+}
+.res.tie {
+  color: var(--tie);
+}
+
+.empty {
+  color: var(--muted);
+}
+
+footer {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
