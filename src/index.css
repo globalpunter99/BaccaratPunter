@@ -54,6 +54,7 @@ header h1 {
 }
 
 select,
+input,
 button {
   font: inherit;
   background: #0f1512;
@@ -61,6 +62,10 @@ button {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
+}
+
+input[type="number"] {
+  width: 5.5rem;
 }
 
 button {
@@ -173,6 +178,175 @@ th {
 
 .empty {
   color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.tab.active {
+  background: #22c55e;
+  color: #06110a;
+  border-color: transparent;
+}
+
+.tab:hover {
+  background: #1f2b24;
+}
+
+.tab.active:hover {
+  background: #34d17b;
+}
+
+.pad {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.pad-btn {
+  min-width: 5rem;
+  padding: 0.7rem 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.pad-btn.player {
+  background: var(--player);
+}
+.pad-btn.banker {
+  background: var(--banker);
+}
+.pad-btn.tie {
+  background: var(--tie);
+  color: #1a1405;
+}
+
+.pad-btn.player:hover {
+  background: #6db0fb;
+}
+.pad-btn.banker:hover {
+  background: #fa8b82;
+}
+.pad-btn.tie:hover {
+  background: #ddb44e;
+}
+
+button.ghost,
+.pad-btn.ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+button.ghost:hover,
+.pad-btn.ghost:hover {
+  background: #1f2b24;
+}
+
+button.danger {
+  color: var(--banker);
+  margin-top: 0.5rem;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.beads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 1rem;
+}
+
+.bead {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.bead.player {
+  background: var(--player);
+}
+.bead.banker {
+  background: var(--banker);
+}
+.bead.tie {
+  background: var(--tie);
+  color: #1a1405;
+}
+
+.picker {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.picker .hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--banker);
+  font-size: 0.9rem;
+}
+
+.board-row summary {
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.board-row {
+  border-bottom: 1px solid var(--line);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.totals td {
+  font-weight: 700;
+  border-top: 2px solid var(--line);
+}
+
+.pos {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.neg {
+  color: var(--banker);
+  font-weight: 600;
 }
 
 footer {

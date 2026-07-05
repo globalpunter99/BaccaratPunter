@@ -28,11 +28,14 @@ Other scripts:
 ```
 src/
   game/baccarat.ts   Core rules engine (scoring + third-card draw rules)
-  game/strategy.ts   Pluggable strategy layer — add your directive here
+  game/strategy.ts   Parameterized strategy layer — add your directive here
+  game/backtest.ts   Backtest engine (payouts, staking progressions, drawdown)
   lib/supabase.ts    Supabase client (reads env vars)
-  App.tsx            UI: deal rounds, history, suggestions
+  lib/db.ts          Boards + strategy-config persistence
+  components/        Boards / Backtest / Predict tabs
+  App.tsx            Tab shell
 supabase/
-  migrations/        SQL schema for sessions + rounds
+  migrations/        SQL schema (sessions/rounds, boards, strategy_configs)
 vercel.json          Vercel build config
 .env.example         Template for Supabase env vars
 ```
@@ -66,13 +69,19 @@ git push -u origin main
 
 ## Extending the strategy
 
-`src/game/strategy.ts` exposes a registry. Add your directive as a new entry:
+`src/game/strategy.ts` exposes a registry. Add your directive as a new entry,
+declaring its tunable variables in `params` — they become UI inputs and
+backtest variables automatically:
 
 ```ts
 strategies.myDirective = {
   label: "My directive",
-  run: (ctx) => ({ bet: "banker", reason: "...", confidence: 0.5 }),
+  description: "What it does.",
+  params: {
+    threshold: { label: "Threshold", min: 1, max: 10, step: 1, default: 3 },
+  },
+  run: (ctx, p) => ({ bet: "banker", reason: "...", confidence: 0.5 }),
 };
 ```
 
-It will show up automatically in the strategy dropdown.
+It shows up in the Backtest and Predict dropdowns with its variables editable.
