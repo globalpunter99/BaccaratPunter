@@ -6,6 +6,7 @@ import type { Outcome } from "../game/baccarat";
 import type { Params, StrategyKey } from "../game/strategy";
 import { defaultParams, strategies } from "../game/strategy";
 import { saveBoard } from "../lib/db";
+import RoadsView from "./RoadsView";
 import { BeadStrip, ErrorNote, OutcomePad, StrategyPicker } from "./shared";
 
 export default function PredictTab({
@@ -82,6 +83,17 @@ export default function PredictTab({
         </div>
         {savedMsg && <p className="hint">{savedMsg}</p>}
         <ErrorNote message={error} />
+      </section>
+
+      <section className="panel">
+        <h2>Roads</h2>
+        <p className="hint">
+          Derived live from the board above. On the derived roads, red = the
+          shoe is repeating its earlier shape, blue = it isn't. A visual
+          reference only — road-reading conventions vary, and past results
+          don't change future odds.
+        </p>
+        <RoadsView outcomes={live} />
       </section>
     </>
   );

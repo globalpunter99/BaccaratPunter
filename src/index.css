@@ -355,3 +355,101 @@ footer {
   font-size: 0.8rem;
   text-align: center;
 }
+
+/* --- Road screens (Bead Plate / Big Road / derived roads) --- */
+.roads {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.road-title {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.road-grid {
+  display: grid;
+  gap: 2px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1.5rem;
+  grid-auto-rows: 1.5rem;
+  justify-content: start;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  background: #0f1512;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.road-grid.sm {
+  grid-auto-columns: 0.85rem;
+  grid-auto-rows: 0.85rem;
+}
+
+.road-grid .cell {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+}
+
+.cell.bead.player,
+.cell.stone.player {
+  background: var(--player);
+}
+.cell.bead.banker,
+.cell.stone.banker {
+  background: var(--banker);
+}
+.cell.bead.tie {
+  background: var(--tie);
+  color: #1a1405;
+}
+
+.cell.stone {
+  background: transparent;
+  border: 2px solid var(--player);
+}
+.cell.stone.banker {
+  background: transparent;
+  border-color: var(--banker);
+}
+.cell.stone.player {
+  background: transparent;
+  border-color: var(--player);
+}
+
+.tie-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  font-size: 0.5rem;
+  background: var(--tie);
+  color: #1a1405;
+  border-radius: 999px;
+  padding: 0 3px;
+  line-height: 1.4;
+}
+
+.derived-roads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.cell.mark.red {
+  background: #e5484d;
+}
+.cell.mark.blue {
+  background: #4f9cf9;
+}
