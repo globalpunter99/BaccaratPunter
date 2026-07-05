@@ -28,9 +28,13 @@ npm run build    # tsc -b && vite build  (must pass before every commit)
 npm run lint     # tsc --noEmit  (type-check only)
 ```
 
+```bash
+npm test        # vitest run — game/roads.ts and future game logic
+```
+
 Always run `npm run build` before committing; the project treats a clean
-type-check + build as the bar for "done." There is no test suite yet — if you
-add non-trivial game/strategy logic, add tests (Vitest) rather than relying on
+type-check + build as the bar for "done." Vitest is set up (`npm test`) — add
+tests alongside any non-trivial game/strategy logic rather than relying on
 manual checks.
 
 ## Layout
@@ -38,6 +42,12 @@ manual checks.
 ```
 src/
   game/baccarat.ts    Rules engine: scoring + third-card draw rules (pure)
+  game/roads.ts       Road derivation: Bead Plate, Big Road, and the three
+                      derived roads (Big Eye Boy / Small Road / Cockroach
+                      Pig via `deriveRoad(stones, lookback)`). Pure functions
+                      of the outcome list — nothing persisted. Not yet wired
+                      into any component. See roads.test.ts for the algorithm
+                      spelled out against known sequences.
   game/strategy.ts    Strategy registry — each strategy declares tunable
                       `params` (ParamSpec) consumed by UI + backtester
   game/backtest.ts    Backtest engine: payouts, staking, drawdown
@@ -86,4 +96,20 @@ supabase/migrations/  0001 sessions/rounds · 0002 boards/strategy_configs
   untracked CLAUDE.md becomes tracked and unmodified). If stale `.git/*.lock`
   files block git first, remove them:
   `rm -f .git/*.lock .git/refs/heads/*.lock .git/objects/*.lock`
-- Not yet done: user auth + RLS policies, Vercel env vars / first deploy, tests.
+- Not yet done: user auth + RLS policies, Vercel env vars / first deploy.
+- `game/roads.ts` (Bead Plate, Big Road, Big Eye Boy/Small Road/Cockroach Pig)
+  is written and unit-tested (`npm test`) but has no UI yet — no component
+  renders these grids. That's the natural next step: a road-display component
+  fed by `toBigRoad`/`bigEyeBoy` etc., likely reusing the outcome data already
+  flowing through `BoardsTab`/`PredictTab`.
+- The derived-road algorithm (`deriveRoad`) implements the commonly published
+  "compare against an earlier column" rule. It's internally consistent (tests
+  pass) but hasn't been checked against a real Macau screen/known shoe —
+  worth a sanity pass before leaning on it for anything beyond a visual
+  reference.
+- Bigger product direction (discussed outside this repo's session): phone
+  capture + web admin split, a "playability" confidence layer showing the
+  user's own rule signal alongside a self-tuning "machine" model, and a
+  profiling questionnaire to calibrate what "aligned roads" means for this
+  specific player. None of that is built yet — `roads.ts` is the first piece
+  it all sits on.
