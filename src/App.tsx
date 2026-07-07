@@ -1,67 +1,73 @@
-import { useCallback, useState } from "react";
-import BacktestTab from "./components/BacktestTab";
-import BoardsTab from "./components/BoardsTab";
-import PredictTab from "./components/PredictTab";
-import type { BoardRecord } from "./lib/db";
-import { listBoards } from "./lib/db";
-import { isSupabaseConfigured } from "./lib/supabase";
+import { useState } from "react";
+import "./index.css";
+import LiveSession from "./components/session/LiveSession";
+import SessionLibrary from "./components/library/SessionLibrary";
+import UploadSession from "./components/library/UploadSession";
+import PracticePlay from "./components/practice/PracticePlay";
+import ProfileBuilder from "./components/profile/ProfileBuilder";
+import ProfileComparison from "./components/profile/ProfileComparison";
+import StatsLeaderboard from "./components/stats/StatsLeaderboard";
+import ShoeReplay from "./components/replay/ShoeReplay";
 
-type Tab = "boards" | "backtest" | "predict";
+type Tab =
+  | "live"
+  | "library"
+  | "upload"
+  | "practice"
+  | "profile-build"
+  | "profile-compare"
+  | "stats"
+  | "replay";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "boards", label: "Boards" },
-  { key: "backtest", label: "Backtest" },
-  { key: "predict", label: "Predict" },
+const NAV: { id: Tab; label: string; group: string }[] = [
+  { id: "live",            label: "Live Session",   group: "Session" },
+  { id: "library",         label: "Library",         group: "Data" },
+  { id: "upload",          label: "Upload Session",  group: "Data" },
+  { id: "practice",        label: "Practice Play",   group: "Data" },
+  { id: "replay",          label: "Shoe Replay",     group: "Data" },
+  { id: "profile-build",   label: "Build Profile",   group: "Profile" },
+  { id: "profile-compare", label: "Profiles",        group: "Profile" },
+  { id: "stats",           label: "Stats",           group: "Profile" },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("boards");
-  const [boards, setBoards] = useState<BoardRecord[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("live");
 
-  const refreshBoards = useCallback(() => {
-    listBoards()
-      .then((b) => {
-        setBoards(b);
-        setLoadError(null);
-      })
-      .catch((e) => setLoadError((e as Error).message));
-  }, []);
+  function renderTab() {
+    switch (tab) {
+      case "live":            return <LiveSession />;
+      case "library":         return <SessionLibrary />;
+      case "upload":          return <UploadSession />;
+      case "practice":        return <PracticePlay />;
+      case "profile-build":   return <ProfileBuilder />;
+      case "profile-compare": return <ProfileComparison />;
+      case "stats":           return <StatsLeaderboard />;
+      case "replay":          return <ShoeReplay />;
+    }
+  }
 
   return (
-    <main className="wrap">
-      <header>
-        <h1>Baccarat Strategy</h1>
-        <p className="sub">
-          Record boards, backtest strategy variables, and get live suggestions.
-        </p>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="app-logo">
+          BaccaratPunter
+          <span>v0.1 prototype</span>
+        </div>
+        <nav className="nav-tabs">
+          {NAV.map(n => (
+            <button
+              key={n.id}
+              className={`nav-tab${tab === n.id ? " active" : ""}`}
+              onClick={() => setTab(n.id)}
+            >
+              {n.label}
+            </button>
+          ))}
+        </nav>
       </header>
-
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`tab ${tab === t.key ? "active" : ""}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      {loadError && <p className="error">{loadError}</p>}
-
-      {tab === "boards" && (
-        <BoardsTab boards={boards} onBoardsChange={refreshBoards} />
-      )}
-      {tab === "backtest" && <BacktestTab boards={boards} />}
-      {tab === "predict" && <PredictTab onBoardsChange={refreshBoards} />}
-
-      <footer>
-        Supabase: {isSupabaseConfigured ? "connected" : "not configured"} · For
-        study and simulation only. Past boards don't change future odds — treat
-        backtests as descriptive, not predictive.
-      </footer>
-    </main>
+      <main className="app-content">
+        {renderTab()}
+      </main>
+    </div>
   );
 }
