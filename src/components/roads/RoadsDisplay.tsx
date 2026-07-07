@@ -11,11 +11,13 @@ interface Props {
 }
 
 const ROWS = 6;
+const MIN_COLS = 18; // standard shoe accommodates ~70+ hands
 
 // ── Bead Plate ──────────────────────────────────────────────────────────────
+// Populated top-to-bottom, left-to-right (column-major fill).
 function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number }) {
   const cells = toBeadPlate(outcomes, ROWS);
-  const cols = Math.max(Math.ceil(outcomes.length / ROWS), 12);
+  const cols = Math.max(Math.ceil(outcomes.length / ROWS), MIN_COLS);
 
   return (
     <div
@@ -28,8 +30,9 @@ function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: numb
       }}
     >
       {Array.from({ length: ROWS * cols }).map((_, idx) => {
-        const col = Math.floor(idx / ROWS);
-        const row = idx % ROWS;
+        // grid renders row-major; map back to our column-major cells
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
         const cell = cells.find(c => c.col === col && c.row === row);
         return (
           <div key={idx} className="road-cell">
@@ -51,8 +54,8 @@ function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: numb
 // ── Big Road ─────────────────────────────────────────────────────────────────
 function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number }) {
   const stones = toBigRoad(outcomes);
-  const maxCol = stones.length ? Math.max(...stones.map(s => s.col)) + 1 : 12;
-  const displayCols = Math.max(maxCol, 12);
+  const maxCol = stones.length ? Math.max(...stones.map(s => s.col)) + 1 : 0;
+  const displayCols = Math.max(maxCol, MIN_COLS);
   const displayRows = ROWS;
 
   const grid: (BigRoadStone | null)[][] = Array.from({ length: displayRows }, () =>
@@ -80,12 +83,10 @@ function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number
           {stone && (
             <>
               <div
-                className={`road-stone ${stone.side}`}
+                className={`road-stone big-road-${stone.side}`}
                 style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
               />
-              {stone.ties > 0 && (
-                <div className="tie-slash" />
-              )}
+              {stone.ties > 0 && <div className="tie-slash" />}
             </>
           )}
         </div>
@@ -94,11 +95,16 @@ function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number
   );
 }
 
-// ── Derived Road (Big Eye Boy / Small Road / Cockroach Pig) ──────────────────
+// ── Derived Roads ────────────────────────────────────────────────────────────
+// Big Eye Road: hollow circles ("donuts")
+// Small Road:   solid circles
+// Cockroach:    diagonal slashes
+type MarkStyle = "donut" | "solid" | "slash";
+
 function DerivedRoad({
-  marks, cellSize, rows = 6,
-}: { marks: RoadMark[]; cellSize: number; rows?: number }) {
-  const cols = Math.max(Math.ceil(marks.length / rows), 8);
+  marks, cellSize, markStyle, rows = ROWS,
+}: { marks: RoadMark[]; cellSize: number; markStyle: MarkStyle; rows?: number }) {
+  const cols = Math.max(Math.ceil(marks.length / rows), MIN_COLS);
   return (
     <div
       className="road-grid"
@@ -110,14 +116,26 @@ function DerivedRoad({
       }}
     >
       {Array.from({ length: rows * cols }).map((_, idx) => {
-        const mark = marks[idx];
+        // column-major fill: top-to-bottom, left-to-right
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        const markIdx = col * rows + row;
+        const mark = marks[markIdx];
+        const size = cellSize * (markStyle === "slash" ? 0.75 : 0.66);
         return (
           <div key={idx} className="road-cell">
             {mark && (
-              <div
-                className={`road-stone ${mark === "red" ? "red-mark" : "blue-mark"}`}
-                style={{ width: cellSize * 0.68, height: cellSize * 0.68 }}
-              />
+              markStyle === "slash" ? (
+                <div
+                  className={`mark-slash ${mark}`}
+                  style={{ width: size, height: size }}
+                />
+              ) : (
+                <div
+                  className={`mark-circle ${markStyle} ${mark}`}
+                  style={{ width: size, height: size }}
+                />
+              )
             )}
           </div>
         );
@@ -142,39 +160,40 @@ function RoadSection({
 }
 
 // ── Main Export ──────────────────────────────────────────────────────────────
+// Layout order: 1) Big Road  2) three derived roads  3) Bead Plate
 export default function RoadsDisplay({ outcomes, compact = false }: Props) {
   const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
-  const beb    = useMemo(() => bigEyeBoy(stones),   [stones]);
-  const sr     = useMemo(() => smallRoad(stones),   [stones]);
+  const beb    = useMemo(() => bigEyeBoy(stones),    [stones]);
+  const sr     = useMemo(() => smallRoad(stones),    [stones]);
   const cp     = useMemo(() => cockroachPig(stones), [stones]);
 
-  const bigCell    = compact ? 22 : 28;
-  const smallCell  = compact ? 14 : 18;
+  const bigCell   = compact ? 22 : 28;
+  const smallCell = compact ? 14 : 18;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Big Road — full width */}
+      {/* Row 1 — Big Road */}
       <RoadSection titleCn="大路" titleEn="Big Road">
         <BigRoad outcomes={outcomes} cellSize={bigCell} />
       </RoadSection>
 
-      {/* Bead Plate */}
+      {/* Row 2 — three derived roads side by side */}
+      <div className="grid-3">
+        <RoadSection titleCn="大眼仔" titleEn="Big Eye Road">
+          <DerivedRoad marks={beb} cellSize={smallCell} markStyle="donut" />
+        </RoadSection>
+        <RoadSection titleCn="小路" titleEn="Small Road">
+          <DerivedRoad marks={sr} cellSize={smallCell} markStyle="solid" />
+        </RoadSection>
+        <RoadSection titleCn="蟑螂路" titleEn="Cockroach Road">
+          <DerivedRoad marks={cp} cellSize={smallCell} markStyle="slash" />
+        </RoadSection>
+      </div>
+
+      {/* Row 3 — Bead Plate by itself */}
       <RoadSection titleCn="珠盘路" titleEn="Bead Plate">
         <BeadPlate outcomes={outcomes} cellSize={bigCell} />
       </RoadSection>
-
-      {/* Three derived roads side by side */}
-      <div className="grid-3">
-        <RoadSection titleCn="大眼仔" titleEn="Big Eye Road">
-          <DerivedRoad marks={beb} cellSize={smallCell} />
-        </RoadSection>
-        <RoadSection titleCn="小路" titleEn="Small Road">
-          <DerivedRoad marks={sr} cellSize={smallCell} />
-        </RoadSection>
-        <RoadSection titleCn="蟑螂路" titleEn="Cockroach Road">
-          <DerivedRoad marks={cp} cellSize={smallCell} />
-        </RoadSection>
-      </div>
     </div>
   );
 }

@@ -198,8 +198,42 @@ body {
 .road-stone.player { background: var(--player-blue); border: 1.5px solid #6b9fff; }
 .road-stone.tie    { background: var(--tie-green);   border: 1.5px solid #5fffaa; }
 
-.road-stone.red-mark  { background: var(--banker-red); }
-.road-stone.blue-mark { background: var(--player-blue); }
+/* Big Road stones — hollow rings, authentic Macau style */
+.road-stone.big-road-banker {
+  background: transparent;
+  border: 3px solid var(--banker-red);
+}
+.road-stone.big-road-player {
+  background: transparent;
+  border: 3px solid var(--player-blue);
+}
+
+/* Derived road marks */
+/* Big Eye Road — hollow circles ("donuts") */
+.mark-circle {
+  border-radius: 50%;
+}
+.mark-circle.donut.red   { background: transparent; border: 2.5px solid var(--banker-red); }
+.mark-circle.donut.blue  { background: transparent; border: 2.5px solid var(--player-blue); }
+/* Small Road — solid circles */
+.mark-circle.solid.red   { background: var(--banker-red); }
+.mark-circle.solid.blue  { background: var(--player-blue); }
+/* Cockroach Road — diagonal slashes */
+.mark-slash {
+  position: relative;
+}
+.mark-slash::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -8%;
+  height: 116%;
+  width: 2.5px;
+  border-radius: 2px;
+  transform: translateX(-50%) rotate(45deg);
+}
+.mark-slash.red::after  { background: var(--banker-red); }
+.mark-slash.blue::after { background: var(--player-blue); }
 
 .tie-slash {
   position: absolute;
