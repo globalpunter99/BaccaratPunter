@@ -250,6 +250,7 @@ select.input { cursor: pointer; }
   border-radius: var(--radius-md);
   overflow: hidden;
   align-self: flex-start;
+  margin-top: 14px; /* aligns top edge with the Games stat row */
 }
 .predictor-header {
   display: flex;
