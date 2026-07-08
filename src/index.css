@@ -270,10 +270,11 @@ select.input { cursor: pointer; }
 }
 .stats-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
   font-size: 15px;
 }
+.stats-row .stats-label { min-width: 110px; }
 .stats-label {
   display: flex;
   align-items: center;
