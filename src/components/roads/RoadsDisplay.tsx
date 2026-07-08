@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import {
   toBeadPlate, toBigRoad, bigEyeBoy, smallRoad, cockroachPig,
@@ -166,12 +166,40 @@ function CockroachBands({
   );
 }
 
+// ── Header stats (Game / Banker / Player / Tie with eye toggle) ─────────────
+function HeaderStats({ outcomes }: { outcomes: Outcome[] }) {
+  const [visible, setVisible] = useState(true);
+  const banker = outcomes.filter(o => o === "banker").length;
+  const player = outcomes.filter(o => o === "player").length;
+  const tie = outcomes.filter(o => o === "tie").length;
+  return (
+    <span className="header-stats">
+      {visible && (
+        <>
+          <span className="header-stat"><span className="header-stat-label">Game</span> <span className="stats-value games" style={{ fontSize: 13 }}>{outcomes.length}</span></span>
+          <span className="header-stat"><span className="header-stat-label">Banker</span> <span className="stats-value banker" style={{ fontSize: 13 }}>{banker}</span></span>
+          <span className="header-stat"><span className="header-stat-label">Player</span> <span className="stats-value player" style={{ fontSize: 13 }}>{player}</span></span>
+          <span className="header-stat"><span className="header-stat-label">Tie</span> <span className="stats-value tie" style={{ fontSize: 13 }}>{tie}</span></span>
+        </>
+      )}
+      <button
+        className="eye-toggle"
+        title={visible ? "Hide stats" : "Show stats"}
+        onClick={() => setVisible(v => !v)}
+      >
+        {visible ? "👁" : "🙈"}
+      </button>
+    </span>
+  );
+}
+
 // ── Section wrapper ──────────────────────────────────────────────────────────
 function RoadSection({
-  titleCn, titleEn, children, style, align = "center",
+  titleCn, titleEn, children, style, align = "center", headerExtra,
 }: {
   titleCn: string; titleEn: string; children: React.ReactNode;
   style?: React.CSSProperties; align?: "left" | "center";
+  headerExtra?: React.ReactNode;
 }) {
   return (
     <div className="road-section" style={style}>
@@ -179,6 +207,7 @@ function RoadSection({
         <span className="road-section-title-en">{titleEn}</span>
         <span className="road-section-title-sep">/</span>
         <span className="road-section-title-cn">{titleCn}</span>
+        {headerExtra && <span className="header-extra">{headerExtra}</span>}
       </div>
       <div style={{ overflowX: "auto" }}>{children}</div>
     </div>
@@ -213,7 +242,8 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Row 1 — Big Road full width */}
-      <RoadSection titleCn="大路" titleEn="Big Road" align="left">
+      <RoadSection titleCn="大路" titleEn="Big Road" align="left"
+        headerExtra={<HeaderStats outcomes={outcomes} />}>
         <BigRoad outcomes={outcomes} cellSize={bigCell} />
       </RoadSection>
 
@@ -234,7 +264,8 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
 
       {/* Row 3 — Bead Plate left · stats panel right */}
       <div className="roads-bottom-grid">
-        <RoadSection titleCn="珠盘路" titleEn="Bead Plate">
+        <RoadSection titleCn="珠盘路" titleEn="Bead Plate"
+          headerExtra={<HeaderStats outcomes={outcomes} />}>
           <BeadPlate outcomes={outcomes} cellSize={bigCell} />
         </RoadSection>
         <StatsPanel outcomes={outcomes} />

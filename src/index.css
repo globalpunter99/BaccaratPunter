@@ -213,6 +213,30 @@ body {
 .input:focus { outline: none; border-color: var(--border-accent); }
 select.input { cursor: pointer; }
 
+/* Header stats + eye toggle */
+.road-section-header { position: relative; }
+.header-extra {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+.header-stats { display: flex; align-items: center; gap: 14px; }
+.header-stat { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+.header-stat-label { color: var(--text-secondary); }
+.eye-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0.75;
+}
+.eye-toggle:hover { opacity: 1; }
+
 /* Casino screen layout grids */
 .roads-mid-grid {
   display: grid;

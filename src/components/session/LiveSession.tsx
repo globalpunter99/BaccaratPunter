@@ -78,10 +78,6 @@ export default function LiveSession() {
     alert("Gap marker added — hands missed in this section will be excluded from analysis.");
   }
 
-  const bankerCount = hands.filter(h => h.outcome === "banker").length;
-  const playerCount = hands.filter(h => h.outcome === "player").length;
-  const tieCount    = hands.filter(h => h.outcome === "tie").length;
-
   return (
     <div className="page">
       {/* Header row */}
@@ -145,21 +141,6 @@ export default function LiveSession() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Hand counter */}
-          <div className="panel">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="hand-number">{hands.length}</div>
-                <div className="hand-label">Hands Played</div>
-              </div>
-              <div style={{ textAlign: "right", fontSize: 13 }}>
-                <div><span className="text-red fw-600">B {bankerCount}</span></div>
-                <div><span className="text-blue fw-600">P {playerCount}</span></div>
-                <div><span className="text-green fw-600">T {tieCount}</span></div>
-              </div>
-            </div>
           </div>
 
           {/* Big entry buttons */}
