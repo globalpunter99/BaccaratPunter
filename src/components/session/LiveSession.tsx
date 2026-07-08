@@ -73,11 +73,6 @@ export default function LiveSession() {
     setHands(prev => prev.slice(0, -1));
   }
 
-  function addGap() {
-    // In full version: mark a gap in the shoe
-    alert("Gap marker added — hands missed in this section will be excluded from analysis.");
-  }
-
   return (
     <div className="page">
       {/* Header row */}
@@ -92,7 +87,6 @@ export default function LiveSession() {
           </div>
         </div>
         <div className="flex gap-8">
-          <button className="btn btn-ghost" onClick={addGap}>⚠ Gap</button>
           <button className="btn btn-ghost" onClick={undoLast} disabled={hands.length === 0}>↩ Undo</button>
           <button className="btn btn-secondary">End Session</button>
         </div>
