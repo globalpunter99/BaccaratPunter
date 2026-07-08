@@ -11,11 +11,50 @@ interface HandRecord {
   natural: boolean;
 }
 
+interface SessionDetails {
+  casino: string;
+  tableNumber: string;
+  shoeNumber: string;
+  minBet: string;
+  maxBet: string;
+  notes: string;
+}
+
 export default function LiveSession() {
   const [hands, setHands] = useState<HandRecord[]>([]);
-  const [sessionName] = useState("Crown Melbourne — Table 3");
   const [showPairNatural, setShowPairNatural] = useState(false);
   const [pendingFlags, setPendingFlags] = useState({ bankerPair: false, playerPair: false, natural: false });
+
+  // Session details — date/time recorded automatically at session start
+  const [sessionStart] = useState(() => new Date());
+  const [details, setDetails] = useState<SessionDetails>({
+    casino: "", tableNumber: "", shoeNumber: "", minBet: "", maxBet: "", notes: "",
+  });
+  const [showDetails, setShowDetails] = useState(false);
+
+  // Correction bar
+  const [fixGameNo, setFixGameNo] = useState("");
+  const [fixAction, setFixAction] = useState<"delete" | "insert" | "change">("change");
+  const [fixOutcome, setFixOutcome] = useState<Outcome>("banker");
+
+  function applyCorrection() {
+    const n = parseInt(fixGameNo, 10);
+    if (isNaN(n) || n < 1 || n > hands.length + (fixAction === "insert" ? 1 : 0)) return;
+    const idx = n - 1;
+    setHands(prev => {
+      let next: HandRecord[];
+      if (fixAction === "delete") {
+        next = prev.filter((_, i) => i !== idx); // everything moves back a game
+      } else if (fixAction === "insert") {
+        const inserted: HandRecord = { id: 0, outcome: fixOutcome, bankerPair: false, playerPair: false, natural: false };
+        next = [...prev.slice(0, idx), inserted, ...prev.slice(idx)];
+      } else {
+        next = prev.map((h, i) => (i === idx ? { ...h, outcome: fixOutcome } : h));
+      }
+      return next.map((h, i) => ({ ...h, id: i + 1 })); // renumber
+    });
+    setFixGameNo("");
+  }
 
   const outcomes = hands.map(h => h.outcome);
   const signal = mockSignal;
@@ -49,7 +88,12 @@ export default function LiveSession() {
       <div className="flex items-center justify-between mb-12">
         <div>
           <div className="page-title">Live Session</div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{sessionName}</div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+            {(details.casino || "Casino not set")}
+            {details.tableNumber ? ` — Table ${details.tableNumber}` : ""}
+            {details.shoeNumber ? ` — Shoe ${details.shoeNumber}` : ""}
+            {" · "}{sessionStart.toLocaleDateString()} {sessionStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </div>
         </div>
         <div className="flex gap-8">
           <button className="btn btn-ghost" onClick={addGap}>⚠ Gap</button>
@@ -61,6 +105,47 @@ export default function LiveSession() {
       <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16 }}>
         {/* Left column — entry + signal */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+          {/* Session details */}
+          <div className="panel">
+            <button
+              className="btn btn-ghost"
+              style={{ width: "100%", fontSize: 12, textAlign: "left" }}
+              onClick={() => setShowDetails(p => !p)}
+            >
+              {showDetails ? "▲" : "▼"} Session Details
+            </button>
+            {showDetails && (
+              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                <input className="input" placeholder="Casino / venue"
+                  value={details.casino}
+                  onChange={e => setDetails(d => ({ ...d, casino: e.target.value }))} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <input className="input" placeholder="Table no."
+                    value={details.tableNumber}
+                    onChange={e => setDetails(d => ({ ...d, tableNumber: e.target.value }))} />
+                  <input className="input" placeholder="Shoe no."
+                    value={details.shoeNumber}
+                    onChange={e => setDetails(d => ({ ...d, shoeNumber: e.target.value }))} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <input className="input" placeholder="Min bet"
+                    value={details.minBet}
+                    onChange={e => setDetails(d => ({ ...d, minBet: e.target.value }))} />
+                  <input className="input" placeholder="Max bet"
+                    value={details.maxBet}
+                    onChange={e => setDetails(d => ({ ...d, maxBet: e.target.value }))} />
+                </div>
+                <textarea className="input" placeholder="Notes (table feel, dealer, anything worth remembering)"
+                  rows={3} style={{ resize: "vertical" }}
+                  value={details.notes}
+                  onChange={e => setDetails(d => ({ ...d, notes: e.target.value }))} />
+                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  Date &amp; start time recorded automatically
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Hand counter */}
           <div className="panel">
@@ -122,6 +207,51 @@ export default function LiveSession() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Correction bar */}
+          <div className="panel">
+            <div className="panel-title">Fix a Result</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 8 }}>
+                <input
+                  className="input" type="number" min={1} placeholder="Game #"
+                  value={fixGameNo}
+                  onChange={e => setFixGameNo(e.target.value)}
+                />
+                <select className="input" value={fixAction}
+                  onChange={e => setFixAction(e.target.value as typeof fixAction)}>
+                  <option value="change">Change result</option>
+                  <option value="insert">Insert result</option>
+                  <option value="delete">Delete result</option>
+                </select>
+              </div>
+              {fixAction !== "delete" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                  {(["banker", "player", "tie"] as const).map(o => (
+                    <button
+                      key={o}
+                      className={`btn ${fixOutcome === o ? `btn-${o}` : "btn-ghost"}`}
+                      style={{ padding: "6px 0", fontSize: 12 }}
+                      onClick={() => setFixOutcome(o)}
+                    >
+                      {o === "banker" ? "B" : o === "player" ? "P" : "T"}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                className="btn btn-secondary"
+                onClick={applyCorrection}
+                disabled={!fixGameNo}
+              >
+                Apply
+              </button>
+              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                Delete removes that game and moves everything after it back one.
+                Insert pushes everything from that game forward one.
+              </div>
+            </div>
           </div>
 
           {/* Playability signal */}

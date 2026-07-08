@@ -198,6 +198,21 @@ body {
 .road-stone.player { background: var(--player-blue); border: 1.5px solid #6b9fff; }
 .road-stone.tie    { background: var(--tie-green);   border: 1.5px solid #5fffaa; }
 
+/* Form inputs */
+.input {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+}
+.input::placeholder { color: var(--text-muted); }
+.input:focus { outline: none; border-color: var(--border-accent); }
+select.input { cursor: pointer; }
+
 /* Casino screen layout grids */
 .roads-mid-grid {
   display: grid;
