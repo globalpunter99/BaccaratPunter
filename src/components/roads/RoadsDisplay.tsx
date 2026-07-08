@@ -168,13 +168,17 @@ function CockroachBands({
 
 // ── Section wrapper ──────────────────────────────────────────────────────────
 function RoadSection({
-  titleCn, titleEn, children, style,
-}: { titleCn: string; titleEn: string; children: React.ReactNode; style?: React.CSSProperties }) {
+  titleCn, titleEn, children, style, align = "center",
+}: {
+  titleCn: string; titleEn: string; children: React.ReactNode;
+  style?: React.CSSProperties; align?: "left" | "center";
+}) {
   return (
     <div className="road-section" style={style}>
-      <div className="road-section-header">
-        <span className="road-section-title-cn">{titleCn}</span>
+      <div className={`road-section-header ${align === "left" ? "align-left" : "align-center"}`}>
         <span className="road-section-title-en">{titleEn}</span>
+        <span className="road-section-title-sep">/</span>
+        <span className="road-section-title-cn">{titleCn}</span>
       </div>
       <div style={{ overflowX: "auto" }}>{children}</div>
     </div>
@@ -209,7 +213,7 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Row 1 — Big Road full width */}
-      <RoadSection titleCn="大路" titleEn="Big Road">
+      <RoadSection titleCn="大路" titleEn="Big Road" align="left">
         <BigRoad outcomes={outcomes} cellSize={bigCell} />
       </RoadSection>
 

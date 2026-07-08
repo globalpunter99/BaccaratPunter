@@ -504,16 +504,23 @@ body {
   padding: 5px 10px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 7px;
 }
-.road-section-title-cn {
-  font-size: 11px;
-  color: var(--text-muted);
-}
+.road-section-header.align-center { justify-content: center; }
+.road-section-header.align-left   { justify-content: flex-start; }
 .road-section-title-en {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-label);
+  color: var(--text-primary);
+}
+.road-section-title-sep {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.road-section-title-cn {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e3edef; /* slightly darker shade of white than the English */
 }
 
 /* ── Profile ── */
