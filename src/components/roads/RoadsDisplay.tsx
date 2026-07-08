@@ -174,14 +174,12 @@ function HeaderStats({ outcomes }: { outcomes: Outcome[] }) {
   const tie = outcomes.filter(o => o === "tie").length;
   return (
     <span className="header-stats">
-      {visible && (
-        <>
-          <span className="header-stat"><span className="header-stat-label">Game</span> <span className="stats-value games" style={{ fontSize: 13 }}>{outcomes.length}</span></span>
-          <span className="header-stat"><span className="header-stat-label">Banker</span> <span className="stats-value banker" style={{ fontSize: 13 }}>{banker}</span></span>
-          <span className="header-stat"><span className="header-stat-label">Player</span> <span className="stats-value player" style={{ fontSize: 13 }}>{player}</span></span>
-          <span className="header-stat"><span className="header-stat-label">Tie</span> <span className="stats-value tie" style={{ fontSize: 13 }}>{tie}</span></span>
-        </>
-      )}
+      <span style={{ display: "flex", gap: 14, visibility: visible ? "visible" : "hidden" }}>
+        <span className="header-stat"><span className="header-stat-label">Game</span> <span className="stats-value games" style={{ fontSize: 13 }}>{outcomes.length}</span></span>
+        <span className="header-stat"><span className="header-stat-label">Banker</span> <span className="stats-value banker" style={{ fontSize: 13 }}>{banker}</span></span>
+        <span className="header-stat"><span className="header-stat-label">Player</span> <span className="stats-value player" style={{ fontSize: 13 }}>{player}</span></span>
+        <span className="header-stat"><span className="header-stat-label">Tie</span> <span className="stats-value tie" style={{ fontSize: 13 }}>{tie}</span></span>
+      </span>
       <button
         className="eye-toggle"
         title={visible ? "Hide stats" : "Show stats"}
