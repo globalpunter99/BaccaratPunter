@@ -269,8 +269,14 @@ function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
   ];
   return (
     <div className="predictor-table">
-      <div className="predictor-header banker">庄</div>
-      <div className="predictor-header player">闲</div>
+      <div className="predictor-header banker">
+        <span className="predictor-header-cn">庄</span>
+        <span className="predictor-header-en">Banker</span>
+      </div>
+      <div className="predictor-header player">
+        <span className="predictor-header-cn">闲</span>
+        <span className="predictor-header-en">Player</span>
+      </div>
       {roads.map(({ road, style }, i) => (
         <Fragment key={i}>
           <PredictorCell mark={nextMark(outcomes, "banker", road)} style={style} />

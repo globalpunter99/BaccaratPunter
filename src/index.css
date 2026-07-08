@@ -243,24 +243,30 @@ select.input { cursor: pointer; }
 /* Predictor table (ask the road) */
 .predictor-table {
   display: grid;
-  grid-template-columns: 44px 44px;
-  grid-auto-rows: 34px;
+  grid-template-columns: 52px 52px;
+  grid-template-rows: auto; /* header row sizes to its two-line content */
+  grid-auto-rows: 30px;
   background: var(--bg-panel);
   border: 1px solid var(--border-panel);
   border-radius: var(--radius-md);
   overflow: hidden;
   align-self: flex-start;
-  margin-top: 14px; /* aligns top edge with the Games stat row */
+  margin-top: 18px; /* aligns top edge with the Games stat row */
 }
 .predictor-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 700;
+  gap: 1px;
+  padding: 4px 0;
   color: #fff;
   border-bottom: 1px solid var(--border-panel);
+  grid-auto-rows: auto;
+  height: auto;
 }
+.predictor-header-cn { font-size: 15px; font-weight: 700; line-height: 1.1; }
+.predictor-header-en { font-size: 9px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.1; }
 .predictor-header.banker { background: var(--banker-red); }
 .predictor-header.player { background: var(--player-blue); }
 .predictor-cell {
