@@ -100,15 +100,81 @@ export function deriveRoad(stones: BigRoadStone[], lookback: 1 | 2 | 3): RoadMar
       if (a < 0 || b < 0) continue;
       marks.push(heights[a] === heights[b] ? "red" : "blue");
     } else {
-      // Continuing a streak: does the column `lookback` back reach at
-      // least this deep?
+      // Continuing a streak: two-cell comparison against the column
+      // `lookback` back. Look at that column's cells at this depth and one
+      // above: both filled (it reaches this deep) or both empty (it fell
+      // short two or more ago) = regular = red; exactly one filled (it
+      // ended right at the previous depth) = odd = blue.
       const ref = col - lookback;
       if (ref < 0) continue;
-      marks.push(heights[ref] >= rowInCol ? "red" : "blue");
+      marks.push(heights[ref] === rowInCol - 1 ? "blue" : "red");
     }
   }
 
   return marks;
+}
+
+// ---- Columnar layout (display placement) ---------------------------------
+// Casino screens place derived-road marks exactly like Big Road stones:
+// a run of the same colour stacks downward; a colour change starts a new
+// column; runs deeper than `rows` turn right and tail along the bottom
+// ("dragon tail"). Collisions with an earlier tail push cells further right.
+
+export interface PlacedCell<T> {
+  col: number;
+  row: number;
+  value: T;
+}
+
+export function layoutColumnar<T>(groups: T[][], rows = 6): PlacedCell<T>[] {
+  const occupied = new Set<string>();
+  const placed: PlacedCell<T>[] = [];
+  let nextStart = 0;
+
+  for (const group of groups) {
+    let startCol = nextStart;
+    while (occupied.has(`${startCol},0`)) startCol++; // dodge earlier tails
+    let col = startCol;
+    let row = 0;
+
+    group.forEach((value, i) => {
+      if (i > 0) {
+        if (row < rows - 1 && !occupied.has(`${col},${row + 1}`)) row++;
+        else col++; // dragon tail: run right along the current row
+      }
+      occupied.add(`${col},${row}`);
+      placed.push({ col, row, value });
+    });
+
+    nextStart = startCol + 1;
+  }
+
+  return placed;
+}
+
+/** Group consecutive equal marks into runs (columns for display). */
+export function groupRuns<T>(items: T[]): T[][] {
+  const groups: T[][] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last && last[0] === item) last.push(item);
+    else groups.push([item]);
+  }
+  return groups;
+}
+
+/** Big Road stones placed on the display grid, dragon tail included. */
+export function placeBigRoad(stones: BigRoadStone[], rows = 6): PlacedCell<BigRoadStone>[] {
+  const byCol: BigRoadStone[][] = [];
+  for (const s of stones) {
+    (byCol[s.col] ??= []).push(s);
+  }
+  return layoutColumnar(byCol.filter(Boolean), rows);
+}
+
+/** Derived-road marks placed on the display grid, dragon tail included. */
+export function placeMarks(marks: RoadMark[], rows = 6): PlacedCell<RoadMark>[] {
+  return layoutColumnar(groupRuns(marks), rows);
 }
 
 export const bigEyeBoy = (stones: BigRoadStone[]): RoadMark[] => deriveRoad(stones, 1);
