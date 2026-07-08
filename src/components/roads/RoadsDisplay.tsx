@@ -187,7 +187,11 @@ function HeaderStats({ outcomes }: { outcomes: Outcome[] }) {
         title={visible ? "Hide stats" : "Show stats"}
         onClick={() => setVisible(v => !v)}
       >
-        {visible ? "👁" : "🙈"}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+          <circle cx="12" cy="12" r="3" />
+          {!visible && <line x1="3" y1="21" x2="21" y2="3" />}
+        </svg>
       </button>
     </span>
   );
@@ -203,10 +207,12 @@ function RoadSection({
 }) {
   return (
     <div className="road-section" style={style}>
-      <div className={`road-section-header ${align === "left" ? "align-left" : "align-center"}`}>
-        <span className="road-section-title-en">{titleEn}</span>
-        <span className="road-section-title-sep">/</span>
-        <span className="road-section-title-cn">{titleCn}</span>
+      <div className={`road-section-header ${align === "left" || headerExtra ? "align-left" : "align-center"}`}>
+        <span className={headerExtra ? "road-title-block" : undefined} style={headerExtra ? undefined : { display: "contents" }}>
+          <span className="road-section-title-en">{titleEn}</span>
+          <span className="road-section-title-sep">/</span>
+          <span className="road-section-title-cn">{titleCn}</span>
+        </span>
         {headerExtra && <span className="header-extra">{headerExtra}</span>}
       </div>
       <div style={{ overflowX: "auto" }}>{children}</div>
