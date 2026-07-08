@@ -35,6 +35,7 @@ export default function LiveSession() {
     casino: "", tableNumber: "", shoeNumber: "", minBet: "", maxBet: "", notes: "", commission: true,
   });
   const [showDetails, setShowDetails] = useState(false);
+  const [showFix, setShowFix] = useState(false);
 
   // Correction bar
   const [fixGameNo, setFixGameNo] = useState("");
@@ -216,8 +217,15 @@ export default function LiveSession() {
 
           {/* Correction bar */}
           <div className="panel">
-            <div className="panel-title">Fix a Result</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <button
+              className="btn btn-ghost"
+              style={{ width: "100%", fontSize: 12, textAlign: "left" }}
+              onClick={() => setShowFix(p => !p)}
+            >
+              {showFix ? "▲" : "▼"} Fix a Result
+            </button>
+            {showFix && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 8 }}>
                 <input
                   className="input" type="number" min={1} placeholder="Game #"
@@ -257,6 +265,7 @@ export default function LiveSession() {
                 Insert pushes everything from that game forward one.
               </div>
             </div>
+            )}
           </div>
 
           {/* Playability signal */}
