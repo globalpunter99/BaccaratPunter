@@ -11,13 +11,15 @@ interface Props {
 }
 
 const ROWS = 6;
-const MIN_COLS = 18; // standard shoe accommodates ~70+ hands
+const BIG_ROAD_MIN_COLS = 36;
+const DERIVED_MIN_COLS = 36; // big eye / small road: 6 deep, 36 across
+const BEAD_MIN_COLS = 18;
 
 // ── Bead Plate ──────────────────────────────────────────────────────────────
 // Populated top-to-bottom, left-to-right (column-major fill).
 function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number }) {
   const cells = toBeadPlate(outcomes, ROWS);
-  const cols = Math.max(Math.ceil(outcomes.length / ROWS), MIN_COLS);
+  const cols = Math.max(Math.ceil(outcomes.length / ROWS), BEAD_MIN_COLS);
 
   return (
     <div
@@ -30,7 +32,6 @@ function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: numb
       }}
     >
       {Array.from({ length: ROWS * cols }).map((_, idx) => {
-        // grid renders row-major; map back to our column-major cells
         const row = Math.floor(idx / cols);
         const col = idx % cols;
         const cell = cells.find(c => c.col === col && c.row === row);
@@ -55,17 +56,14 @@ function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: numb
 function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number }) {
   const stones = toBigRoad(outcomes);
   const maxCol = stones.length ? Math.max(...stones.map(s => s.col)) + 1 : 0;
-  const displayCols = Math.max(maxCol, MIN_COLS);
-  const displayRows = ROWS;
+  const displayCols = Math.max(maxCol, BIG_ROAD_MIN_COLS);
 
-  const grid: (BigRoadStone | null)[][] = Array.from({ length: displayRows }, () =>
+  const grid: (BigRoadStone | null)[][] = Array.from({ length: ROWS }, () =>
     Array(displayCols).fill(null)
   );
-
   for (const stone of stones) {
-    const row = Math.min(stone.rowInCol - 1, displayRows - 1);
-    const col = stone.col;
-    if (row >= 0 && col < displayCols) grid[row][col] = stone;
+    const row = Math.min(stone.rowInCol - 1, ROWS - 1);
+    if (row >= 0 && stone.col < displayCols) grid[row][stone.col] = stone;
   }
 
   return (
@@ -73,7 +71,7 @@ function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number
       className="road-grid"
       style={{
         gridTemplateColumns: `repeat(${displayCols}, ${cellSize}px)`,
-        gridTemplateRows: `repeat(${displayRows}, ${cellSize}px)`,
+        gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
         width: displayCols * cellSize,
         minWidth: "100%",
       }}
@@ -96,45 +94,35 @@ function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number
 }
 
 // ── Derived Roads ────────────────────────────────────────────────────────────
-// Big Eye Road: hollow circles ("donuts")
-// Small Road:   solid circles
-// Cockroach:    diagonal slashes
+// Big Eye Road: hollow circles ("donuts") · Small Road: solid circles ·
+// Cockroach: diagonal slashes.
 type MarkStyle = "donut" | "solid" | "slash";
 
-function DerivedRoad({
-  marks, cellSize, markStyle, rows = ROWS,
-}: { marks: RoadMark[]; cellSize: number; markStyle: MarkStyle; rows?: number }) {
-  const cols = Math.max(Math.ceil(marks.length / rows), MIN_COLS);
+function DerivedRoadGrid({
+  marks, cellSize, markStyle, cols,
+}: { marks: RoadMark[]; cellSize: number; markStyle: MarkStyle; cols: number }) {
   return (
     <div
       className="road-grid"
       style={{
         gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
-        gridTemplateRows: `repeat(${rows}, ${cellSize}px)`,
+        gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
         width: cols * cellSize,
         minWidth: "100%",
       }}
     >
-      {Array.from({ length: rows * cols }).map((_, idx) => {
-        // column-major fill: top-to-bottom, left-to-right
+      {Array.from({ length: ROWS * cols }).map((_, idx) => {
         const row = Math.floor(idx / cols);
         const col = idx % cols;
-        const markIdx = col * rows + row;
-        const mark = marks[markIdx];
-        const size = cellSize * (markStyle === "slash" ? 0.75 : 0.66);
+        const mark = marks[col * ROWS + row];
+        const size = cellSize * (markStyle === "slash" ? 0.8 : 0.66);
         return (
           <div key={idx} className="road-cell">
             {mark && (
               markStyle === "slash" ? (
-                <div
-                  className={`mark-slash ${mark}`}
-                  style={{ width: size, height: size }}
-                />
+                <div className={`mark-slash ${mark}`} style={{ width: size, height: size }} />
               ) : (
-                <div
-                  className={`mark-circle ${markStyle} ${mark}`}
-                  style={{ width: size, height: size }}
-                />
+                <div className={`mark-circle ${markStyle} ${mark}`} style={{ width: size, height: size }} />
               )
             )}
           </div>
@@ -144,12 +132,36 @@ function DerivedRoad({
   );
 }
 
-// ── Road Section Wrapper ─────────────────────────────────────────────────────
-function RoadSection({
-  titleCn, titleEn, children,
-}: { titleCn: string; titleEn: string; children: React.ReactNode }) {
+function DerivedRoad({
+  marks, cellSize, markStyle, minCols = DERIVED_MIN_COLS,
+}: { marks: RoadMark[]; cellSize: number; markStyle: MarkStyle; minCols?: number }) {
+  const cols = Math.max(Math.ceil(marks.length / ROWS), minCols);
+  return <DerivedRoadGrid marks={marks} cellSize={cellSize} markStyle={markStyle} cols={cols} />;
+}
+
+// Cockroach Road — two stacked bands. Sticks travel left to right; when the
+// top band runs out of columns the marks continue on the bottom band
+// (matches casino display behaviour).
+function CockroachBands({
+  marks, cellSize, bandCols,
+}: { marks: RoadMark[]; cellSize: number; bandCols: number }) {
+  const perBand = bandCols * ROWS;
+  const top = marks.slice(0, perBand);
+  const bottom = marks.slice(perBand, perBand * 2);
   return (
-    <div className="road-section">
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <DerivedRoadGrid marks={top} cellSize={cellSize} markStyle="slash" cols={bandCols} />
+      <DerivedRoadGrid marks={bottom} cellSize={cellSize} markStyle="slash" cols={bandCols} />
+    </div>
+  );
+}
+
+// ── Section wrapper ──────────────────────────────────────────────────────────
+function RoadSection({
+  titleCn, titleEn, children, style,
+}: { titleCn: string; titleEn: string; children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div className="road-section" style={style}>
       <div className="road-section-header">
         <span className="road-section-title-cn">{titleCn}</span>
         <span className="road-section-title-en">{titleEn}</span>
@@ -159,41 +171,64 @@ function RoadSection({
   );
 }
 
-// ── Main Export ──────────────────────────────────────────────────────────────
-// Layout order: 1) Big Road  2) three derived roads  3) Bead Plate
+// ── Stats panel (bottom-right, casino style) ─────────────────────────────────
+function StatsPanel({ outcomes }: { outcomes: Outcome[] }) {
+  const banker = outcomes.filter(o => o === "banker").length;
+  const player = outcomes.filter(o => o === "player").length;
+  const tie = outcomes.filter(o => o === "tie").length;
+  return (
+    <div className="stats-panel">
+      <div className="stats-row"><span className="stats-label">局数 Games</span><span className="stats-value games">{outcomes.length}</span></div>
+      <div className="stats-row"><span className="stats-label"><span className="stats-dot banker-dot" />庄 Banker</span><span className="stats-value banker">{banker}</span></div>
+      <div className="stats-row"><span className="stats-label"><span className="stats-dot player-dot" />闲 Player</span><span className="stats-value player">{player}</span></div>
+      <div className="stats-row"><span className="stats-label"><span className="stats-dot tie-dot" />和 Tie</span><span className="stats-value tie">{tie}</span></div>
+    </div>
+  );
+}
+
+// ── Main export — casino screen layout ───────────────────────────────────────
+// ┌──────────────────── Big Road ────────────────────┐
+// ├── Big Eye Road ──────────┬── Cockroach (band 1) ──┤
+// ├── Small Road ────────────┤── Cockroach (band 2) ──┤
+// ├── Bead Plate ────────────┴── Stats panel ─────────┤
 export default function RoadsDisplay({ outcomes, compact = false }: Props) {
   const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
   const beb    = useMemo(() => bigEyeBoy(stones),    [stones]);
   const sr     = useMemo(() => smallRoad(stones),    [stones]);
   const cp     = useMemo(() => cockroachPig(stones), [stones]);
 
-  const bigCell   = compact ? 22 : 28;
-  const smallCell = compact ? 14 : 18;
+  const bigCell   = compact ? 20 : 26;
+  const smallCell = compact ? 11 : 13;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Row 1 — Big Road */}
+      {/* Row 1 — Big Road full width */}
       <RoadSection titleCn="大路" titleEn="Big Road">
         <BigRoad outcomes={outcomes} cellSize={bigCell} />
       </RoadSection>
 
-      {/* Row 2 — three derived roads side by side */}
-      <div className="grid-3">
-        <RoadSection titleCn="大眼仔" titleEn="Big Eye Road">
-          <DerivedRoad marks={beb} cellSize={smallCell} markStyle="donut" />
-        </RoadSection>
-        <RoadSection titleCn="小路" titleEn="Small Road">
-          <DerivedRoad marks={sr} cellSize={smallCell} markStyle="solid" />
-        </RoadSection>
+      {/* Row 2 — left: Big Eye above Small Road · right: Cockroach two bands */}
+      <div className="roads-mid-grid">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <RoadSection titleCn="大眼仔" titleEn="Big Eye Road">
+            <DerivedRoad marks={beb} cellSize={smallCell} markStyle="donut" />
+          </RoadSection>
+          <RoadSection titleCn="小路" titleEn="Small Road">
+            <DerivedRoad marks={sr} cellSize={smallCell} markStyle="solid" />
+          </RoadSection>
+        </div>
         <RoadSection titleCn="蟑螂路" titleEn="Cockroach Road">
-          <DerivedRoad marks={cp} cellSize={smallCell} markStyle="slash" />
+          <CockroachBands marks={cp} cellSize={smallCell} bandCols={DERIVED_MIN_COLS} />
         </RoadSection>
       </div>
 
-      {/* Row 3 — Bead Plate by itself */}
-      <RoadSection titleCn="珠盘路" titleEn="Bead Plate">
-        <BeadPlate outcomes={outcomes} cellSize={bigCell} />
-      </RoadSection>
+      {/* Row 3 — Bead Plate left · stats panel right */}
+      <div className="roads-bottom-grid">
+        <RoadSection titleCn="珠盘路" titleEn="Bead Plate">
+          <BeadPlate outcomes={outcomes} cellSize={bigCell} />
+        </RoadSection>
+        <StatsPanel outcomes={outcomes} />
+      </div>
     </div>
   );
 }

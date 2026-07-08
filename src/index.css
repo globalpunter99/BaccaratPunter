@@ -198,6 +198,58 @@ body {
 .road-stone.player { background: var(--player-blue); border: 1.5px solid #6b9fff; }
 .road-stone.tie    { background: var(--tie-green);   border: 1.5px solid #5fffaa; }
 
+/* Casino screen layout grids */
+.roads-mid-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+.roads-bottom-grid {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+@media (max-width: 1000px) {
+  .roads-mid-grid, .roads-bottom-grid { grid-template-columns: 1fr; }
+}
+
+/* Stats panel — casino style */
+.stats-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+}
+.stats-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+}
+.stats-value { font-size: 22px; font-weight: 700; }
+.stats-value.games  { color: var(--gold, #e8c34a); }
+.stats-value.banker { color: var(--banker-red); }
+.stats-value.player { color: var(--player-blue); }
+.stats-value.tie    { color: var(--tie-green); }
+.stats-dot {
+  width: 12px; height: 12px; border-radius: 50%; display: inline-block;
+}
+.stats-dot.banker-dot { background: var(--banker-red); }
+.stats-dot.player-dot { background: var(--player-blue); }
+.stats-dot.tie-dot    { background: var(--tie-green); }
+
 /* Big Road stones — hollow rings, authentic Macau style */
 .road-stone.big-road-banker {
   background: transparent;
