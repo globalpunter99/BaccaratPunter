@@ -200,16 +200,7 @@ export default function LiveSession() {
 
         {/* Right column — roads */}
         <div>
-          {hands.length === 0 ? (
-            <div className="panel" style={{ textAlign: "center", padding: 40 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🎴</div>
-              <div style={{ color: "var(--text-muted)", fontSize: 14 }}>
-                Roads will appear as you record hands
-              </div>
-            </div>
-          ) : (
-            <RoadsDisplay outcomes={outcomes} />
-          )}
+          <RoadsDisplay outcomes={outcomes} />
         </div>
       </div>
     </div>
