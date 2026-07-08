@@ -284,23 +284,6 @@ export default function LiveSession() {
             )}
           </div>
 
-          {/* Recent hands */}
-          {hands.length > 0 && (
-            <div className="panel">
-              <div className="panel-title">Recent Hands</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {hands.slice(-20).map(h => (
-                  <span
-                    key={h.id}
-                    className={`badge badge-${h.outcome === "banker" ? "banker" : h.outcome === "player" ? "player" : "tie"}`}
-                  >
-                    {h.outcome === "banker" ? "B" : h.outcome === "player" ? "P" : "T"}
-                    {h.bankerPair || h.playerPair ? "★" : ""}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right column — roads */}
