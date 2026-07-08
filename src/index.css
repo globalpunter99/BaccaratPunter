@@ -240,6 +240,36 @@ select.input { cursor: pointer; }
 }
 .eye-toggle:hover { opacity: 1; }
 
+/* Predictor table (ask the road) */
+.predictor-table {
+  display: grid;
+  grid-template-columns: 44px 44px;
+  grid-auto-rows: 34px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  align-self: flex-start;
+}
+.predictor-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid var(--border-panel);
+}
+.predictor-header.banker { background: var(--banker-red); }
+.predictor-header.player { background: var(--player-blue); }
+.predictor-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-panel);
+}
+.predictor-cell:nth-child(odd) { border-right: 1px solid var(--border-panel); }
+
 /* Casino screen layout grids */
 .roads-mid-grid {
   display: grid;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import {
   toBeadPlate, toBigRoad, bigEyeBoy, smallRoad, cockroachPig,
@@ -233,6 +233,54 @@ function StatsPanel({ outcomes }: { outcomes: Outcome[] }) {
   );
 }
 
+// ── Predictor table ("ask the road" 问路) ────────────────────────────────────
+// Standard casino inclusion: shows the mark each derived road would print
+// if the next hand lands Banker (庄) or Player (闲).
+function nextMark(
+  outcomes: Outcome[],
+  side: "banker" | "player",
+  road: (stones: BigRoadStone[]) => RoadMark[],
+): RoadMark | null {
+  const current = road(toBigRoad(outcomes));
+  const next = road(toBigRoad([...outcomes, side]));
+  return next.length > current.length ? next[next.length - 1] : null;
+}
+
+function PredictorCell({ mark, style }: { mark: RoadMark | null; style: MarkStyle }) {
+  const size = 18;
+  return (
+    <div className="predictor-cell">
+      {mark && (
+        style === "slash" ? (
+          <div className={`mark-slash ${mark}`} style={{ width: size, height: size }} />
+        ) : (
+          <div className={`mark-circle ${style} ${mark}`} style={{ width: size, height: size }} />
+        )
+      )}
+    </div>
+  );
+}
+
+function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
+  const roads: { road: (s: BigRoadStone[]) => RoadMark[]; style: MarkStyle }[] = [
+    { road: bigEyeBoy,    style: "donut" },
+    { road: smallRoad,    style: "solid" },
+    { road: cockroachPig, style: "slash" },
+  ];
+  return (
+    <div className="predictor-table">
+      <div className="predictor-header banker">庄</div>
+      <div className="predictor-header player">闲</div>
+      {roads.map(({ road, style }, i) => (
+        <Fragment key={i}>
+          <PredictorCell mark={nextMark(outcomes, "banker", road)} style={style} />
+          <PredictorCell mark={nextMark(outcomes, "player", road)} style={style} />
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
 // ── Main export — casino screen layout ───────────────────────────────────────
 export default function RoadsDisplay({ outcomes, compact = false }: Props) {
   const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
@@ -272,7 +320,10 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
           headerExtra={<HeaderStats outcomes={outcomes} />}>
           <BeadPlate outcomes={outcomes} cellSize={bigCell} />
         </RoadSection>
-        <StatsPanel outcomes={outcomes} />
+        <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+          <StatsPanel outcomes={outcomes} />
+          <PredictorTable outcomes={outcomes} />
+        </div>
       </div>
     </div>
   );
