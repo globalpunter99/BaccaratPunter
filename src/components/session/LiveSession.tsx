@@ -9,6 +9,21 @@ interface HandRecord {
   bankerPair: boolean;
   playerPair: boolean;
   natural: boolean;
+  // Exotic result variant (medium/advance modes): sml-tiger, lge-tiger,
+  // sml-dragon, big-dragon, dragontiger-3, dragontiger-4, dragontiger-5
+  variant?: string;
+  // Advance mode: raw card values as entered (banker/player, up to 3 each)
+  cards?: { player: number[]; banker: number[] };
+}
+
+type EntryMode = "basic" | "medium" | "advance";
+type CardSlot = number | null;
+
+// Baccarat card value: 10/J/Q/K count 0; entry uses 0–10 where 10 → 0.
+const cardVal = (v: number) => v % 10;
+
+function handTotal(cards: CardSlot[]): number {
+  return cards.reduce<number>((sum, c) => (c === null ? sum : (sum + cardVal(c)) % 10), 0);
 }
 
 interface SessionDetails {
@@ -64,14 +79,46 @@ export default function LiveSession() {
   const outcomes = hands.map(h => h.outcome);
   const signal = mockSignal;
 
-  function addHand(outcome: Outcome) {
+  // Entry mode + advance-mode card slots
+  const [entryMode, setEntryMode] = useState<EntryMode>("basic");
+  const emptyCards: { player: CardSlot[]; banker: CardSlot[] } = {
+    player: [null, null, null], banker: [null, null, null],
+  };
+  const [cardEntry, setCardEntry] = useState(emptyCards);
+
+  function addHand(outcome: Outcome, extra?: { natural?: boolean; variant?: string; cards?: HandRecord["cards"] }) {
     const newHand: HandRecord = {
       id: hands.length + 1,
       outcome,
       ...pendingFlags,
+      natural: extra?.natural ?? pendingFlags.natural,
+      variant: extra?.variant,
+      cards: extra?.cards,
     };
     setHands(prev => [...prev, newHand]);
     setPendingFlags({ bankerPair: false, playerPair: false, natural: false });
+  }
+
+  // Advance mode: computed live result
+  const pTotal = handTotal(cardEntry.player);
+  const bTotal = handTotal(cardEntry.banker);
+  const cardsEntered = cardEntry.player.slice(0, 2).every(c => c !== null)
+    && cardEntry.banker.slice(0, 2).every(c => c !== null);
+  const advanceOutcome: Outcome = pTotal > bTotal ? "player" : bTotal > pTotal ? "banker" : "tie";
+  const advanceNatural = cardsEntered
+    && cardEntry.player[2] === null && cardEntry.banker[2] === null
+    && (pTotal >= 8 || bTotal >= 8);
+
+  function submitAdvanceHand() {
+    if (!cardsEntered) return;
+    addHand(advanceOutcome, {
+      natural: advanceNatural,
+      cards: {
+        player: cardEntry.player.filter((c): c is number => c !== null),
+        banker: cardEntry.banker.filter((c): c is number => c !== null),
+      },
+    });
+    setCardEntry(emptyCards);
   }
 
   function undoLast() {
@@ -171,17 +218,119 @@ export default function LiveSession() {
           {/* Big entry buttons */}
           <div className="panel">
             <div className="panel-title">Record Result</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button className="btn btn-banker" onClick={() => addHand("banker")}>
-                庄 &nbsp; BANKER
-              </button>
-              <button className="btn btn-player" onClick={() => addHand("player")}>
-                闲 &nbsp; PLAYER
-              </button>
-              <button className="btn btn-tie" onClick={() => addHand("tie")}>
-                和 &nbsp; TIE
-              </button>
+
+            {/* Mode selector */}
+            <div className="mode-tabs">
+              {(["basic", "medium", "advance"] as const).map(m => (
+                <button
+                  key={m}
+                  className={`mode-tab ${entryMode === m ? "active" : ""}`}
+                  onClick={() => setEntryMode(m)}
+                >
+                  {m === "basic" ? "BASIC" : m === "medium" ? "MEDIUM" : "ADVANCE"}
+                </button>
+              ))}
             </div>
+
+            {/* Mode 1 — BASIC */}
+            {entryMode === "basic" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <button className="btn btn-banker" onClick={() => addHand("banker")}>庄 BANKER</button>
+                  <button className="btn btn-banker" style={{ fontSize: 12 }} onClick={() => addHand("banker", { natural: true })}>
+                    BANKER<br />NATURAL
+                  </button>
+                  <button className="btn btn-player" onClick={() => addHand("player")}>闲 PLAYER</button>
+                  <button className="btn btn-player" style={{ fontSize: 12 }} onClick={() => addHand("player", { natural: true })}>
+                    PLAYER<br />NATURAL
+                  </button>
+                </div>
+                <button className="btn btn-tie" style={{ padding: "8px 0" }} onClick={() => addHand("tie")}>和 TIE</button>
+              </div>
+            )}
+
+            {/* Mode 2 — MEDIUM */}
+            {entryMode === "medium" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <button className="btn btn-banker" onClick={() => addHand("banker")}>庄 BANKER</button>
+                  <button className="btn btn-banker" style={{ fontSize: 11 }} onClick={() => addHand("banker", { natural: true })}>BANKER NATURAL</button>
+                  <button className="btn btn-banker" style={{ fontSize: 11 }} onClick={() => addHand("banker", { variant: "sml-tiger" })}>BANKER SML TIGER</button>
+                  <button className="btn btn-banker" style={{ fontSize: 11 }} onClick={() => addHand("banker", { variant: "lge-tiger" })}>BANKER LGE TIGER</button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <button className="btn btn-player" onClick={() => addHand("player")}>闲 PLAYER</button>
+                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { natural: true })}>PLAYER NATURAL</button>
+                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "sml-dragon" })}>PLAYER SML DRAGON</button>
+                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "big-dragon" })}>PLAYER BIG DRAGON</button>
+                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "dragontiger-3" })}>P DRAGONTIGER (3 CARD)</button>
+                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "dragontiger-4" })}>P DRAGONTIGER (4 CARD)</button>
+                  <button className="btn btn-player" style={{ fontSize: 11, gridColumn: "1 / -1" }} onClick={() => addHand("player", { variant: "dragontiger-5" })}>P DRAGONTIGER (5 CARD)</button>
+                </div>
+                <button className="btn btn-tie" style={{ padding: "8px 0" }} onClick={() => addHand("tie")}>和 TIE</button>
+              </div>
+            )}
+
+            {/* Mode 3 — ADVANCE: card-by-card entry */}
+            {entryMode === "advance" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {(["player", "banker"] as const).map(side => (
+                  <div key={side}>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 5, color: side === "banker" ? "var(--banker-red)" : "var(--player-blue)" }}>
+                      {side === "banker" ? "庄 Banker" : "闲 Player"}
+                      <span style={{ marginLeft: 8, color: "var(--text-secondary)", fontWeight: 400 }}>
+                        total: {handTotal(cardEntry[side])}
+                      </span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                      {[0, 1, 2].map(i => (
+                        <select
+                          key={i}
+                          className="input"
+                          style={{ padding: "6px 4px", fontSize: 13, textAlign: "center" }}
+                          value={cardEntry[side][i] === null ? "" : String(cardEntry[side][i])}
+                          onChange={e => {
+                            const v = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                            setCardEntry(prev => {
+                              const next = { ...prev, [side]: [...prev[side]] };
+                              next[side][i] = v;
+                              return next;
+                            });
+                          }}
+                        >
+                          <option value="">{i === 2 ? "Card 3 —" : `Card ${i + 1}`}</option>
+                          {Array.from({ length: 11 }, (_, v) => (
+                            <option key={v} value={v}>{v}</option>
+                          ))}
+                        </select>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Computed result preview */}
+                <div className="panel" style={{ background: "var(--bg-dark)", padding: 10, textAlign: "center" }}>
+                  {cardsEntered ? (
+                    <>
+                      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Result: </span>
+                      <span style={{
+                        fontWeight: 700, fontSize: 15,
+                        color: advanceOutcome === "banker" ? "var(--banker-red)" : advanceOutcome === "player" ? "var(--player-blue)" : "var(--tie-green)",
+                      }}>
+                        {advanceOutcome === "banker" ? "庄 BANKER" : advanceOutcome === "player" ? "闲 PLAYER" : "和 TIE"}
+                        {" "}{bTotal}–{pTotal}
+                        {advanceNatural ? " · NATURAL" : ""}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Enter both first two cards to see the result</span>
+                  )}
+                </div>
+                <button className="btn btn-secondary" disabled={!cardsEntered} onClick={submitAdvanceHand}>
+                  OK — Submit Hand
+                </button>
+              </div>
+            )}
 
             <div className="divider" />
 

@@ -198,6 +198,30 @@ body {
 .road-stone.player { background: var(--player-blue); border: 1.5px solid #6b9fff; }
 .road-stone.tie    { background: var(--tie-green);   border: 1.5px solid #5fffaa; }
 
+/* Record-result mode tabs */
+.mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.mode-tab {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.mode-tab.active {
+  background: var(--bg-panel);
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+
 /* Form inputs */
 .input {
   background: var(--bg-dark);
