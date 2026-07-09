@@ -86,11 +86,11 @@ export default function LiveSession() {
   const [cardEntry, setCardEntry] = useState(emptyCards);
 
   // Advance mode: which slot the next keypad tap fills.
-  // Natural fill order follows the deal: P1, B1, P2, B2, then thirds P3, B3.
+  // Fill order runs left to right per side, Player row then Banker row,
+  // matching the table layout from the player's seat.
   const SLOT_ORDER: { side: "player" | "banker"; idx: number }[] = [
-    { side: "player", idx: 0 }, { side: "banker", idx: 0 },
-    { side: "player", idx: 1 }, { side: "banker", idx: 1 },
-    { side: "player", idx: 2 }, { side: "banker", idx: 2 },
+    { side: "player", idx: 0 }, { side: "player", idx: 1 }, { side: "player", idx: 2 },
+    { side: "banker", idx: 0 }, { side: "banker", idx: 1 }, { side: "banker", idx: 2 },
   ];
   const [activeSlot, setActiveSlot] = useState(0);
 
@@ -364,7 +364,7 @@ export default function LiveSession() {
                             data-side={side}
                             onClick={() => setActiveSlot(slotIdx)}
                           >
-                            {val !== null ? val : <span style={{ opacity: 0.45 }}>{i === 2 ? "3rd" : `C${i + 1}`}</span>}
+                            {val !== null ? val : <span style={{ opacity: 0.45, fontSize: 12, fontWeight: 500 }}>Card {i + 1}</span>}
                           </button>
                         );
                       })}
