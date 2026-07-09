@@ -37,6 +37,9 @@ interface SessionDetails {
   // Non-commission: Banker win on a total of 6 (big/small tiger) pays
   // the Banker bet at 50%.
   commission: boolean;
+  // Side bets available at this table
+  tiger: boolean;
+  dragon: boolean;
 }
 
 export default function LiveSession() {
@@ -45,7 +48,8 @@ export default function LiveSession() {
   // Session details — date/time recorded automatically at session start
   const [sessionStart] = useState(() => new Date());
   const [details, setDetails] = useState<SessionDetails>({
-    casino: "", tableNumber: "", shoeNumber: "", minBet: "", maxBet: "", notes: "", commission: true,
+    casino: "", tableNumber: "", shoeNumber: "", minBet: "", maxBet: "", notes: "",
+    commission: true, tiger: false, dragon: false,
   });
   const [showDetails, setShowDetails] = useState(false);
   const [showFix, setShowFix] = useState(false);
@@ -202,32 +206,29 @@ export default function LiveSession() {
                     value={details.maxBet}
                     onChange={e => setDetails(d => ({ ...d, maxBet: e.target.value }))} />
                 </div>
-                <div>
-                  <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 6 }}>
-                    Commission baccarat?
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {([
+                  { key: "commission", label: "Commission" },
+                  { key: "tiger", label: "Tiger" },
+                  { key: "dragon", label: "Dragon" },
+                ] as const).map(({ key, label }) => (
+                  <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 13, color: "var(--text-secondary)", flex: 1 }}>{label}</span>
                     <button
-                      className={`btn ${details.commission ? "btn-secondary" : "btn-ghost"}`}
-                      style={{ padding: "7px 0", fontSize: 12 }}
-                      onClick={() => setDetails(d => ({ ...d, commission: true }))}
+                      className={`btn ${details[key] ? "btn-secondary" : "btn-ghost"}`}
+                      style={{ padding: "4px 14px", fontSize: 12 }}
+                      onClick={() => setDetails(d => ({ ...d, [key]: true }))}
                     >
                       Yes
                     </button>
                     <button
-                      className={`btn ${!details.commission ? "btn-secondary" : "btn-ghost"}`}
-                      style={{ padding: "7px 0", fontSize: 12 }}
-                      onClick={() => setDetails(d => ({ ...d, commission: false }))}
+                      className={`btn ${!details[key] ? "btn-secondary" : "btn-ghost"}`}
+                      style={{ padding: "4px 14px", fontSize: 12 }}
+                      onClick={() => setDetails(d => ({ ...d, [key]: false }))}
                     >
                       No
                     </button>
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 5 }}>
-                    {details.commission
-                      ? "5% commission applies on winning Banker bets"
-                      : "No commission — Banker win on a total of 6 (big/small tiger) pays Banker bets at 50%"}
-                  </div>
-                </div>
+                ))}
                 <textarea className="input" placeholder="Notes (table feel, dealer, anything worth remembering)"
                   rows={3} style={{ resize: "vertical" }}
                   value={details.notes}
