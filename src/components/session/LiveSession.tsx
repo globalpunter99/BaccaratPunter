@@ -328,19 +328,19 @@ export default function LiveSession() {
             {entryMode === "medium" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                  <button className="btn btn-banker" onClick={() => addHand("banker")}>庄 BANKER</button>
-                  <button className="btn btn-banker" style={{ fontSize: 11 }} onClick={() => addHand("banker", { natural: true })}>BANKER<br />Natural (8/9)</button>
-                  <button className="btn btn-banker" style={{ fontSize: 11 }} onClick={() => addHand("banker", { variant: "sml-tiger" })}>BANKER<br />Sml Tiger</button>
-                  <button className="btn btn-banker" style={{ fontSize: 11 }} onClick={() => addHand("banker", { variant: "lge-tiger" })}>BANKER<br />Lge Tiger</button>
+                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker")}>庄 BANKER</button>
+                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { natural: true })}>BANKER<br /><span className="medium-sub">Natural (8/9)</span></button>
+                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "sml-tiger" })}>BANKER<br /><span className="medium-sub">Sml Tiger</span></button>
+                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "lge-tiger" })}>BANKER<br /><span className="medium-sub">Lge Tiger</span></button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                  <button className="btn btn-player" onClick={() => addHand("player")}>闲 PLAYER</button>
-                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { natural: true })}>PLAYER<br />Natural (8/9)</button>
-                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "sml-dragon" })}>PLAYER<br />Sml Dragon</button>
-                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "big-dragon" })}>PLAYER<br />Big Dragon</button>
-                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "dragontiger-3" })}>PLAYER<br />DragonTiger (3 Card)</button>
-                  <button className="btn btn-player" style={{ fontSize: 11 }} onClick={() => addHand("player", { variant: "dragontiger-4" })}>PLAYER<br />DragonTiger (4 Card)</button>
-                  <button className="btn btn-player" style={{ fontSize: 11, gridColumn: "1 / -1" }} onClick={() => addHand("player", { variant: "dragontiger-5" })}>PLAYER<br />DragonTiger (5 Card)</button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player")}>闲 PLAYER</button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { natural: true })}>PLAYER<br /><span className="medium-sub">Natural (8/9)</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "sml-dragon" })}>PLAYER<br /><span className="medium-sub">Sml Dragon</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "big-dragon" })}>PLAYER<br /><span className="medium-sub">Big Dragon</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-3" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (3 Card)</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-4" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (4 Card)</span></button>
+                  <button className="btn btn-player medium-btn" style={{ gridColumn: "1 / -1" }} onClick={() => addHand("player", { variant: "dragontiger-5" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (5 Card)</span></button>
                 </div>
                 <button className="btn btn-tie" style={{ padding: "8px 0" }} onClick={() => addHand("tie")}>和 TIE</button>
               </div>

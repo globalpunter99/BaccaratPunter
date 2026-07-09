@@ -198,6 +198,20 @@ body {
 .road-stone.player { background: var(--player-blue); border: 1.5px solid #6b9fff; }
 .road-stone.tie    { background: var(--tie-green);   border: 1.5px solid #5fffaa; }
 
+/* Medium-mode buttons: uniform height, two-line labels */
+.medium-btn {
+  font-size: 12px;
+  line-height: 1.25;
+  padding: 8px 2px;
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.medium-sub { font-size: 11px; font-weight: 600; }
+.medium-sub.small { font-size: 9.5px; white-space: nowrap; }
+
 /* Record-result mode tabs */
 .mode-tabs {
   display: grid;
