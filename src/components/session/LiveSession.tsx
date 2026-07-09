@@ -280,7 +280,7 @@ export default function LiveSession() {
                     </p>
                     <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
                       All modes feed the same roads — extra detail is stored on the hand
-                      for later analysis. Made a mistake? Use Undo or Fix a Result.
+                      for later analysis. Made a mistake? Use Undo or Edit a Game Result.
                     </p>
                   </div>
                 </div>
@@ -415,7 +415,7 @@ export default function LiveSession() {
               style={{ width: "100%", fontSize: 12, textAlign: "left" }}
               onClick={() => setShowFix(p => !p)}
             >
-              {showFix ? "▲" : "▼"} Fix a Result
+              {showFix ? "▲" : "▼"} Edit a Game Result
             </button>
             {showFix && (
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
