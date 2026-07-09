@@ -360,9 +360,9 @@ select.input { cursor: pointer; }
 /* Predictor table (ask the road) */
 .predictor-table {
   display: grid;
-  grid-template-columns: 52px 52px;
+  grid-template-columns: 62px 62px;
   grid-template-rows: auto; /* header row sizes to its two-line content */
-  grid-auto-rows: 30px;
+  grid-auto-rows: 38px;
   background: var(--bg-panel);
   border: 1px solid var(--border-panel);
   border-radius: var(--radius-md);
@@ -382,8 +382,8 @@ select.input { cursor: pointer; }
   grid-auto-rows: auto;
   height: auto;
 }
-.predictor-header-cn { font-size: 15px; font-weight: 700; line-height: 1.1; }
-.predictor-header-en { font-size: 9px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.1; }
+.predictor-header-cn { font-size: 17px; font-weight: 700; line-height: 1.1; }
+.predictor-header-en { font-size: 11px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.1; }
 .predictor-header.banker { background: var(--banker-red); }
 .predictor-header.player { background: var(--player-blue); }
 .predictor-cell {

@@ -247,7 +247,7 @@ function nextMark(
 }
 
 function PredictorCell({ mark, style }: { mark: RoadMark | null; style: MarkStyle }) {
-  const size = 18;
+  const size = 22;
   return (
     <div className="predictor-cell">
       {mark && (
