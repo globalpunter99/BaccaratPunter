@@ -243,16 +243,17 @@ export default function LiveSession() {
           <div className="panel" style={{ position: "relative" }}>
             <div className="flex items-center justify-between">
               <div className="panel-title">Record Result</div>
-              <div className="flex items-center" style={{ gap: 8 }}>
-                <span className="game-indicator">Game {hands.length + 1}</span>
-                <button
-                  className="info-icon"
-                  title="How this works"
-                  onClick={() => setShowRecordInfo(true)}
-                >
-                  i
-                </button>
-              </div>
+              <button
+                className="info-icon"
+                title="How this works"
+                onClick={() => setShowRecordInfo(true)}
+              >
+                i
+              </button>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+              <span className="game-indicator">Game {hands.length + 1}</span>
             </div>
 
             {/* Info popup */}
