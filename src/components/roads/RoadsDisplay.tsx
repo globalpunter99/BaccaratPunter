@@ -226,9 +226,9 @@ function StatsPanel({ outcomes }: { outcomes: Outcome[] }) {
   return (
     <div className="stats-panel">
       <div className="stats-row"><span className="stats-label">局数 Games</span><span className="stats-value games">{outcomes.length}</span></div>
-      <div className="stats-row"><span className="stats-label"><span className="stats-dot banker-dot" />庄 Banker</span><span className="stats-value banker">{banker}</span></div>
-      <div className="stats-row"><span className="stats-label"><span className="stats-dot player-dot" />闲 Player</span><span className="stats-value player">{player}</span></div>
-      <div className="stats-row"><span className="stats-label"><span className="stats-dot tie-dot" />和 Tie</span><span className="stats-value tie">{tie}</span></div>
+      <div className="stats-row"><span className="stats-label"><span className="stats-dot banker-dot">庄</span>Banker</span><span className="stats-value banker">{banker}</span></div>
+      <div className="stats-row"><span className="stats-label"><span className="stats-dot player-dot">闲</span>Player</span><span className="stats-value player">{player}</span></div>
+      <div className="stats-row"><span className="stats-label"><span className="stats-dot tie-dot">和</span>Tie</span><span className="stats-value tie">{tie}</span></div>
     </div>
   );
 }
