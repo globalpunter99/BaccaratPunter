@@ -385,23 +385,36 @@ export default function LiveSession() {
                 {/* Computed result preview */}
                 <div className="panel" style={{ background: "var(--bg-dark)", padding: 10, textAlign: "center" }}>
                   {cardsEntered ? (
-                    <>
-                      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Result: </span>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>
                       <span style={{
-                        fontWeight: 700, fontSize: 15,
                         color: advanceOutcome === "banker" ? "var(--banker-red)" : advanceOutcome === "player" ? "var(--player-blue)" : "var(--tie-green)",
                       }}>
-                        {advanceOutcome === "banker" ? "庄 BANKER" : advanceOutcome === "player" ? "闲 PLAYER" : "和 TIE"}
-                        {" "}{bTotal}–{pTotal}
-                        {advanceNatural ? " · NATURAL" : ""}
+                        {advanceOutcome === "banker" ? "庄 Banker Wins" : advanceOutcome === "player" ? "闲 Player Wins" : "和 Tie"}
                       </span>
-                    </>
+                      {" "}
+                      {advanceOutcome === "tie" ? (
+                        <span style={{ color: "var(--tie-green)" }}>{bTotal} v {pTotal}</span>
+                      ) : advanceOutcome === "banker" ? (
+                        <>
+                          <span style={{ color: "var(--banker-red)" }}>{bTotal}</span>
+                          <span style={{ color: "var(--text-secondary)" }}> v </span>
+                          <span style={{ color: "var(--player-blue)" }}>{pTotal}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ color: "var(--player-blue)" }}>{pTotal}</span>
+                          <span style={{ color: "var(--text-secondary)" }}> v </span>
+                          <span style={{ color: "var(--banker-red)" }}>{bTotal}</span>
+                        </>
+                      )}
+                      {advanceNatural && <span style={{ color: "var(--gold)" }}> · NATURAL</span>}
+                    </span>
                   ) : (
                     <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Enter both first two cards to see the result</span>
                   )}
                 </div>
                 <button className="btn btn-secondary" disabled={!cardsEntered} onClick={submitAdvanceHand}>
-                  OK — Submit Hand
+                  OK — Record Hand
                 </button>
               </div>
             )}
