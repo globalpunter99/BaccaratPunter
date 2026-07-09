@@ -51,6 +51,7 @@ export default function LiveSession() {
   });
   const [showDetails, setShowDetails] = useState(false);
   const [showFix, setShowFix] = useState(false);
+  const [showRecordInfo, setShowRecordInfo] = useState(false);
 
   // Correction bar
   const [fixGameNo, setFixGameNo] = useState("");
@@ -241,8 +242,52 @@ export default function LiveSession() {
           </div>
 
           {/* Big entry buttons */}
-          <div className="panel">
-            <div className="panel-title">Record Result</div>
+          <div className="panel" style={{ position: "relative" }}>
+            <div className="flex items-center justify-between">
+              <div className="panel-title">Record Result</div>
+              <button
+                className="info-icon"
+                title="How this works"
+                onClick={() => setShowRecordInfo(true)}
+              >
+                i
+              </button>
+            </div>
+
+            {/* Info popup */}
+            {showRecordInfo && (
+              <div className="info-overlay" onClick={() => setShowRecordInfo(false)}>
+                <div className="info-popup" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>Recording Results</div>
+                    <button className="info-close" onClick={() => setShowRecordInfo(false)}>✕</button>
+                  </div>
+                  <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-secondary)" }}>
+                    <p style={{ margin: "0 0 8px" }}>
+                      Record each hand as it finishes. You can switch mode at any time,
+                      hand by hand — use whichever suits the pace of the game.
+                    </p>
+                    <p style={{ margin: "0 0 4px" }}>
+                      <strong style={{ color: "var(--text-primary)" }}>BASIC</strong> — one tap:
+                      Banker, Player, their Naturals, or Tie.
+                    </p>
+                    <p style={{ margin: "0 0 4px" }}>
+                      <strong style={{ color: "var(--text-primary)" }}>MEDIUM</strong> — adds exotic
+                      results: Tigers (Banker wins on 6), Dragons and DragonTiger variants.
+                    </p>
+                    <p style={{ margin: "0 0 8px" }}>
+                      <strong style={{ color: "var(--text-primary)" }}>ADVANCE</strong> — enter the
+                      actual card values on the keypad in deal order. The winner is
+                      calculated for you; check it matches the table, then press OK.
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+                      All modes feed the same roads — extra detail is stored on the hand
+                      for later analysis. Made a mistake? Use Undo or Fix a Result.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Mode selector */}
             <div className="mode-tabs">
