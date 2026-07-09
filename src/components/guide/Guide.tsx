@@ -89,7 +89,7 @@ export default function Guide() {
           <Legend label="Player win (Big Road) — hollow blue ring">
             <div className="road-stone big-road-player" style={{ width: 22, height: 22 }} />
           </Legend>
-          <Legend label='Big Eye Road mark — hollow circle ("donut")'>
+          <Legend label='Big Eye Boy mark — hollow circle ("donut")'>
             <div className="mark-circle donut red" style={{ width: 18, height: 18 }} />
           </Legend>
           <Legend label="Small Road mark — solid circle">
@@ -142,7 +142,7 @@ export default function Guide() {
         </P>
         <P>
           The only difference between the three roads is <strong>how far back they compare</strong>:
-          Big Eye Road compares against the previous column, Small Road skips one column back,
+          Big Eye Boy compares against the previous column, Small Road skips one column back,
           and Cockroach Road skips two. Think of them as three witnesses with different memories —
           when <strong>all three agree</strong>, the shoe is behaving very consistently; when they
           disagree, the shoe is unreadable.

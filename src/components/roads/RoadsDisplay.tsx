@@ -308,7 +308,7 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
       {/* Row 2 — left: Big Eye above Small Road · right: Cockroach two bands */}
       <div className="roads-mid-grid">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <RoadSection titleCn="大眼仔" titleEn="Big Eye Road">
+          <RoadSection titleCn="大眼仔" titleEn="Big Eye Boy">
             <DerivedRoad marks={beb} cellSize={smallCell} markStyle="donut" />
           </RoadSection>
           <RoadSection titleCn="小路" titleEn="Small Road">

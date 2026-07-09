@@ -150,7 +150,7 @@ export default function ProfileBuilder() {
         {[
           { val: "bigroad_streak", label: "Big Road — a clear streak (same side 3+ in a row)" },
           { val: "bigroad_chop", label: "Big Road — alternating pattern (ping-pong)" },
-          { val: "beb_aligned", label: "Big Eye Road — mostly solid circles (regular pattern)" },
+          { val: "beb_aligned", label: "Big Eye Boy — mostly solid circles (regular pattern)" },
           { val: "sr_aligned", label: "Small Road — mostly solid (short-lookback alignment)" },
           { val: "cp_aligned", label: "Cockroach Road — mostly solid (long-lookback alignment)" },
           { val: "all_three_aligned", label: "All three derived roads aligned in the same direction" },
