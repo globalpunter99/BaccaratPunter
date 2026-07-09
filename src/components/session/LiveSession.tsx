@@ -241,8 +241,9 @@ export default function LiveSession() {
 
           {/* Big entry buttons */}
           <div className="panel" style={{ position: "relative" }}>
-            <div className="flex items-center justify-between">
-              <div className="panel-title">Record Result</div>
+            <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+              <div className="panel-title" style={{ marginBottom: 0 }}>Record Result</div>
+              <span className="game-indicator">Game {hands.length + 1}</span>
               <button
                 className="info-icon"
                 title="How this works"
@@ -250,10 +251,6 @@ export default function LiveSession() {
               >
                 i
               </button>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-              <span className="game-indicator">Game {hands.length + 1}</span>
             </div>
 
             {/* Info popup */}
