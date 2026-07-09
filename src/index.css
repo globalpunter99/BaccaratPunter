@@ -222,6 +222,38 @@ body {
   color: var(--text-primary);
 }
 
+/* Advance mode: card slots + keypad */
+.card-slot {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 9px 0;
+  cursor: pointer;
+  text-align: center;
+}
+.card-slot[data-active] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.card-slot[data-side="banker"][data-active] { border-color: var(--banker-red); box-shadow: 0 0 0 1px var(--banker-red); }
+.card-slot[data-side="player"][data-active] { border-color: var(--player-blue); box-shadow: 0 0 0 1px var(--player-blue); }
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.keypad-btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 700;
+  padding: 11px 0;
+  cursor: pointer;
+}
+.keypad-btn:active { background: var(--border-accent); }
+
 /* Form inputs */
 .input {
   background: var(--bg-dark);

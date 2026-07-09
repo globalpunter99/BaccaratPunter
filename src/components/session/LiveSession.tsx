@@ -86,6 +86,31 @@ export default function LiveSession() {
   };
   const [cardEntry, setCardEntry] = useState(emptyCards);
 
+  // Advance mode: which slot the next keypad tap fills.
+  // Natural fill order follows the deal: P1, B1, P2, B2, then thirds P3, B3.
+  const SLOT_ORDER: { side: "player" | "banker"; idx: number }[] = [
+    { side: "player", idx: 0 }, { side: "banker", idx: 0 },
+    { side: "player", idx: 1 }, { side: "banker", idx: 1 },
+    { side: "player", idx: 2 }, { side: "banker", idx: 2 },
+  ];
+  const [activeSlot, setActiveSlot] = useState(0);
+
+  function tapCardValue(v: number) {
+    if (activeSlot >= SLOT_ORDER.length) return;
+    const { side, idx } = SLOT_ORDER[activeSlot];
+    setCardEntry(prev => {
+      const next = { ...prev, [side]: [...prev[side]] };
+      next[side][idx] = v;
+      return next;
+    });
+    setActiveSlot(s => Math.min(s + 1, SLOT_ORDER.length));
+  }
+
+  function clearAdvance() {
+    setCardEntry(emptyCards);
+    setActiveSlot(0);
+  }
+
   function addHand(outcome: Outcome, extra?: { natural?: boolean; variant?: string; cards?: HandRecord["cards"] }) {
     const newHand: HandRecord = {
       id: hands.length + 1,
@@ -118,7 +143,7 @@ export default function LiveSession() {
         banker: cardEntry.banker.filter((c): c is number => c !== null),
       },
     });
-    setCardEntry(emptyCards);
+    clearAdvance();
   }
 
   function undoLast() {
@@ -271,9 +296,10 @@ export default function LiveSession() {
               </div>
             )}
 
-            {/* Mode 3 — ADVANCE: card-by-card entry */}
+            {/* Mode 3 — ADVANCE: one-touch keypad entry */}
             {entryMode === "advance" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* Card slots — tap a slot to redirect the next keypad tap */}
                 {(["player", "banker"] as const).map(side => (
                   <div key={side}>
                     <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 5, color: side === "banker" ? "var(--banker-red)" : "var(--player-blue)" }}>
@@ -283,30 +309,35 @@ export default function LiveSession() {
                       </span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-                      {[0, 1, 2].map(i => (
-                        <select
-                          key={i}
-                          className="input"
-                          style={{ padding: "6px 4px", fontSize: 13, textAlign: "center" }}
-                          value={cardEntry[side][i] === null ? "" : String(cardEntry[side][i])}
-                          onChange={e => {
-                            const v = e.target.value === "" ? null : parseInt(e.target.value, 10);
-                            setCardEntry(prev => {
-                              const next = { ...prev, [side]: [...prev[side]] };
-                              next[side][i] = v;
-                              return next;
-                            });
-                          }}
-                        >
-                          <option value="">{i === 2 ? "Card 3 —" : `Card ${i + 1}`}</option>
-                          {Array.from({ length: 11 }, (_, v) => (
-                            <option key={v} value={v}>{v}</option>
-                          ))}
-                        </select>
-                      ))}
+                      {[0, 1, 2].map(i => {
+                        const slotIdx = SLOT_ORDER.findIndex(s => s.side === side && s.idx === i);
+                        const isActive = slotIdx === activeSlot;
+                        const val = cardEntry[side][i];
+                        return (
+                          <button
+                            key={i}
+                            className="card-slot"
+                            data-active={isActive || undefined}
+                            data-side={side}
+                            onClick={() => setActiveSlot(slotIdx)}
+                          >
+                            {val !== null ? val : <span style={{ opacity: 0.45 }}>{i === 2 ? "3rd" : `C${i + 1}`}</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
+
+                {/* One-touch 0–9 keypad */}
+                <div className="keypad">
+                  {Array.from({ length: 10 }, (_, v) => (
+                    <button key={v} className="keypad-btn" onClick={() => tapCardValue(v)}>{v}</button>
+                  ))}
+                </div>
+                <button className="btn btn-ghost" style={{ padding: "6px 0", fontSize: 12 }} onClick={clearAdvance}>
+                  ✕ Clear cards
+                </button>
 
                 {/* Computed result preview */}
                 <div className="panel" style={{ background: "var(--bg-dark)", padding: 10, textAlign: "center" }}>
