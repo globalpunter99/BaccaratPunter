@@ -426,7 +426,7 @@ select.input { cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 16px;
-  font-size: 15px;
+  font-size: 17px;
 }
 .stats-row .stats-label { min-width: 110px; }
 .stats-label {
@@ -441,16 +441,17 @@ select.input { cursor: pointer; }
 .stats-value.player { color: var(--player-blue); }
 .stats-value.tie    { color: var(--tie-green); }
 .stats-dot {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   flex-shrink: 0;
+  line-height: 1;
 }
 .stats-dot.banker-dot { background: var(--banker-red); }
 .stats-dot.player-dot { background: var(--player-blue); }
