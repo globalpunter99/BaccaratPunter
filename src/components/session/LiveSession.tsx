@@ -313,11 +313,11 @@ export default function LiveSession() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <button className="btn btn-banker" onClick={() => addHand("banker")}>庄 BANKER</button>
                   <button className="btn btn-banker" style={{ fontSize: 12 }} onClick={() => addHand("banker", { natural: true })}>
-                    Banker<br />Natural (8/9)
+                    BANKER<br />Natural (8/9)
                   </button>
                   <button className="btn btn-player" onClick={() => addHand("player")}>闲 PLAYER</button>
                   <button className="btn btn-player" style={{ fontSize: 12 }} onClick={() => addHand("player", { natural: true })}>
-                    Player<br />Natural (8/9)
+                    PLAYER<br />Natural (8/9)
                   </button>
                 </div>
                 <button className="btn btn-tie" style={{ padding: "8px 0" }} onClick={() => addHand("tie")}>和 TIE</button>
