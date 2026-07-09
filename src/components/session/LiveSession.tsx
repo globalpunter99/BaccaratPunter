@@ -41,8 +41,6 @@ interface SessionDetails {
 
 export default function LiveSession() {
   const [hands, setHands] = useState<HandRecord[]>([]);
-  const [showPairNatural, setShowPairNatural] = useState(false);
-  const [pendingFlags, setPendingFlags] = useState({ bankerPair: false, playerPair: false, natural: false });
 
   // Session details — date/time recorded automatically at session start
   const [sessionStart] = useState(() => new Date());
@@ -116,13 +114,13 @@ export default function LiveSession() {
     const newHand: HandRecord = {
       id: hands.length + 1,
       outcome,
-      ...pendingFlags,
-      natural: extra?.natural ?? pendingFlags.natural,
+      bankerPair: false,
+      playerPair: false,
+      natural: extra?.natural ?? false,
       variant: extra?.variant,
       cards: extra?.cards,
     };
     setHands(prev => [...prev, newHand]);
-    setPendingFlags({ bankerPair: false, playerPair: false, natural: false });
   }
 
   // Advance mode: computed live result
@@ -408,36 +406,6 @@ export default function LiveSession() {
               </div>
             )}
 
-            <div className="divider" />
-
-            {/* Optional flags */}
-            <button
-              className="btn btn-ghost"
-              style={{ width: "100%", fontSize: 12 }}
-              onClick={() => setShowPairNatural(p => !p)}
-            >
-              {showPairNatural ? "▲" : "▼"} Pairs / Natural flags
-            </button>
-
-            {showPairNatural && (
-              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                {(["bankerPair", "playerPair", "natural"] as const).map(flag => (
-                  <label key={flag} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
-                    <input
-                      type="checkbox"
-                      checked={pendingFlags[flag]}
-                      onChange={e => setPendingFlags(p => ({ ...p, [flag]: e.target.checked }))}
-                    />
-                    <span style={{ color: "var(--text-secondary)" }}>
-                      {flag === "bankerPair" ? "Banker Pair" : flag === "playerPair" ? "Player Pair" : "Natural (8/9)"}
-                    </span>
-                  </label>
-                ))}
-                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-                  Flags apply to the next hand entered
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Correction bar */}
