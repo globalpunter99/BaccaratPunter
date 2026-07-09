@@ -315,7 +315,7 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
             <DerivedRoad marks={sr} cellSize={smallCell} markStyle="solid" />
           </RoadSection>
         </div>
-        <RoadSection titleCn="蟑螂路" titleEn="Cockroach Road">
+        <RoadSection titleCn="曱甴路" titleEn="Cockroach Road">
           <CockroachBands marks={cp} cellSize={smallCell} bandCols={DERIVED_MIN_COLS} />
         </RoadSection>
       </div>
