@@ -525,10 +525,10 @@ select.input { cursor: pointer; }
 /* ── Hand-extra markers (naturals, pairs, tigers, dragons) ── */
 .marker-natural {
   position: absolute;
-  top: -2px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
   font-weight: 900;
   color: var(--gold);
   line-height: 1;
