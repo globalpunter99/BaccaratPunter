@@ -166,10 +166,18 @@ function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?:
                   className={`road-stone big-road-${p.value.side}`}
                   style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
                 />
-                {/* One slash per tie (up to 3), offset so consecutive ties are visible */}
-                {Array.from({ length: Math.min(p.value.ties, 3) }).map((_, i) => (
-                  <div key={i} className={`tie-slash tie-pos-${i}`} />
-                ))}
+                {/* One slash per tie, offset within the tile; 5+ consecutive
+                    ties fill the tile solid green (more lines add nothing) */}
+                {p.value.ties >= 5 ? (
+                  <div
+                    className="tie-solid"
+                    style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                  />
+                ) : (
+                  Array.from({ length: Math.min(p.value.ties, 4) }).map((_, i) => (
+                    <div key={i} className={`tie-slash tie-pos-${i}`} />
+                  ))
+                )}
                 <StoneMarkers extra={stoneExtra.get(p.value)} />
               </>
             )}
