@@ -517,6 +517,114 @@ select.input { cursor: pointer; }
   transform: translateY(-50%) rotate(-45deg);
   pointer-events: none;
 }
+/* Consecutive ties: each extra slash sits at a visible offset */
+.tie-slash.tie-pos-0 { transform: translateY(-50%) rotate(-45deg); }
+.tie-slash.tie-pos-1 { transform: translateY(calc(-50% + 5px)) rotate(-45deg); }
+.tie-slash.tie-pos-2 { transform: translateY(calc(-50% - 5px)) rotate(-45deg); }
+
+/* ── Hand-extra markers (naturals, pairs, tigers, dragons) ── */
+.marker-natural {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 3px rgba(0,0,0,0.8);
+  z-index: 2;
+}
+.marker-pair {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid #fff;
+  pointer-events: none;
+  z-index: 2;
+}
+.marker-pair.player-pair { top: 1px; right: 1px; background: var(--player-blue); }
+.marker-pair.banker-pair { bottom: 1px; left: 1px; background: var(--banker-red); }
+.marker-variant {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  font-size: 10px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.7));
+}
+.marker-variant.big { font-size: 14px; }
+.marker-variant.tiger  { border-radius: 50%; }
+.marker-variant.dragon { border-radius: 50%; }
+.marker-variant.dragontiger {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #1c8a4c 50%, var(--banker-red) 50%);
+  border: 1px solid var(--gold);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Inline (non-positioned) versions for legend + stats */
+.marker-natural.inline, .marker-pair.inline, .marker-variant.inline {
+  position: static;
+  transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Side-bet counters in the stats panel */
+.stats-side-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px 10px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-panel);
+}
+.stats-side-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.stats-side-item b { color: var(--text-primary); }
+
+/* Key button on the Big Road header */
+.legend-key-btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--gold-muted);
+  border-radius: var(--radius-sm);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-left: 12px;
+  white-space: nowrap;
+}
+.legend-key-btn:hover { border-color: var(--gold); }
+.legend-list { display: flex; flex-direction: column; gap: 9px; }
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
 
 /* ── Buttons ── */
 .btn {

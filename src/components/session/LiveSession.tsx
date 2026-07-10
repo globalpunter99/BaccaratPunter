@@ -540,7 +540,15 @@ export default function LiveSession() {
 
         {/* Right column — roads */}
         <div>
-          <RoadsDisplay outcomes={outcomes} />
+          <RoadsDisplay
+            outcomes={outcomes}
+            extras={hands.map(h => ({
+              natural: h.natural,
+              bankerPair: h.bankerPair,
+              playerPair: h.playerPair,
+              variant: h.variant,
+            }))}
+          />
         </div>
       </div>
     </div>

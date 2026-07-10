@@ -6,9 +6,46 @@ import {
   type RoadMark, type PlacedCell, type BigRoadStone,
 } from "../../game/roads";
 
+// Extra elements of a hand beyond the outcome, displayed as markers on
+// the Big Road and Bead Plate. Indexed in step with `outcomes`.
+export interface HandExtra {
+  natural?: boolean;
+  bankerPair?: boolean;
+  playerPair?: boolean;
+  // sml-tiger | lge-tiger | sml-dragon | big-dragon | dragontiger-3/4/5
+  variant?: string;
+}
+
 interface Props {
   outcomes: Outcome[];
+  extras?: (HandExtra | undefined)[];
   compact?: boolean;
+}
+
+// ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
+function VariantBadge({ variant }: { variant: string }) {
+  if (variant === "sml-tiger" || variant === "lge-tiger") {
+    return <span className={`marker-variant tiger ${variant === "lge-tiger" ? "big" : ""}`}>🐯</span>;
+  }
+  if (variant === "sml-dragon" || variant === "big-dragon") {
+    return <span className={`marker-variant dragon ${variant === "big-dragon" ? "big" : ""}`}>🐲</span>;
+  }
+  if (variant.startsWith("dragontiger-")) {
+    return <span className="marker-variant dragontiger">{variant.split("-")[1]}</span>;
+  }
+  return null;
+}
+
+function StoneMarkers({ extra }: { extra?: HandExtra }) {
+  if (!extra) return null;
+  return (
+    <>
+      {extra.natural && <span className="marker-natural">N</span>}
+      {extra.playerPair && <span className="marker-pair player-pair" />}
+      {extra.bankerPair && <span className="marker-pair banker-pair" />}
+      {extra.variant && <VariantBadge variant={extra.variant} />}
+    </>
+  );
 }
 
 const ROWS = 6;
@@ -18,7 +55,7 @@ const BEAD_MIN_COLS = 18;
 
 // ── Bead Plate ──────────────────────────────────────────────────────────────
 // Populated top-to-bottom, left-to-right (column-major fill).
-function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number }) {
+function BeadPlate({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number }) {
   const cells = toBeadPlate(outcomes, ROWS);
   const cols = Math.max(Math.ceil(outcomes.length / ROWS), BEAD_MIN_COLS);
 
@@ -35,16 +72,20 @@ function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: numb
       {Array.from({ length: ROWS * cols }).map((_, idx) => {
         const row = Math.floor(idx / cols);
         const col = idx % cols;
+        const handIdx = col * ROWS + row;
         const cell = cells.find(c => c.col === col && c.row === row);
         return (
           <div key={idx} className="road-cell">
             {cell && (
-              <div
-                className={`road-stone ${cell.outcome}`}
-                style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
-              >
-                {cell.outcome === "banker" ? "B" : cell.outcome === "player" ? "P" : "T"}
-              </div>
+              <>
+                <div
+                  className={`road-stone ${cell.outcome}`}
+                  style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                >
+                  {cell.outcome === "banker" ? "B" : cell.outcome === "player" ? "P" : "T"}
+                </div>
+                <StoneMarkers extra={extras?.[handIdx]} />
+              </>
             )}
           </div>
         );
@@ -54,8 +95,17 @@ function BeadPlate({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: numb
 }
 
 // ── Big Road ─────────────────────────────────────────────────────────────────
-function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number }) {
-  const placed = placeBigRoad(toBigRoad(outcomes), ROWS);
+function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number }) {
+  const stones = toBigRoad(outcomes);
+  // Stones drop ties, so stone i corresponds to the i-th non-tie hand.
+  const stoneExtra = new Map<BigRoadStone, HandExtra | undefined>();
+  if (extras) {
+    let stoneIdx = 0;
+    outcomes.forEach((o, handIdx) => {
+      if (o !== "tie") stoneExtra.set(stones[stoneIdx++], extras[handIdx]);
+    });
+  }
+  const placed = placeBigRoad(stones, ROWS);
   const maxCol = placed.length ? Math.max(...placed.map(p => p.col)) + 1 : 0;
   const cols = Math.max(maxCol, BIG_ROAD_MIN_COLS);
 
@@ -84,7 +134,11 @@ function BigRoad({ outcomes, cellSize }: { outcomes: Outcome[]; cellSize: number
                   className={`road-stone big-road-${p.value.side}`}
                   style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
                 />
-                {p.value.ties > 0 && <div className="tie-slash" />}
+                {/* One slash per tie (up to 3), offset so consecutive ties are visible */}
+                {Array.from({ length: Math.min(p.value.ties, 3) }).map((_, i) => (
+                  <div key={i} className={`tie-slash tie-pos-${i}`} />
+                ))}
+                <StoneMarkers extra={stoneExtra.get(p.value)} />
               </>
             )}
           </div>
@@ -219,17 +273,74 @@ function RoadSection({
 }
 
 // ── Stats panel (bottom-right, casino style) ─────────────────────────────────
-function StatsPanel({ outcomes }: { outcomes: Outcome[] }) {
+function StatsPanel({ outcomes, extras }: { outcomes: Outcome[]; extras?: (HandExtra | undefined)[] }) {
   const banker = outcomes.filter(o => o === "banker").length;
   const player = outcomes.filter(o => o === "player").length;
   const tie = outcomes.filter(o => o === "tie").length;
+
+  const count = (pred: (e: HandExtra) => boolean) =>
+    (extras ?? []).filter((e): e is HandExtra => !!e && pred(e)).length;
+  const naturals = count(e => !!e.natural);
+  const bPairs = count(e => !!e.bankerPair);
+  const pPairs = count(e => !!e.playerPair);
+  const tigers = count(e => e.variant === "sml-tiger" || e.variant === "lge-tiger");
+  const dragons = count(e => e.variant === "sml-dragon" || e.variant === "big-dragon");
+  const dragonTigers = count(e => !!e.variant?.startsWith("dragontiger-"));
+
   return (
     <div className="stats-panel">
       <div className="stats-row"><span className="stats-label">局数 Games</span><span className="stats-value games">{outcomes.length}</span></div>
       <div className="stats-row"><span className="stats-label"><span className="stats-dot banker-dot">庄</span>Banker</span><span className="stats-value banker">{banker}</span></div>
       <div className="stats-row"><span className="stats-label"><span className="stats-dot player-dot">闲</span>Player</span><span className="stats-value player">{player}</span></div>
       <div className="stats-row"><span className="stats-label"><span className="stats-dot tie-dot">和</span>Tie</span><span className="stats-value tie">{tie}</span></div>
+      <div className="stats-side-grid">
+        <span className="stats-side-item"><b className="marker-natural inline">N</b> Natural <b>{naturals}</b></span>
+        <span className="stats-side-item"><span className="marker-pair banker-pair inline" /> B Pair <b>{bPairs}</b></span>
+        <span className="stats-side-item">🐯 Tiger <b>{tigers}</b></span>
+        <span className="stats-side-item"><span className="marker-pair player-pair inline" /> P Pair <b>{pPairs}</b></span>
+        <span className="stats-side-item">🐲 Dragon <b>{dragons}</b></span>
+        <span className="stats-side-item">🐉🐯 D-Tiger <b>{dragonTigers}</b></span>
+      </div>
     </div>
+  );
+}
+
+// ── Key / legend popup ───────────────────────────────────────────────────────
+function LegendKey() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="legend-key-btn" title="Symbol key" onClick={() => setOpen(true)}>
+        🔑 Key
+      </button>
+      {open && (
+        <div className="info-overlay" onClick={() => setOpen(false)}>
+          <div className="info-popup" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>Symbol Key</div>
+              <button className="info-close" onClick={() => setOpen(false)}>✕</button>
+            </div>
+            <div className="legend-list">
+              <div className="legend-row"><span className="road-stone big-road-banker" style={{ width: 20, height: 20 }} /> Banker win</div>
+              <div className="legend-row"><span className="road-stone big-road-player" style={{ width: 20, height: 20 }} /> Player win</div>
+              <div className="legend-row">
+                <span style={{ position: "relative", width: 20, height: 20, display: "inline-block" }}>
+                  <span className="road-stone big-road-banker" style={{ width: 20, height: 20, display: "block" }} />
+                  <span className="tie-slash tie-pos-0" />
+                </span>
+                Tie — one slash per tie; consecutive ties stack at offsets
+              </div>
+              <div className="legend-row"><b className="marker-natural inline">N</b> Natural win (8/9 on two cards)</div>
+              <div className="legend-row"><span className="marker-pair player-pair inline" /> Player pair (top-right dot)</div>
+              <div className="legend-row"><span className="marker-pair banker-pair inline" /> Banker pair (bottom-left dot)</div>
+              <div className="legend-row"><span className="marker-variant tiger inline">🐯</span> Small Tiger — Banker wins on 6 (two cards); larger icon = Big Tiger (three cards)</div>
+              <div className="legend-row"><span className="marker-variant dragon inline">🐲</span> Small Dragon — Player wins 7 v Banker ≤5 (two cards); larger icon = Big Dragon (three cards)</div>
+              <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (Dragon bets also pay)</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -288,7 +399,7 @@ function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
 }
 
 // ── Main export — casino screen layout ───────────────────────────────────────
-export default function RoadsDisplay({ outcomes, compact = false }: Props) {
+export default function RoadsDisplay({ outcomes, extras, compact = false }: Props) {
   const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
   const beb    = useMemo(() => bigEyeBoy(stones),    [stones]);
   const sr     = useMemo(() => smallRoad(stones),    [stones]);
@@ -301,8 +412,8 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Row 1 — Big Road full width */}
       <RoadSection titleCn="大路" titleEn="Big Road" align="left"
-        headerExtra={<HeaderStats outcomes={outcomes} />}>
-        <BigRoad outcomes={outcomes} cellSize={bigCell} />
+        headerExtra={<><HeaderStats outcomes={outcomes} /><LegendKey /></>}>
+        <BigRoad outcomes={outcomes} extras={extras} cellSize={bigCell} />
       </RoadSection>
 
       {/* Row 2 — left: Big Eye above Small Road · right: Cockroach two bands */}
@@ -324,10 +435,10 @@ export default function RoadsDisplay({ outcomes, compact = false }: Props) {
       <div className="roads-bottom-grid">
         <RoadSection titleCn="珠盘路" titleEn="Bead Plate"
           headerExtra={<HeaderStats outcomes={outcomes} />}>
-          <BeadPlate outcomes={outcomes} cellSize={bigCell} />
+          <BeadPlate outcomes={outcomes} extras={extras} cellSize={bigCell} />
         </RoadSection>
         <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
-          <StatsPanel outcomes={outcomes} />
+          <StatsPanel outcomes={outcomes} extras={extras} />
           <PredictorTable outcomes={outcomes} />
         </div>
       </div>
