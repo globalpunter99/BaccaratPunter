@@ -23,12 +23,45 @@ interface Props {
 }
 
 // ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
+// Stencil-style Chinese dragon head (side profile: horns, snout, beard,
+// whisker). Renders in green with a gold outline on the big variant.
+export function DragonIcon({ size = 12, big = false }: { size?: number; big?: boolean }) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24"
+      style={{ display: "block" }}
+      aria-label="dragon"
+    >
+      <path
+        d="M2 13 C4 11 7 10 9 10 L10.5 6 L12 9.5 L14.5 5 L15.5 9.7
+           C19 10.5 21 13 21 15.5 C21 19 18 21 14.5 21
+           C13.5 21 12.8 20.6 12.3 20 L9.5 21.5 L9.8 19.5 L7 20.3 L8 18.4
+           C6 18 4.5 16.8 4 15.5 L2 16 L3 14.4 Z"
+        fill="#1fa05a"
+        stroke={big ? "var(--gold, #f5c842)" : "none"}
+        strokeWidth={big ? 1.2 : 0}
+        strokeLinejoin="round"
+      />
+      <circle cx="15" cy="13.5" r="1.2" fill="#062d1a" />
+      <path
+        d="M2 13 C0.8 12.5 0.4 11.4 1 10.3"
+        fill="none" stroke="#1fa05a" strokeWidth="1.1" strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function VariantBadge({ variant }: { variant: string }) {
   if (variant === "sml-tiger" || variant === "lge-tiger") {
     return <span className={`marker-variant tiger ${variant === "lge-tiger" ? "big" : ""}`}>🐯</span>;
   }
   if (variant === "sml-dragon" || variant === "big-dragon") {
-    return <span className={`marker-variant dragon ${variant === "big-dragon" ? "big" : ""}`}>🐲</span>;
+    const big = variant === "big-dragon";
+    return (
+      <span className={`marker-variant dragon ${big ? "big" : ""}`}>
+        <DragonIcon size={big ? 17 : 13} big={big} />
+      </span>
+    );
   }
   if (variant.startsWith("dragontiger-")) {
     return <span className="marker-variant dragontiger">{variant.split("-")[1]}</span>;
@@ -298,8 +331,8 @@ function StatsPanel({ outcomes, extras }: { outcomes: Outcome[]; extras?: (HandE
         <span className="stats-side-item"><span className="marker-pair banker-pair inline" /> B Pair <b>{bPairs}</b></span>
         <span className="stats-side-item">🐯 Tiger <b>{tigers}</b></span>
         <span className="stats-side-item"><span className="marker-pair player-pair inline" /> P Pair <b>{pPairs}</b></span>
-        <span className="stats-side-item">🐲 Dragon <b>{dragons}</b></span>
-        <span className="stats-side-item">🐉🐯 D-Tiger <b>{dragonTigers}</b></span>
+        <span className="stats-side-item"><DragonIcon size={14} /> Dragon <b>{dragons}</b></span>
+        <span className="stats-side-item"><span className="marker-variant dragontiger inline" style={{ width: 13, height: 13 }}>#</span> D-Tiger <b>{dragonTigers}</b></span>
       </div>
     </div>
   );
@@ -334,7 +367,7 @@ function LegendKey() {
               <div className="legend-row"><span className="marker-pair player-pair inline" /> Player pair (top-right dot)</div>
               <div className="legend-row"><span className="marker-pair banker-pair inline" /> Banker pair (bottom-left dot)</div>
               <div className="legend-row"><span className="marker-variant tiger inline">🐯</span> Small Tiger — Banker wins on 6 (two cards); larger icon = Big Tiger (three cards)</div>
-              <div className="legend-row"><span className="marker-variant dragon inline">🐲</span> Small Dragon — Player wins 7 v Banker ≤5 (two cards); larger icon = Big Dragon (three cards)</div>
+              <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={16} /></span> Small Dragon — Player wins 7 v Banker ≤5 (two cards); larger gold-edged icon = Big Dragon (three cards)</div>
               <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (4, 5 or 6; Dragon bets also pay)</div>
             </div>
           </div>
