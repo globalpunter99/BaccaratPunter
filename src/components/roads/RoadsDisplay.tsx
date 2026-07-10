@@ -305,19 +305,10 @@ function RoadSection({
 }
 
 // ── Stats panel (bottom-right, casino style) ─────────────────────────────────
-function StatsPanel({ outcomes, extras }: { outcomes: Outcome[]; extras?: (HandExtra | undefined)[] }) {
+function StatsPanel({ outcomes }: { outcomes: Outcome[] }) {
   const banker = outcomes.filter(o => o === "banker").length;
   const player = outcomes.filter(o => o === "player").length;
   const tie = outcomes.filter(o => o === "tie").length;
-
-  const count = (pred: (e: HandExtra) => boolean) =>
-    (extras ?? []).filter((e): e is HandExtra => !!e && pred(e)).length;
-  const naturals = count(e => !!e.natural);
-  const bPairs = count(e => !!e.bankerPair);
-  const pPairs = count(e => !!e.playerPair);
-  const tigers = count(e => e.variant === "sml-tiger" || e.variant === "lge-tiger");
-  const dragons = count(e => e.variant === "sml-dragon" || e.variant === "big-dragon");
-  const dragonTigers = count(e => !!e.variant?.startsWith("dragontiger-"));
 
   return (
     <div className="stats-panel">
@@ -325,14 +316,22 @@ function StatsPanel({ outcomes, extras }: { outcomes: Outcome[]; extras?: (HandE
       <div className="stats-row"><span className="stats-label"><span className="stats-dot banker-dot">庄</span>Banker</span><span className="stats-value banker">{banker}</span></div>
       <div className="stats-row"><span className="stats-label"><span className="stats-dot player-dot">闲</span>Player</span><span className="stats-value player">{player}</span></div>
       <div className="stats-row"><span className="stats-label"><span className="stats-dot tie-dot">和</span>Tie</span><span className="stats-value tie">{tie}</span></div>
-      <div className="stats-side-grid">
-        <span className="stats-side-item"><b className="marker-natural inline">N</b> Natural <b>{naturals}</b></span>
-        <span className="stats-side-item"><span className="marker-pair banker-pair inline" /> B Pair <b>{bPairs}</b></span>
-        <span className="stats-side-item">🐯 Tiger <b>{tigers}</b></span>
-        <span className="stats-side-item"><span className="marker-pair player-pair inline" /> P Pair <b>{pPairs}</b></span>
-        <span className="stats-side-item"><DragonIcon size={14} /> Dragon <b>{dragons}</b></span>
-        <span className="stats-side-item"><span className="marker-variant dragontiger inline" style={{ width: 13, height: 13 }}>#</span> D-Tiger <b>{dragonTigers}</b></span>
-      </div>
+    </div>
+  );
+}
+
+// Exotic side-bet counters, stacked vertically beside the predictor table.
+function SideBetCounts({ extras }: { extras?: (HandExtra | undefined)[] }) {
+  const count = (pred: (e: HandExtra) => boolean) =>
+    (extras ?? []).filter((e): e is HandExtra => !!e && pred(e)).length;
+  return (
+    <div className="side-bet-list">
+      <span className="stats-side-item"><b className="marker-natural inline">N</b> Natural <b>{count(e => !!e.natural)}</b></span>
+      <span className="stats-side-item"><span className="marker-pair banker-pair inline" /> B Pair <b>{count(e => !!e.bankerPair)}</b></span>
+      <span className="stats-side-item"><span className="marker-pair player-pair inline" /> P Pair <b>{count(e => !!e.playerPair)}</b></span>
+      <span className="stats-side-item">🐯 Tiger <b>{count(e => e.variant === "sml-tiger" || e.variant === "lge-tiger")}</b></span>
+      <span className="stats-side-item"><DragonIcon size={14} /> Dragon <b>{count(e => e.variant === "sml-dragon" || e.variant === "big-dragon")}</b></span>
+      <span className="stats-side-item"><span className="marker-variant dragontiger inline" style={{ width: 13, height: 13 }}>#</span> D-Tiger <b>{count(e => !!e.variant?.startsWith("dragontiger-"))}</b></span>
     </div>
   );
 }
@@ -469,9 +468,10 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
           headerExtra={<HeaderStats outcomes={outcomes} />}>
           <BeadPlate outcomes={outcomes} extras={extras} cellSize={bigCell} />
         </RoadSection>
-        <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
-          <StatsPanel outcomes={outcomes} extras={extras} />
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <StatsPanel outcomes={outcomes} />
           <PredictorTable outcomes={outcomes} />
+          <SideBetCounts extras={extras} />
         </div>
       </div>
     </div>
