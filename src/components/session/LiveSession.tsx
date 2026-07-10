@@ -154,12 +154,36 @@ export default function LiveSession() {
   const advanceBankerPair = cardEntry.banker[0] !== null
     && cardEntry.banker[0] === cardEntry.banker[1];
 
+  // Exotic side-bet detection from the entered cards:
+  // - Sml/Lge Tiger: Banker wins on a total of 6 with two/three cards
+  // - Sml/Big Dragon: Player wins on 7 (two/three cards) v Banker 5 or less
+  // - Dragon Tiger: Player 7 beats Banker 6; labelled by total cards (4/5/6)
+  const pCardCount = cardEntry.player.filter(c => c !== null).length;
+  const bCardCount = cardEntry.banker.filter(c => c !== null).length;
+  let advanceVariant: string | undefined;
+  if (cardsEntered) {
+    if (advanceOutcome === "banker" && bTotal === 6) {
+      advanceVariant = bCardCount === 2 ? "sml-tiger" : "lge-tiger";
+    } else if (advanceOutcome === "player" && pTotal === 7) {
+      if (bTotal === 6) advanceVariant = `dragontiger-${pCardCount + bCardCount}`;
+      else if (bTotal <= 5) advanceVariant = pCardCount === 2 ? "sml-dragon" : "big-dragon";
+    }
+  }
+  const VARIANT_LABELS: Record<string, string> = {
+    "sml-tiger": "SML TIGER", "lge-tiger": "LGE TIGER",
+    "sml-dragon": "SML DRAGON", "big-dragon": "BIG DRAGON",
+    "dragontiger-4": "DRAGON TIGER (4 CARD)",
+    "dragontiger-5": "DRAGON TIGER (5 CARD)",
+    "dragontiger-6": "DRAGON TIGER (6 CARD)",
+  };
+
   function submitAdvanceHand() {
     if (!cardsEntered) return;
     addHand(advanceOutcome, {
       natural: advanceNatural,
       playerPair: advancePlayerPair,
       bankerPair: advanceBankerPair,
+      variant: advanceVariant,
       cards: {
         player: cardEntry.player.filter((c): c is string => c !== null),
         banker: cardEntry.banker.filter((c): c is string => c !== null),
@@ -437,6 +461,7 @@ export default function LiveSession() {
                         </>
                       )}
                       {advanceNatural && <span style={{ color: "var(--gold)" }}> · NATURAL</span>}
+                      {advanceVariant && <span style={{ color: "var(--gold)" }}> · {VARIANT_LABELS[advanceVariant] ?? advanceVariant}</span>}
                       {advancePlayerPair && <span style={{ color: "var(--player-blue)" }}> · P PAIR</span>}
                       {advanceBankerPair && <span style={{ color: "var(--banker-red)" }}> · B PAIR</span>}
                     </span>
