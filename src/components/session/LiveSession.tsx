@@ -115,12 +115,15 @@ export default function LiveSession() {
     setActiveSlot(0);
   }
 
-  function addHand(outcome: Outcome, extra?: { natural?: boolean; variant?: string; cards?: HandRecord["cards"] }) {
+  function addHand(outcome: Outcome, extra?: {
+    natural?: boolean; variant?: string; cards?: HandRecord["cards"];
+    bankerPair?: boolean; playerPair?: boolean;
+  }) {
     const newHand: HandRecord = {
       id: hands.length + 1,
       outcome,
-      bankerPair: false,
-      playerPair: false,
+      bankerPair: extra?.bankerPair ?? false,
+      playerPair: extra?.playerPair ?? false,
       natural: extra?.natural ?? false,
       variant: extra?.variant,
       cards: extra?.cards,
@@ -138,10 +141,19 @@ export default function LiveSession() {
     && cardEntry.player[2] === null && cardEntry.banker[2] === null
     && (pTotal >= 8 || bTotal >= 8);
 
+  // Pairs: first two cards of a side matching. Recorded regardless of which
+  // side wins — the pair markers on the roads are independent of the outcome.
+  const advancePlayerPair = cardEntry.player[0] !== null
+    && cardEntry.player[0] === cardEntry.player[1];
+  const advanceBankerPair = cardEntry.banker[0] !== null
+    && cardEntry.banker[0] === cardEntry.banker[1];
+
   function submitAdvanceHand() {
     if (!cardsEntered) return;
     addHand(advanceOutcome, {
       natural: advanceNatural,
+      playerPair: advancePlayerPair,
+      bankerPair: advanceBankerPair,
       cards: {
         player: cardEntry.player.filter((c): c is number => c !== null),
         banker: cardEntry.banker.filter((c): c is number => c !== null),
@@ -419,6 +431,8 @@ export default function LiveSession() {
                         </>
                       )}
                       {advanceNatural && <span style={{ color: "var(--gold)" }}> · NATURAL</span>}
+                      {advancePlayerPair && <span style={{ color: "var(--player-blue)" }}> · P PAIR</span>}
+                      {advanceBankerPair && <span style={{ color: "var(--banker-red)" }}> · B PAIR</span>}
                     </span>
                   ) : (
                     <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Enter both first two cards to see the result</span>
