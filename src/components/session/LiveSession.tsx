@@ -164,7 +164,10 @@ export default function LiveSession() {
             {(details.casino || "Casino not set")}
             {details.tableNumber ? ` — Table ${details.tableNumber}` : ""}
             {details.shoeNumber ? ` — Shoe ${details.shoeNumber}` : ""}
-            {" · "}{sessionStart.toLocaleDateString()} {sessionStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {" · "}
+            {sessionStart.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+            {" "}
+            {sessionStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
         <div className="flex gap-8">
