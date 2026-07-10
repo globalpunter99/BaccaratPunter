@@ -23,29 +23,27 @@ interface Props {
 }
 
 // ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
-// Stencil-style Chinese dragon head (side profile: horns, snout, beard,
-// whisker). Renders in green with a gold outline on the big variant.
+// Stencil-style Chinese dragon head, front-facing: a single-colour angular
+// mask (swept horns, cheek spikes, slanted eye cutouts, nostrils, pointed
+// chin). Small Dragon = jade green; Big Dragon = gold.
 export function DragonIcon({ size = 12, big = false }: { size?: number; big?: boolean }) {
+  const colour = big ? "var(--gold, #f5c842)" : "#1fa05a";
   return (
     <svg
-      width={size} height={size} viewBox="0 0 24 24"
+      width={size} height={size} viewBox="0 0 32 32"
       style={{ display: "block" }}
       aria-label="dragon"
     >
       <path
-        d="M2 13 C4 11 7 10 9 10 L10.5 6 L12 9.5 L14.5 5 L15.5 9.7
-           C19 10.5 21 13 21 15.5 C21 19 18 21 14.5 21
-           C13.5 21 12.8 20.6 12.3 20 L9.5 21.5 L9.8 19.5 L7 20.3 L8 18.4
-           C6 18 4.5 16.8 4 15.5 L2 16 L3 14.4 Z"
-        fill="#1fa05a"
-        stroke={big ? "var(--gold, #f5c842)" : "none"}
-        strokeWidth={big ? 1.2 : 0}
-        strokeLinejoin="round"
-      />
-      <circle cx="15" cy="13.5" r="1.2" fill="#062d1a" />
-      <path
-        d="M2 13 C0.8 12.5 0.4 11.4 1 10.3"
-        fill="none" stroke="#1fa05a" strokeWidth="1.1" strokeLinecap="round"
+        fillRule="evenodd"
+        fill={colour}
+        d="M16 5 L12 2 L11 7 L6 4 L8 10 L2 13 L8 14 L4 19 L10 18
+           L9 25 L13 22 L16 30 L19 22 L23 25 L22 18 L28 19 L24 14
+           L30 13 L24 10 L26 4 L21 7 L20 2 Z
+           M10 13 L14 15 L13 17.5 L9 15.5 Z
+           M22 13 L18 15 L19 17.5 L23 15.5 Z
+           M14 21.5 L15.3 24 L12.8 24 Z
+           M18 21.5 L16.7 24 L19.2 24 Z"
       />
     </svg>
   );
