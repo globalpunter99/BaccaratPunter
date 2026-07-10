@@ -25,9 +25,10 @@ interface Props {
 // ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
 // Stencil-style Chinese dragon head, front-facing: a single-colour angular
 // mask (swept horns, cheek spikes, slanted eye cutouts, nostrils, pointed
-// chin). Small Dragon = jade green; Big Dragon = gold.
+// chin). Purple family to stay in line with the Player-win blue:
+// Small Dragon = purple; Big Dragon = dark purple.
 export function DragonIcon({ size = 12, big = false }: { size?: number; big?: boolean }) {
-  const colour = big ? "var(--gold, #f5c842)" : "#1fa05a";
+  const colour = big ? "#5e2a8e" : "#a05ce0";
   return (
     <svg
       width={size} height={size} viewBox="0 0 32 32"
@@ -365,7 +366,7 @@ function LegendKey() {
               <div className="legend-row"><span className="marker-pair player-pair inline" /> Player pair (top-right dot)</div>
               <div className="legend-row"><span className="marker-pair banker-pair inline" /> Banker pair (bottom-left dot)</div>
               <div className="legend-row"><span className="marker-variant tiger inline">🐯</span> Small Tiger — Banker wins on 6 (two cards); larger icon = Big Tiger (three cards)</div>
-              <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={16} /></span> Small Dragon — Player wins 7 v Banker ≤5 (two cards); larger gold icon = Big Dragon (three cards)</div>
+              <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={16} /></span> Small Dragon — Player wins 7 v Banker ≤5 (two cards); larger dark purple icon = Big Dragon (three cards)</div>
               <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (4, 5 or 6; Dragon bets also pay)</div>
             </div>
           </div>
