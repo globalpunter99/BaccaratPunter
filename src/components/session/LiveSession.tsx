@@ -105,16 +105,81 @@ export default function LiveSession() {
   ];
   const [activeSlot, setActiveSlot] = useState(0);
 
+  // ── Baccarat drawing rules (the tableau) ──────────────────────────────
+  // Banker third-card table: given banker two-card total and the value of
+  // the player's third card, does the banker draw?
+  function bankerDraws(b2: number, playerThirdValue: number): boolean {
+    if (b2 <= 2) return true;
+    if (b2 === 3) return playerThirdValue !== 8;
+    if (b2 === 4) return playerThirdValue >= 2 && playerThirdValue <= 7;
+    if (b2 === 5) return playerThirdValue >= 4 && playerThirdValue <= 7;
+    if (b2 === 6) return playerThirdValue === 6 || playerThirdValue === 7;
+    return false; // 7 stands
+  }
+
+  // Can this slot legally take a card right now?
+  function slotEnabled(side: "player" | "banker", idx: number): boolean {
+    if (idx < 2) return true;
+    const p2ok = cardEntry.player[0] !== null && cardEntry.player[1] !== null;
+    const b2ok = cardEntry.banker[0] !== null && cardEntry.banker[1] !== null;
+    const p2 = handTotal(cardEntry.player.slice(0, 2));
+    const b2 = handTotal(cardEntry.banker.slice(0, 2));
+
+    if (side === "player") {
+      if (!p2ok) return false;          // first two cards come first
+      if (p2 >= 6) return false;        // stands on 6/7, natural on 8/9
+      if (b2ok && b2 >= 8) return false; // banker natural ends the hand
+      return true;
+    }
+    // banker third
+    if (!b2ok) return false;
+    if (b2 >= 8) return false;          // banker natural
+    if (p2ok && p2 >= 8) return false;  // player natural ends the hand
+    if (!p2ok) return true;             // not enough info yet — allow
+    const playerTakes = p2 <= 5;
+    if (!playerTakes) return b2 <= 5;   // player stood: banker draws 0–5
+    const p3 = cardEntry.player[2];
+    if (p3 === null) return false;      // player's third must be entered first
+    return bankerDraws(b2, rankValue(p3));
+  }
+
   function tapCardValue(v: string) {
-    if (activeSlot >= SLOT_ORDER.length) return;
-    const { side, idx } = SLOT_ORDER[activeSlot];
+    // Fill the first empty, rule-legal slot at or after the active one
+    let target = -1;
+    for (let i = activeSlot; i < SLOT_ORDER.length; i++) {
+      const { side, idx } = SLOT_ORDER[i];
+      if (cardEntry[side][idx] === null && slotEnabled(side, idx)) { target = i; break; }
+    }
+    if (target === -1) return;
+    const { side, idx } = SLOT_ORDER[target];
     setCardEntry(prev => {
       const next = { ...prev, [side]: [...prev[side]] };
       next[side][idx] = v;
       return next;
     });
-    setActiveSlot(s => Math.min(s + 1, SLOT_ORDER.length));
+    setActiveSlot(Math.min(target + 1, SLOT_ORDER.length));
   }
+
+  // Rule validation across the whole entered hand — blocks OK when violated
+  function validateAdvance(): string | null {
+    if (!cardsEntered) return null;
+    const p2 = handTotal(cardEntry.player.slice(0, 2));
+    const b2 = handTotal(cardEntry.banker.slice(0, 2));
+    const p3 = cardEntry.player[2];
+    const b3 = cardEntry.banker[2];
+    if (p2 >= 8 || b2 >= 8) {
+      if (p3 !== null || b3 !== null) return "Natural — no third cards are drawn";
+      return null;
+    }
+    const playerTakes = p2 <= 5;
+    if (playerTakes && p3 === null) return "Player must draw a third card (total 0–5)";
+    if (!playerTakes && p3 !== null) return "Player stands on 6/7 — no third card";
+    const bankerTakes = playerTakes ? bankerDraws(b2, rankValue(p3!)) : b2 <= 5;
+    if (bankerTakes && b3 === null) return "Banker must draw a third card";
+    if (!bankerTakes && b3 !== null) return "Banker stands — no third card";
+    return null;
+  }
+  const advanceError = validateAdvance();
 
   function clearAdvance() {
     setCardEntry(emptyCards);
@@ -178,7 +243,7 @@ export default function LiveSession() {
   };
 
   function submitAdvanceHand() {
-    if (!cardsEntered) return;
+    if (!cardsEntered || advanceError) return;
     addHand(advanceOutcome, {
       natural: advanceNatural,
       playerPair: advancePlayerPair,
@@ -409,15 +474,22 @@ export default function LiveSession() {
                         const slotIdx = SLOT_ORDER.findIndex(s => s.side === side && s.idx === i);
                         const isActive = slotIdx === activeSlot;
                         const val = cardEntry[side][i];
+                        const enabled = val !== null || slotEnabled(side, i);
+                        const bothIn = cardEntry[side][0] !== null && cardEntry[side][1] !== null;
                         return (
                           <button
                             key={i}
                             className="card-slot"
-                            data-active={isActive || undefined}
+                            data-active={(isActive && enabled) || undefined}
                             data-side={side}
+                            disabled={!enabled}
                             onClick={() => setActiveSlot(slotIdx)}
                           >
-                            {val !== null ? val : <span style={{ opacity: 0.45, fontSize: 12, fontWeight: 500 }}>Card {i + 1}</span>}
+                            {val !== null ? val : (
+                              <span style={{ opacity: 0.45, fontSize: 12, fontWeight: 500 }}>
+                                {i === 2 && bothIn && !enabled ? "Stand" : `Card ${i + 1}`}
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -468,8 +540,13 @@ export default function LiveSession() {
                   ) : (
                     <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Enter both first two cards to see the result</span>
                   )}
+                  {advanceError && (
+                    <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: "var(--signal-amber)" }}>
+                      ⚠ {advanceError}
+                    </div>
+                  )}
                 </div>
-                <button className="btn btn-secondary" disabled={!cardsEntered} onClick={submitAdvanceHand}>
+                <button className="btn btn-secondary" disabled={!cardsEntered || !!advanceError} onClick={submitAdvanceHand}>
                   OK — Record Hand
                 </button>
               </div>

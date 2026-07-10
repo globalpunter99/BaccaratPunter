@@ -309,6 +309,7 @@ body {
   cursor: pointer;
   text-align: center;
 }
+.card-slot:disabled { opacity: 0.45; cursor: not-allowed; }
 .card-slot[data-active] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 .card-slot[data-side="banker"][data-active] { border-color: var(--banker-red); box-shadow: 0 0 0 1px var(--banker-red); }
 .card-slot[data-side="player"][data-active] { border-color: var(--player-blue); box-shadow: 0 0 0 1px var(--player-blue); }
