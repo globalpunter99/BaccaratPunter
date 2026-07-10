@@ -549,15 +549,16 @@ select.input { cursor: pointer; }
 .marker-pair.banker-pair { bottom: 1px; left: 1px; background: var(--banker-red); }
 .marker-variant {
   position: absolute;
-  bottom: -1px;
-  right: -1px;
-  font-size: 10px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
   line-height: 1;
   pointer-events: none;
   z-index: 2;
   filter: drop-shadow(0 0 2px rgba(0,0,0,0.7));
 }
-.marker-variant.big { font-size: 14px; }
+.marker-variant.big { font-size: 16px; }
 .marker-variant.tiger  { border-radius: 50%; }
 .marker-variant.dragon { border-radius: 50%; }
 .marker-variant.dragontiger {
