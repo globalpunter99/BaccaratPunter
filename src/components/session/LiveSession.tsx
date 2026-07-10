@@ -179,7 +179,6 @@ export default function LiveSession() {
     if (!bankerTakes && b3 !== null) return "Banker stands — no third card";
     return null;
   }
-  const advanceError = validateAdvance();
 
   function clearAdvance() {
     setCardEntry(emptyCards);
@@ -211,6 +210,7 @@ export default function LiveSession() {
   const advanceNatural = cardsEntered
     && cardEntry.player[2] === null && cardEntry.banker[2] === null
     && (pTotal >= 8 || bTotal >= 8);
+  const advanceError = validateAdvance();
 
   // Pairs: first two cards of a side matching. Recorded regardless of which
   // side wins — the pair markers on the roads are independent of the outcome.
