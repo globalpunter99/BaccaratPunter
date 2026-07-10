@@ -12,7 +12,7 @@ export interface HandExtra {
   natural?: boolean;
   bankerPair?: boolean;
   playerPair?: boolean;
-  // sml-tiger | lge-tiger | sml-dragon | big-dragon | dragontiger-3/4/5
+  // sml-tiger | lge-tiger | sml-dragon | big-dragon | dragontiger-4/5/6
   variant?: string;
 }
 
@@ -335,7 +335,7 @@ function LegendKey() {
               <div className="legend-row"><span className="marker-pair banker-pair inline" /> Banker pair (bottom-left dot)</div>
               <div className="legend-row"><span className="marker-variant tiger inline">🐯</span> Small Tiger — Banker wins on 6 (two cards); larger icon = Big Tiger (three cards)</div>
               <div className="legend-row"><span className="marker-variant dragon inline">🐲</span> Small Dragon — Player wins 7 v Banker ≤5 (two cards); larger icon = Big Dragon (three cards)</div>
-              <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (Dragon bets also pay)</div>
+              <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (4, 5 or 6; Dragon bets also pay)</div>
             </div>
           </div>
         </div>

@@ -10,7 +10,8 @@ interface HandRecord {
   playerPair: boolean;
   natural: boolean;
   // Exotic result variant (medium/advance modes): sml-tiger, lge-tiger,
-  // sml-dragon, big-dragon, dragontiger-3, dragontiger-4, dragontiger-5
+  // sml-dragon, big-dragon, dragontiger-4, dragontiger-5, dragontiger-6
+  // (Dragon Tiger: Player wins 7 v Banker 6 — minimum 4 cards, maximum 6)
   variant?: string;
   // Advance mode: raw card values as entered (banker/player, up to 3 each)
   cards?: { player: number[]; banker: number[] };
@@ -338,9 +339,9 @@ export default function LiveSession() {
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player", { natural: true })}>PLAYER<br /><span className="medium-sub">Natural (8/9)</span></button>
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "sml-dragon" })}>PLAYER<br /><span className="medium-sub">Sml Dragon</span></button>
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "big-dragon" })}>PLAYER<br /><span className="medium-sub">Big Dragon</span></button>
-                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-3" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (3 Card)</span></button>
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-4" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (4 Card)</span></button>
-                  <button className="btn btn-player medium-btn" style={{ gridColumn: "1 / -1" }} onClick={() => addHand("player", { variant: "dragontiger-5" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (5 Card)</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-5" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (5 Card)</span></button>
+                  <button className="btn btn-player medium-btn" style={{ gridColumn: "1 / -1" }} onClick={() => addHand("player", { variant: "dragontiger-6" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (6 Card)</span></button>
                 </div>
                 <button className="btn btn-tie" style={{ padding: "8px 0" }} onClick={() => addHand("tie")}>和 TIE</button>
               </div>
