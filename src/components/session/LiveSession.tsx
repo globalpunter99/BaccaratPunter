@@ -13,18 +13,24 @@ interface HandRecord {
   // sml-dragon, big-dragon, dragontiger-4, dragontiger-5, dragontiger-6
   // (Dragon Tiger: Player wins 7 v Banker 6 — minimum 4 cards, maximum 6)
   variant?: string;
-  // Advance mode: raw card values as entered (banker/player, up to 3 each)
-  cards?: { player: number[]; banker: number[] };
+  // Advance mode: raw card ranks as entered (banker/player, up to 3 each)
+  cards?: { player: string[]; banker: string[] };
 }
 
 type EntryMode = "basic" | "medium" | "advance";
-type CardSlot = number | null;
+type CardSlot = string | null; // card rank: A, 2–10, J, Q, K
 
-// Baccarat card value: 10/J/Q/K count 0; entry uses 0–10 where 10 → 0.
-const cardVal = (v: number) => v % 10;
+const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"] as const;
+
+// Baccarat card value: A = 1, 2–9 face value, 10/J/Q/K = 0.
+function rankValue(rank: string): number {
+  if (rank === "A") return 1;
+  const n = parseInt(rank, 10);
+  return isNaN(n) || n === 10 ? 0 : n;
+}
 
 function handTotal(cards: CardSlot[]): number {
-  return cards.reduce<number>((sum, c) => (c === null ? sum : (sum + cardVal(c)) % 10), 0);
+  return cards.reduce<number>((sum, c) => (c === null ? sum : (sum + rankValue(c)) % 10), 0);
 }
 
 interface SessionDetails {
@@ -99,7 +105,7 @@ export default function LiveSession() {
   ];
   const [activeSlot, setActiveSlot] = useState(0);
 
-  function tapCardValue(v: number) {
+  function tapCardValue(v: string) {
     if (activeSlot >= SLOT_ORDER.length) return;
     const { side, idx } = SLOT_ORDER[activeSlot];
     setCardEntry(prev => {
@@ -155,8 +161,8 @@ export default function LiveSession() {
       playerPair: advancePlayerPair,
       bankerPair: advanceBankerPair,
       cards: {
-        player: cardEntry.player.filter((c): c is number => c !== null),
-        banker: cardEntry.banker.filter((c): c is number => c !== null),
+        player: cardEntry.player.filter((c): c is string => c !== null),
+        banker: cardEntry.banker.filter((c): c is string => c !== null),
       },
     });
     clearAdvance();
@@ -395,10 +401,10 @@ export default function LiveSession() {
                   </div>
                 ))}
 
-                {/* One-touch 0–9 keypad */}
-                <div className="keypad">
-                  {Array.from({ length: 10 }, (_, v) => (
-                    <button key={v} className="keypad-btn" onClick={() => tapCardValue(v)}>{v}</button>
+                {/* One-touch rank keypad: A, 2–10, J, Q, K */}
+                <div className="keypad ranks">
+                  {RANKS.map(r => (
+                    <button key={r} className="keypad-btn" onClick={() => tapCardValue(r)}>{r}</button>
                   ))}
                 </div>
                 <button className="btn btn-ghost" style={{ padding: "6px 0", fontSize: 12 }} onClick={clearAdvance}>

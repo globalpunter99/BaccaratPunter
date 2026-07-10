@@ -317,6 +317,9 @@ body {
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;
 }
+/* 13-rank keypad: A 2 3 4 5 6 7 / 8 9 10 J Q K */
+.keypad.ranks { grid-template-columns: repeat(7, 1fr); }
+.keypad.ranks .keypad-btn { font-size: 14px; padding: 10px 0; }
 .keypad-btn {
   background: var(--bg-panel);
   border: 1px solid var(--border-panel);
