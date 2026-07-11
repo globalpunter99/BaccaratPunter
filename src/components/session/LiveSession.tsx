@@ -417,19 +417,32 @@ export default function LiveSession() {
 
           {/* My Bet — pay engine */}
           <div className="panel">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between" style={{ gap: 8 }}>
               <button
                 className="btn btn-ghost"
-                style={{ flex: 1, fontSize: 12, textAlign: "left" }}
+                style={{ fontSize: 12, textAlign: "left", flexShrink: 0 }}
                 onClick={() => setShowBets(p => !p)}
               >
-                {showBets ? "▲" : "▼"} My Bet
+                {showBets ? "▲" : "▼"} My Bets
               </button>
-              {ledger.betHands > 0 && (
-                <span className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`}>
-                  {ledger.returned - ledger.staked >= 0 ? "+" : ""}{ledger.returned - ledger.staked}
+              <span className="bet-header-stats">
+                <span>
+                  P/(L):{" "}
+                  <b className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`} style={{ fontSize: 12 }}>
+                    {ledger.returned - ledger.staked > 0
+                      ? `+${ledger.returned - ledger.staked}`
+                      : ledger.returned - ledger.staked < 0
+                      ? `(${Math.abs(ledger.returned - ledger.staked)})`
+                      : "0"}
+                  </b>
                 </span>
-              )}
+                <span>
+                  Bets:{" "}
+                  {ledger.betHands === 0
+                    ? "0"
+                    : `${ledger.wonHands} (W) - ${ledger.betHands - ledger.wonHands} (L)`}
+                </span>
+              </span>
             </div>
             {showBets && (
               <div style={{ marginTop: 10 }}>
@@ -531,20 +544,6 @@ export default function LiveSession() {
                   </div>
                 )}
 
-                {/* Session ledger */}
-                {ledger.betHands > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
-                    <span>
-                      Profit/(Loss):{" "}
-                      <b className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`} style={{ fontSize: 11 }}>
-                        {ledger.returned - ledger.staked >= 0
-                          ? `+${ledger.returned - ledger.staked}`
-                          : `(${Math.abs(ledger.returned - ledger.staked)})`}
-                      </b>
-                    </span>
-                    <span>Bets {ledger.wonHands}/{ledger.betHands} won</span>
-                  </div>
-                )}
               </div>
             )}
           </div>

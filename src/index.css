@@ -333,7 +333,15 @@ body {
 }
 .keypad-btn:active { background: var(--border-accent); }
 
-/* Pay engine: My Bet panel */
+/* Pay engine: My Bets panel */
+.bet-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
 .bet-side-btn {
   padding: 8px 0;
   font-size: 13px;
