@@ -23,6 +23,9 @@ interface HandRecord {
   // Total both sides finished on when the hand tied (Advance mode only) —
   // settles Tiger Tie (6-6) and Dragon Tie (7-7) side bets
   tieTotal?: number;
+  // Outcome of the user's main Banker/Player bet on this hand (side bets
+  // excluded; ties push and leave no mark)
+  betResult?: "win" | "loss";
 }
 
 type EntryMode = "basic" | "medium" | "advance";
@@ -120,6 +123,12 @@ export default function LiveSession() {
     }));
     setLastSettlement(result);
     setLastSlip(pendingSlip);
+    // Mark the hand with the main-bet outcome (Banker/Player bets only)
+    const m = pendingSlip.main;
+    if (m && (m.side === "banker" || m.side === "player") && hand.outcome !== "tie") {
+      const betResult = m.side === hand.outcome ? "win" as const : "loss" as const;
+      setHands(prev => prev.map(h => (h.id === hand.id ? { ...h, betResult } : h)));
+    }
     clearPendingBet();
   }
 
@@ -877,6 +886,7 @@ export default function LiveSession() {
               playerPair: h.playerPair,
               variant: h.variant,
               tieTotal: h.tieTotal,
+              betResult: h.betResult,
             }))}
           />
         </div>

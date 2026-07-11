@@ -16,6 +16,8 @@ export interface HandExtra {
   variant?: string;
   // Total the hand tied on (6 = Tiger Tie, 7 = Dragon Tie)
   tieTotal?: number;
+  // User's main-bet outcome on this hand: tile washes light (win) or dark (loss)
+  betResult?: "win" | "loss";
 }
 
 // Tie-total badge: green disc with the tied total — gold ring for Tiger
@@ -120,8 +122,9 @@ function BeadPlate({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras
         const col = idx % cols;
         const handIdx = col * ROWS + row;
         const cell = cells.find(c => c.col === col && c.row === row);
+        const betResult = cell ? extras?.[handIdx]?.betResult : undefined;
         return (
-          <div key={idx} className="road-cell">
+          <div key={idx} className={`road-cell${betResult ? ` bet-${betResult}` : ""}`}>
             {cell && (
               <>
                 <div
@@ -185,8 +188,9 @@ function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?:
         const row = Math.floor(idx / cols);
         const col = idx % cols;
         const p = byPos.get(`${col},${row}`);
+        const betResult = p ? stoneExtra.get(p.value)?.betResult : undefined;
         return (
-          <div key={idx} className="road-cell">
+          <div key={idx} className={`road-cell${betResult ? ` bet-${betResult}` : ""}`}>
             {p && (
               <>
                 <div
@@ -420,6 +424,8 @@ function LegendKey() {
               <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (4, 5 or 6; Dragon bets also pay)</div>
               <div className="legend-row"><span className="marker-tietotal tiger inline">6</span> Tiger Tie — hand ties with both totals 6</div>
               <div className="legend-row"><span className="marker-tietotal dragon inline">7</span> Dragon Tie — hand ties with both totals 7</div>
+              <div className="legend-row"><span className="legend-cell bet-win" /> Light tile — your Banker/Player bet won this hand</div>
+              <div className="legend-row"><span className="legend-cell bet-loss" /> Dark tile — your Banker/Player bet lost this hand</div>
             </div>
           </div>
         </div>
@@ -487,9 +493,15 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
   // View mode for Big Road + Bead Plate markers:
   // basic = outcomes, ties and naturals only · detailed = + pairs and exotics
   const [viewMode, setViewMode] = useState<"basic" | "detailed">("detailed");
-  const shownExtras = viewMode === "detailed"
-    ? extras
-    : extras?.map(e => (e ? { natural: e.natural } : e));
+  const [showBetOverlay, setShowBetOverlay] = useState(true);
+  const shownExtras = extras?.map(e => {
+    if (!e) return e;
+    const base = viewMode === "detailed"
+      ? { ...e }
+      : { natural: e.natural, betResult: e.betResult } as HandExtra;
+    if (!showBetOverlay) delete base.betResult;
+    return base;
+  });
   const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
   const beb    = useMemo(() => bigEyeBoy(stones),    [stones]);
   const sr     = useMemo(() => smallRoad(stones),    [stones]);
@@ -517,6 +529,13 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
                 onClick={() => setViewMode("detailed")}
               >
                 Detailed
+              </button>
+              <button
+                className={`view-toggle-btn ${showBetOverlay ? "active" : ""}`}
+                title="Show/hide your bet results on the tiles"
+                onClick={() => setShowBetOverlay(p => !p)}
+              >
+                Bets
               </button>
             </span>
             <LegendKey />

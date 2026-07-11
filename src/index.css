@@ -182,6 +182,18 @@ body {
   position: relative;
   aspect-ratio: 1;
 }
+/* Bet-result washes: lit tile = main bet won, dimmed tile = lost */
+.road-cell.bet-win  { background: rgba(255, 255, 255, 0.22); }
+.road-cell.bet-loss { background: rgba(0, 0, 0, 0.42); }
+.legend-cell {
+  width: 18px;
+  height: 18px;
+  border: 0.5px solid rgba(255,255,255,0.3);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.legend-cell.bet-win  { background: rgba(255, 255, 255, 0.22); }
+.legend-cell.bet-loss { background: rgba(0, 0, 0, 0.42); }
 
 .road-stone {
   border-radius: 50%;
