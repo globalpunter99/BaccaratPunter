@@ -9,6 +9,7 @@ import ProfileComparison from "./components/profile/ProfileComparison";
 import StatsLeaderboard from "./components/stats/StatsLeaderboard";
 import ShoeReplay from "./components/replay/ShoeReplay";
 import Guide from "./components/guide/Guide";
+import SettingsPage from "./components/settings/SettingsPage";
 
 type Tab =
   | "live"
@@ -19,7 +20,8 @@ type Tab =
   | "profile-compare"
   | "stats"
   | "replay"
-  | "guide";
+  | "guide"
+  | "settings";
 
 const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "live",            label: "Live Session",   group: "Session" },
@@ -31,6 +33,7 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "profile-compare", label: "Profiles",        group: "Profile" },
   { id: "stats",           label: "Stats",           group: "Profile" },
   { id: "guide",           label: "Guide",           group: "Help" },
+  { id: "settings",        label: "Settings",        group: "Help" },
 ];
 
 export default function App() {
@@ -47,6 +50,7 @@ export default function App() {
       case "stats":           return <StatsLeaderboard />;
       case "replay":          return <ShoeReplay />;
       case "guide":           return <Guide />;
+      case "settings":        return <SettingsPage />;
     }
   }
 

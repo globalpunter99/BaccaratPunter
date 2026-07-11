@@ -2,6 +2,11 @@ import { useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
 import { mockSignal } from "../../mock/data";
+import {
+  settle, totalStake,
+  type BetSlip, type MainSide, type SideBetType, type Settlement,
+} from "../../game/payouts";
+import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
 
 interface HandRecord {
   id: number;
@@ -61,6 +66,57 @@ export default function LiveSession() {
   const [showDetails, setShowDetails] = useState(false);
   const [showFix, setShowFix] = useState(false);
   const [showRecordInfo, setShowRecordInfo] = useState(false);
+
+  // ── My Bet (pay engine) ────────────────────────────────────────────────
+  const [betTracking, setBetTracking] = useState(false);
+  const [sideBetMode, setSideBetMode] = useState(false);
+  const [pendingMain, setPendingMain] = useState<MainSide | null>(null);
+  const [pendingStake, setPendingStake] = useState(0);
+  const [pendingSides, setPendingSides] = useState<Partial<Record<SideBetType, number>>>({});
+  const [lastSlip, setLastSlip] = useState<BetSlip | null>(null);
+  const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
+  const [ledger, setLedger] = useState({ staked: 0, returned: 0, betHands: 0, wonHands: 0 });
+  const STAKE_PRESETS = [100, 500, 1000, 5000];
+
+  const pendingSlip: BetSlip = {
+    main: pendingMain && pendingStake > 0 ? { side: pendingMain, stake: pendingStake } : undefined,
+    side: pendingSides,
+  };
+  const hasPendingBet = totalStake(pendingSlip) > 0;
+
+  function clearPendingBet() {
+    setPendingMain(null);
+    setPendingStake(0);
+    setPendingSides({});
+  }
+
+  function repeatLastBet() {
+    if (!lastSlip) return;
+    setPendingMain(lastSlip.main?.side ?? null);
+    setPendingStake(lastSlip.main?.stake ?? 0);
+    setPendingSides({ ...lastSlip.side });
+  }
+
+  function settlePendingBet(hand: HandRecord) {
+    if (!betTracking || !hasPendingBet) return;
+    const table = tableForCasino(loadPayoutSettings(), details.casino);
+    const result = settle(pendingSlip, {
+      outcome: hand.outcome,
+      natural: hand.natural,
+      bankerPair: hand.bankerPair,
+      playerPair: hand.playerPair,
+      variant: hand.variant,
+    }, details.commission, table);
+    setLedger(l => ({
+      staked: l.staked + result.staked,
+      returned: l.returned + result.returned,
+      betHands: l.betHands + 1,
+      wonHands: l.wonHands + (result.profit > 0 ? 1 : 0),
+    }));
+    setLastSettlement(result);
+    setLastSlip(pendingSlip);
+    clearPendingBet();
+  }
 
   // Correction bar
   const [fixGameNo, setFixGameNo] = useState("");
@@ -199,6 +255,7 @@ export default function LiveSession() {
       cards: extra?.cards,
     };
     setHands(prev => [...prev, newHand]);
+    settlePendingBet(newHand);
   }
 
   // Advance mode: computed live result
@@ -348,6 +405,124 @@ export default function LiveSession() {
                   Date &amp; start time recorded automatically
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* My Bet — pay engine */}
+          <div className="panel">
+            {!betTracking ? (
+              <button
+                className="btn btn-ghost"
+                style={{ width: "100%", fontSize: 12, textAlign: "left" }}
+                onClick={() => setBetTracking(true)}
+              >
+                💰 Bet tracking: Off — tap to enable
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+                  <div className="panel-title" style={{ marginBottom: 0 }}>My Bet</div>
+                  <span className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`}>
+                    {ledger.returned - ledger.staked >= 0 ? "+" : ""}{ledger.returned - ledger.staked}
+                  </span>
+                  <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }} onClick={() => setBetTracking(false)}>
+                    Off
+                  </button>
+                </div>
+
+                {/* Main bet: side + stake */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+                  {(["banker", "player", "tie"] as const).map(s => (
+                    <button
+                      key={s}
+                      className={`btn ${pendingMain === s ? `btn-${s}` : "btn-ghost"}`}
+                      style={{ padding: "7px 0", fontSize: 12 }}
+                      onClick={() => setPendingMain(m => (m === s ? null : s))}
+                    >
+                      {s === "banker" ? "庄 B" : s === "player" ? "闲 P" : "和 T"}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
+                  {STAKE_PRESETS.map(v => (
+                    <button
+                      key={v}
+                      className={`btn ${pendingStake === v ? "btn-secondary" : "btn-ghost"}`}
+                      style={{ padding: "6px 0", fontSize: 12 }}
+                      onClick={() => setPendingStake(v)}
+                    >
+                      {v >= 1000 ? `${v / 1000}k` : v}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Side bets */}
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: "100%", fontSize: 11, marginBottom: sideBetMode ? 8 : 0 }}
+                  onClick={() => setSideBetMode(p => !p)}
+                >
+                  {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
+                </button>
+                {sideBetMode && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {([
+                      ["bPair", "B Pair"], ["pPair", "P Pair"], ["tiger", "Tiger"],
+                      ["dragon", "Dragon"], ["dragonTiger", "D-Tiger"],
+                    ] as [SideBetType, string][]).map(([type, label]) => (
+                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, color: "var(--text-secondary)", width: 52 }}>{label}</span>
+                        <input
+                          className="input"
+                          type="number" min={0} placeholder="stake"
+                          style={{ padding: "4px 8px", fontSize: 12 }}
+                          value={pendingSides[type] ?? ""}
+                          onChange={e => {
+                            const v = parseInt(e.target.value, 10);
+                            setPendingSides(p => ({ ...p, [type]: isNaN(v) || v <= 0 ? undefined : v }));
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Slip summary + actions */}
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
+                    ↻ Same again
+                  </button>
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet} onClick={clearPendingBet}>
+                    ✕ Clear bet
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet ? "var(--gold)" : "var(--text-muted)" }}>
+                  {hasPendingBet
+                    ? `Bet pending: ${totalStake(pendingSlip)} — settles when the result is recorded`
+                    : "No bet on the next hand (sitting out)"}
+                </div>
+
+                {/* Last settlement flash */}
+                {lastSettlement && (
+                  <div className="settlement-flash" style={{ borderColor: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
+                    <div style={{ fontWeight: 700, color: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
+                      {lastSettlement.profit >= 0 ? "+" : ""}{lastSettlement.profit}
+                    </div>
+                    {lastSettlement.lines.map((l, i) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)" }}>{l}</div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Session ledger */}
+                {ledger.betHands > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
+                    <span>Staked {ledger.staked}</span>
+                    <span>Return {ledger.returned}</span>
+                    <span>Bets {ledger.wonHands}/{ledger.betHands} won</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
