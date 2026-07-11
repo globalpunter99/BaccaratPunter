@@ -57,6 +57,7 @@ export const PAYOUT_LABELS: Record<keyof PayoutTable, string> = {
 
 export type MainSide = "banker" | "player" | "tie";
 export type SideBetType =
+  | "tie"
   | "bPair" | "pPair" | "anyPair"
   | "smlTiger" | "bigTiger" | "anyTiger" | "tigerTie"
   | "smlDragon" | "bigDragon" | "dragonTie"
@@ -142,6 +143,9 @@ export function settle(
         won = !!hand.bankerPair; rate = table.bPair; break;
       case "pPair":
         won = !!hand.playerPair; rate = table.pPair; break;
+      case "tie":
+        if (hand.outcome === "tie") { won = true; rate = table.tie; }
+        break;
       case "anyPair":
         if (hand.bankerPair || hand.playerPair) { won = true; rate = table.anyPair; }
         break;
@@ -178,6 +182,7 @@ export function settle(
         break;
     }
     const label: Record<SideBetType, string> = {
+      tie: "Tie",
       bPair: "B Pair", pPair: "P Pair", anyPair: "Any Pair",
       smlTiger: "Sml Tiger", bigTiger: "Big Tiger", anyTiger: "Any Tiger", tigerTie: "Tiger Tie",
       smlDragon: "Sml Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",

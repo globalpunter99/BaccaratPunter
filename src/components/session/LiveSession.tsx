@@ -76,14 +76,13 @@ export default function LiveSession() {
   // ── My Bet (pay engine) ────────────────────────────────────────────────
   const [showBets, setShowBets] = useState(false);
   const [sideBetMode, setSideBetMode] = useState(false);
-  const [customStake, setCustomStake] = useState("");
   const [pendingMain, setPendingMain] = useState<MainSide | null>(null);
   const [pendingStake, setPendingStake] = useState(0);
   const [pendingSides, setPendingSides] = useState<Partial<Record<SideBetType, number>>>({});
   const [lastSlip, setLastSlip] = useState<BetSlip | null>(null);
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
   const [ledger, setLedger] = useState({ staked: 0, returned: 0, betHands: 0, wonHands: 0 });
-  const STAKE_PRESETS = [25, 50, 100, 200, 400, 500, 800, 1000, 2000];
+  const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
 
   const pendingSlip: BetSlip = {
     main: pendingMain && pendingStake > 0 ? { side: pendingMain, stake: pendingStake } : undefined,
@@ -455,37 +454,39 @@ export default function LiveSession() {
             </div>
             {showBets && (
               <div style={{ marginTop: 10 }}>
-                {/* Main bet: side + stake */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
-                  {(["banker", "player", "tie"] as const).map(s => (
+                {/* Main bet: Banker or Player */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+                  {(["banker", "player"] as const).map(s => (
                     <button
                       key={s}
                       className={`btn bet-side-btn ${s} ${pendingMain === s ? "selected" : ""}`}
                       onClick={() => setPendingMain(m => (m === s ? null : s))}
                     >
-                      {s === "banker" ? "庄 B" : s === "player" ? "闲 P" : "和 T"}
+                      {s === "banker" ? "庄 B" : "闲 P"}
                     </button>
                   ))}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 5, marginBottom: 6 }}>
+
+                {/* Casino chips */}
+                <div className="chip-row">
                   {STAKE_PRESETS.map(v => (
                     <button
                       key={v}
-                      className={`btn ${pendingStake === v ? "btn-secondary" : "btn-ghost"}`}
-                      style={{ padding: "6px 0", fontSize: 11 }}
-                      onClick={() => { setPendingStake(v); setCustomStake(""); }}
+                      className={`bet-chip chip-${v} ${pendingStake === v ? "selected" : ""}`}
+                      onClick={() => setPendingStake(v)}
                     >
-                      {v >= 1000 ? `${v / 1000}k` : v}
+                      ${v >= 1000 ? `${v / 1000}k` : v}
                     </button>
                   ))}
                 </div>
+
+                {/* Bet amount — synced with the chips, editable for custom */}
                 <input
                   className="input"
-                  type="number" min={1} placeholder="Custom amount"
+                  type="number" min={1} placeholder="Bet amount"
                   style={{ padding: "6px 10px", fontSize: 12, marginBottom: 8 }}
-                  value={customStake}
+                  value={pendingStake > 0 ? pendingStake : ""}
                   onChange={e => {
-                    setCustomStake(e.target.value);
                     const v = parseInt(e.target.value, 10);
                     setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
                   }}
@@ -502,6 +503,7 @@ export default function LiveSession() {
                 {sideBetMode && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     {([
+                      ["tie", "Tie"],
                       ["bPair", "B Pair"], ["pPair", "P Pair"],
                       ["anyPair", "Any Pair"], ["anyTiger", "Any Tiger"],
                       ["smlTiger", "Sml Tiger"], ["bigTiger", "Big Tiger"],
