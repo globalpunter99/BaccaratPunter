@@ -370,10 +370,24 @@ function LegendKey() {
                 Tie — one slash per tie; consecutive ties stack at offsets
               </div>
               <div className="legend-row"><b className="marker-natural inline">N</b> Natural win (8/9 on two cards)</div>
-              <div className="legend-row"><span className="marker-pair player-pair inline" /> Player pair (top-right dot)</div>
-              <div className="legend-row"><span className="marker-pair banker-pair inline" /> Banker pair (bottom-left dot)</div>
-              <div className="legend-row"><span className="marker-variant tiger inline">🐯</span> Small Tiger — Banker wins on 6 (two cards); larger icon = Big Tiger (three cards)</div>
-              <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={16} /></span> Small Dragon — Player wins 7 v Banker ≤5 (two cards); larger dark purple icon = Big Dragon (three cards)</div>
+              <div className="legend-row">
+                <span style={{ position: "relative", width: 20, height: 20, display: "inline-block", flexShrink: 0 }}>
+                  <span className="road-stone big-road-player" style={{ width: 20, height: 20, display: "block" }} />
+                  <span className="marker-pair player-pair" />
+                </span>
+                Player pair — dot on the top-right of the circle
+              </div>
+              <div className="legend-row">
+                <span style={{ position: "relative", width: 20, height: 20, display: "inline-block", flexShrink: 0 }}>
+                  <span className="road-stone big-road-banker" style={{ width: 20, height: 20, display: "block" }} />
+                  <span className="marker-pair banker-pair" />
+                </span>
+                Banker pair — dot on the bottom-left of the circle
+              </div>
+              <div className="legend-row"><span className="marker-variant tiger inline" style={{ fontSize: 12 }}>🐯</span> Small Tiger — Banker wins on 6 with two cards</div>
+              <div className="legend-row"><span className="marker-variant tiger inline" style={{ fontSize: 16 }}>🐯</span> Big Tiger — Banker wins on 6 with three cards</div>
+              <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={14} /></span> Small Dragon — Player wins 7 v Banker ≤5 (two cards)</div>
+              <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={18} big /></span> Big Dragon — Player wins 7 v Banker ≤5 (three cards)</div>
               <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (4, 5 or 6; Dragon bets also pay)</div>
             </div>
           </div>
