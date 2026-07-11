@@ -530,6 +530,8 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
               >
                 Detailed
               </button>
+            </span>
+            <span className="view-toggle" style={{ marginLeft: 20 }}>
               <button
                 className={`view-toggle-btn ${showBetOverlay ? "active" : ""}`}
                 title="Show/hide your bet results on the tiles"
