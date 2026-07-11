@@ -20,6 +20,9 @@ interface HandRecord {
   variant?: string;
   // Advance mode: raw card ranks as entered (banker/player, up to 3 each)
   cards?: { player: string[]; banker: string[] };
+  // Total both sides finished on when the hand tied (Advance mode only) —
+  // settles Tiger Tie (6-6) and Dragon Tie (7-7) side bets
+  tieTotal?: number;
 }
 
 type EntryMode = "basic" | "medium" | "advance";
@@ -107,6 +110,7 @@ export default function LiveSession() {
       bankerPair: hand.bankerPair,
       playerPair: hand.playerPair,
       variant: hand.variant,
+      tieTotal: hand.tieTotal,
     }, details.commission, table);
     setLedger(l => ({
       staked: l.staked + result.staked,
@@ -244,7 +248,7 @@ export default function LiveSession() {
 
   function addHand(outcome: Outcome, extra?: {
     natural?: boolean; variant?: string; cards?: HandRecord["cards"];
-    bankerPair?: boolean; playerPair?: boolean;
+    bankerPair?: boolean; playerPair?: boolean; tieTotal?: number;
   }) {
     const newHand: HandRecord = {
       id: hands.length + 1,
@@ -254,6 +258,7 @@ export default function LiveSession() {
       natural: extra?.natural ?? false,
       variant: extra?.variant,
       cards: extra?.cards,
+      tieTotal: extra?.tieTotal,
     };
     setHands(prev => [...prev, newHand]);
     settlePendingBet(newHand);
@@ -307,6 +312,7 @@ export default function LiveSession() {
       playerPair: advancePlayerPair,
       bankerPair: advanceBankerPair,
       variant: advanceVariant,
+      tieTotal: advanceOutcome === "tie" ? pTotal : undefined,
       cards: {
         player: cardEntry.player.filter((c): c is string => c !== null),
         banker: cardEntry.banker.filter((c): c is string => c !== null),
@@ -472,17 +478,20 @@ export default function LiveSession() {
                   {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
                 </button>
                 {sideBetMode && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     {([
-                      ["bPair", "B Pair"], ["pPair", "P Pair"], ["tiger", "Tiger"],
-                      ["dragon", "Dragon"], ["dragonTiger", "D-Tiger"],
+                      ["bPair", "B Pair"], ["pPair", "P Pair"],
+                      ["smlTiger", "Sml Tiger"], ["bigTiger", "Big Tiger"],
+                      ["smlDragon", "Sml Dragon"], ["bigDragon", "Big Dragon"],
+                      ["tigerTie", "Tiger Tie"], ["dragonTie", "Dragon Tie"],
+                      ["dragonTiger", "D-Tiger"],
                     ] as [SideBetType, string][]).map(([type, label]) => (
-                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 12, color: "var(--text-secondary)", width: 52 }}>{label}</span>
+                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 62, flexShrink: 0 }}>{label}</span>
                         <input
                           className="input"
                           type="number" min={0} placeholder="stake"
-                          style={{ padding: "4px 8px", fontSize: 12 }}
+                          style={{ padding: "4px 6px", fontSize: 11, minWidth: 0 }}
                           value={pendingSides[type] ?? ""}
                           onChange={e => {
                             const v = parseInt(e.target.value, 10);

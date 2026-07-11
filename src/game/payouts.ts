@@ -8,8 +8,10 @@ export interface PayoutTable {
   pPair: number;
   smlTiger: number;
   bigTiger: number;
+  tigerTie: number;   // tie with both totals 6
   smlDragon: number;
   bigDragon: number;
+  dragonTie: number;  // tie with both totals 7
   dragonTiger4: number;
   dragonTiger5: number;
   dragonTiger6: number;
@@ -23,8 +25,10 @@ export const DEFAULT_PAYOUTS: PayoutTable = {
   pPair: 11,
   smlTiger: 22,
   bigTiger: 50,
+  tigerTie: 35,
   smlDragon: 17,
   bigDragon: 40,
+  dragonTie: 35,
   dragonTiger4: 30,
   dragonTiger5: 60,
   dragonTiger6: 100,
@@ -36,15 +40,21 @@ export const PAYOUT_LABELS: Record<keyof PayoutTable, string> = {
   pPair: "Player Pair",
   smlTiger: "Small Tiger",
   bigTiger: "Big Tiger",
+  tigerTie: "Tiger Tie (6-6)",
   smlDragon: "Small Dragon",
   bigDragon: "Big Dragon",
+  dragonTie: "Dragon Tie (7-7)",
   dragonTiger4: "Dragon Tiger (4 card)",
   dragonTiger5: "Dragon Tiger (5 card)",
   dragonTiger6: "Dragon Tiger (6 card)",
 };
 
 export type MainSide = "banker" | "player" | "tie";
-export type SideBetType = "bPair" | "pPair" | "tiger" | "dragon" | "dragonTiger";
+export type SideBetType =
+  | "bPair" | "pPair"
+  | "smlTiger" | "bigTiger" | "tigerTie"
+  | "smlDragon" | "bigDragon" | "dragonTie"
+  | "dragonTiger";
 
 export interface BetSlip {
   main?: { side: MainSide; stake: number };
@@ -57,6 +67,9 @@ export interface HandResultForSettle {
   bankerPair?: boolean;
   playerPair?: boolean;
   variant?: string; // sml-tiger | lge-tiger | sml-dragon | big-dragon | dragontiger-4/5/6
+  // Total both sides finished on when the hand tied (known from Advance-mode
+  // card entry). Needed to settle Tiger Tie (6-6) and Dragon Tie (7-7).
+  tieTotal?: number;
 }
 
 export interface Settlement {
@@ -123,18 +136,28 @@ export function settle(
         won = !!hand.bankerPair; rate = table.bPair; break;
       case "pPair":
         won = !!hand.playerPair; rate = table.pPair; break;
-      case "tiger":
+      case "smlTiger":
         if (hand.variant === "sml-tiger") { won = true; rate = table.smlTiger; }
+        break;
+      case "bigTiger":
         if (hand.variant === "lge-tiger") { won = true; rate = table.bigTiger; }
         break;
-      case "dragon":
+      case "tigerTie":
+        if (hand.outcome === "tie" && hand.tieTotal === 6) { won = true; rate = table.tigerTie; }
+        break;
+      case "smlDragon":
         // Dragon bets also pay in a Dragon Tiger situation. 4 cards means
-        // the Player won on two cards (small); 6 cards means three (big);
-        // 5 cards is settled as small (conservative — venue rules vary).
-        if (hand.variant === "sml-dragon") { won = true; rate = table.smlDragon; }
-        if (hand.variant === "big-dragon") { won = true; rate = table.bigDragon; }
-        if (hand.variant === "dragontiger-4" || hand.variant === "dragontiger-5") { won = true; rate = table.smlDragon; }
-        if (hand.variant === "dragontiger-6") { won = true; rate = table.bigDragon; }
+        // the Player won on two cards (small); 5 cards settles as small
+        // (conservative — venue rules vary).
+        if (hand.variant === "sml-dragon"
+          || hand.variant === "dragontiger-4"
+          || hand.variant === "dragontiger-5") { won = true; rate = table.smlDragon; }
+        break;
+      case "bigDragon":
+        if (hand.variant === "big-dragon" || hand.variant === "dragontiger-6") { won = true; rate = table.bigDragon; }
+        break;
+      case "dragonTie":
+        if (hand.outcome === "tie" && hand.tieTotal === 7) { won = true; rate = table.dragonTie; }
         break;
       case "dragonTiger":
         if (hand.variant === "dragontiger-4") { won = true; rate = table.dragonTiger4; }
@@ -143,7 +166,10 @@ export function settle(
         break;
     }
     const label: Record<SideBetType, string> = {
-      bPair: "B Pair", pPair: "P Pair", tiger: "Tiger", dragon: "Dragon", dragonTiger: "D-Tiger",
+      bPair: "B Pair", pPair: "P Pair",
+      smlTiger: "Sml Tiger", bigTiger: "Big Tiger", tigerTie: "Tiger Tie",
+      smlDragon: "Sml Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",
+      dragonTiger: "D-Tiger",
     };
     if (won) {
       const win = stake * rate;
