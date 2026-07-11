@@ -465,16 +465,18 @@ export default function LiveSession() {
                       {s === "banker" ? "庄 B" : "闲 P"}
                     </button>
                   ))}
-                  <input
-                    className="input"
-                    type="number" min={1} placeholder="Amount"
-                    style={{ padding: "6px 8px", fontSize: 13, fontWeight: 700, textAlign: "center", minWidth: 0 }}
-                    value={pendingStake > 0 ? pendingStake : ""}
-                    onChange={e => {
-                      const v = parseInt(e.target.value, 10);
-                      setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
-                    }}
-                  />
+                  <span className={`amount-wrap${pendingStake > 0 ? " has-value" : ""}`}>
+                    <span className="amount-prefix">$</span>
+                    <input
+                      className="input amount-input"
+                      type="number" min={1} placeholder="Amount $"
+                      value={pendingStake > 0 ? pendingStake : ""}
+                      onChange={e => {
+                        const v = parseInt(e.target.value, 10);
+                        setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
+                      }}
+                    />
+                  </span>
                 </div>
 
                 {/* Casino chips — each press adds to the amount, like stacking chips */}
