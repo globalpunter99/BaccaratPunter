@@ -719,14 +719,18 @@ select.input { cursor: pointer; }
 }
 .legend-key-btn:hover { border-color: var(--gold); }
 .legend-list { display: flex; flex-direction: column; gap: 9px; }
+/* Icon column fixed width with the icon centred in it, so all the
+   description text starts at the same x position */
 .legend-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  column-gap: 10px;
   align-items: center;
-  gap: 10px;
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.4;
 }
+.legend-row > :first-child { justify-self: center; }
 
 /* ── Buttons ── */
 .btn {
