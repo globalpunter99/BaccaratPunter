@@ -453,6 +453,12 @@ function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
 
 // ── Main export — casino screen layout ───────────────────────────────────────
 export default function RoadsDisplay({ outcomes, extras, compact = false }: Props) {
+  // View mode for Big Road + Bead Plate markers:
+  // basic = outcomes, ties and naturals only · detailed = + pairs and exotics
+  const [viewMode, setViewMode] = useState<"basic" | "detailed">("detailed");
+  const shownExtras = viewMode === "detailed"
+    ? extras
+    : extras?.map(e => (e ? { natural: e.natural } : e));
   const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
   const beb    = useMemo(() => bigEyeBoy(stones),    [stones]);
   const sr     = useMemo(() => smallRoad(stones),    [stones]);
@@ -465,8 +471,27 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Row 1 — Big Road full width */}
       <RoadSection titleCn="大路" titleEn="Big Road" align="left"
-        headerExtra={<><HeaderStats outcomes={outcomes} /><LegendKey /></>}>
-        <BigRoad outcomes={outcomes} extras={extras} cellSize={bigCell} />
+        headerExtra={
+          <>
+            <HeaderStats outcomes={outcomes} />
+            <span className="view-toggle">
+              <button
+                className={`view-toggle-btn ${viewMode === "basic" ? "active" : ""}`}
+                onClick={() => setViewMode("basic")}
+              >
+                Basic
+              </button>
+              <button
+                className={`view-toggle-btn ${viewMode === "detailed" ? "active" : ""}`}
+                onClick={() => setViewMode("detailed")}
+              >
+                Detailed
+              </button>
+            </span>
+            <LegendKey />
+          </>
+        }>
+        <BigRoad outcomes={outcomes} extras={shownExtras} cellSize={bigCell} />
       </RoadSection>
 
       {/* Row 2 — left: Big Eye above Small Road · right: Cockroach two bands */}
@@ -488,7 +513,7 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
       <div className="roads-bottom-grid">
         <RoadSection titleCn="珠盘路" titleEn="Bead Plate"
           headerExtra={<HeaderStats outcomes={outcomes} />}>
-          <BeadPlate outcomes={outcomes} extras={extras} cellSize={bigCell} />
+          <BeadPlate outcomes={outcomes} extras={shownExtras} cellSize={bigCell} />
         </RoadSection>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
           <StatsPanel outcomes={outcomes} />
