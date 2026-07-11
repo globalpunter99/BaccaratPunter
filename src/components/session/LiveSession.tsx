@@ -68,15 +68,16 @@ export default function LiveSession() {
   const [showRecordInfo, setShowRecordInfo] = useState(false);
 
   // ── My Bet (pay engine) ────────────────────────────────────────────────
-  const [betTracking, setBetTracking] = useState(false);
+  const [showBets, setShowBets] = useState(false);
   const [sideBetMode, setSideBetMode] = useState(false);
+  const [customStake, setCustomStake] = useState("");
   const [pendingMain, setPendingMain] = useState<MainSide | null>(null);
   const [pendingStake, setPendingStake] = useState(0);
   const [pendingSides, setPendingSides] = useState<Partial<Record<SideBetType, number>>>({});
   const [lastSlip, setLastSlip] = useState<BetSlip | null>(null);
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
   const [ledger, setLedger] = useState({ staked: 0, returned: 0, betHands: 0, wonHands: 0 });
-  const STAKE_PRESETS = [100, 500, 1000, 5000];
+  const STAKE_PRESETS = [25, 50, 100, 200, 400, 500, 800, 1000, 2000];
 
   const pendingSlip: BetSlip = {
     main: pendingMain && pendingStake > 0 ? { side: pendingMain, stake: pendingStake } : undefined,
@@ -98,7 +99,7 @@ export default function LiveSession() {
   }
 
   function settlePendingBet(hand: HandRecord) {
-    if (!betTracking || !hasPendingBet) return;
+    if (!hasPendingBet) return; // no bet = user skipped this hand
     const table = tableForCasino(loadPayoutSettings(), details.casino);
     const result = settle(pendingSlip, {
       outcome: hand.outcome,
@@ -410,51 +411,57 @@ export default function LiveSession() {
 
           {/* My Bet — pay engine */}
           <div className="panel">
-            {!betTracking ? (
+            <div className="flex items-center justify-between">
               <button
                 className="btn btn-ghost"
-                style={{ width: "100%", fontSize: 12, textAlign: "left" }}
-                onClick={() => setBetTracking(true)}
+                style={{ flex: 1, fontSize: 12, textAlign: "left" }}
+                onClick={() => setShowBets(p => !p)}
               >
-                💰 Bet tracking: Off — tap to enable
+                {showBets ? "▲" : "▼"} My Bet
               </button>
-            ) : (
-              <>
-                <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-                  <div className="panel-title" style={{ marginBottom: 0 }}>My Bet</div>
-                  <span className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`}>
-                    {ledger.returned - ledger.staked >= 0 ? "+" : ""}{ledger.returned - ledger.staked}
-                  </span>
-                  <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }} onClick={() => setBetTracking(false)}>
-                    Off
-                  </button>
-                </div>
-
+              {ledger.betHands > 0 && (
+                <span className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`}>
+                  {ledger.returned - ledger.staked >= 0 ? "+" : ""}{ledger.returned - ledger.staked}
+                </span>
+              )}
+            </div>
+            {showBets && (
+              <div style={{ marginTop: 10 }}>
                 {/* Main bet: side + stake */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
                   {(["banker", "player", "tie"] as const).map(s => (
                     <button
                       key={s}
-                      className={`btn ${pendingMain === s ? `btn-${s}` : "btn-ghost"}`}
-                      style={{ padding: "7px 0", fontSize: 12 }}
+                      className={`btn bet-side-btn ${s} ${pendingMain === s ? "selected" : ""}`}
                       onClick={() => setPendingMain(m => (m === s ? null : s))}
                     >
                       {s === "banker" ? "庄 B" : s === "player" ? "闲 P" : "和 T"}
                     </button>
                   ))}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 5, marginBottom: 6 }}>
                   {STAKE_PRESETS.map(v => (
                     <button
                       key={v}
                       className={`btn ${pendingStake === v ? "btn-secondary" : "btn-ghost"}`}
-                      style={{ padding: "6px 0", fontSize: 12 }}
-                      onClick={() => setPendingStake(v)}
+                      style={{ padding: "6px 0", fontSize: 11 }}
+                      onClick={() => { setPendingStake(v); setCustomStake(""); }}
                     >
                       {v >= 1000 ? `${v / 1000}k` : v}
                     </button>
                   ))}
                 </div>
+                <input
+                  className="input"
+                  type="number" min={1} placeholder="Custom amount"
+                  style={{ padding: "6px 10px", fontSize: 12, marginBottom: 8 }}
+                  value={customStake}
+                  onChange={e => {
+                    setCustomStake(e.target.value);
+                    const v = parseInt(e.target.value, 10);
+                    setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
+                  }}
+                />
 
                 {/* Side bets */}
                 <button
@@ -490,7 +497,7 @@ export default function LiveSession() {
                 {/* Slip summary + actions */}
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                   <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
-                    ↻ Same again
+                    ↻ Repeat bet
                   </button>
                   <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet} onClick={clearPendingBet}>
                     ✕ Clear bet
@@ -517,12 +524,18 @@ export default function LiveSession() {
                 {/* Session ledger */}
                 {ledger.betHands > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
-                    <span>Staked {ledger.staked}</span>
-                    <span>Return {ledger.returned}</span>
+                    <span>
+                      Profit/(Loss):{" "}
+                      <b className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`} style={{ fontSize: 11 }}>
+                        {ledger.returned - ledger.staked >= 0
+                          ? `+${ledger.returned - ledger.staked}`
+                          : `(${Math.abs(ledger.returned - ledger.staked)})`}
+                      </b>
+                    </span>
                     <span>Bets {ledger.wonHands}/{ledger.betHands} won</span>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
 

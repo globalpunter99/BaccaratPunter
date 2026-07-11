@@ -334,6 +334,21 @@ body {
 .keypad-btn:active { background: var(--border-accent); }
 
 /* Pay engine: My Bet panel */
+.bet-side-btn {
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--bg-dark);
+  border: 1.5px solid;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.bet-side-btn.banker { border-color: var(--banker-red); color: var(--banker-red); }
+.bet-side-btn.player { border-color: var(--player-blue); color: var(--player-blue); }
+.bet-side-btn.tie    { border-color: var(--tie-green); color: var(--tie-green); }
+.bet-side-btn.banker.selected { background: var(--banker-red); color: #fff; }
+.bet-side-btn.player.selected { background: var(--player-blue); color: #fff; }
+.bet-side-btn.tie.selected    { background: var(--tie-green); color: #fff; }
 .ledger-pl { font-size: 15px; font-weight: 700; }
 .ledger-pl.up   { color: var(--tie-green); }
 .ledger-pl.down { color: var(--banker-red); }
