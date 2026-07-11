@@ -6,8 +6,10 @@ export interface PayoutTable {
   tie: number;
   bPair: number;
   pPair: number;
+  anyPair: number;  // either side pairs
   smlTiger: number;
   bigTiger: number;
+  anyTiger: number;   // banker wins on 6, two or three cards
   tigerTie: number;   // tie with both totals 6
   smlDragon: number;
   bigDragon: number;
@@ -23,8 +25,10 @@ export const DEFAULT_PAYOUTS: PayoutTable = {
   tie: 8,
   bPair: 11,
   pPair: 11,
+  anyPair: 5,
   smlTiger: 22,
   bigTiger: 50,
+  anyTiger: 12,
   tigerTie: 35,
   smlDragon: 17,
   bigDragon: 40,
@@ -38,8 +42,10 @@ export const PAYOUT_LABELS: Record<keyof PayoutTable, string> = {
   tie: "Tie",
   bPair: "Banker Pair",
   pPair: "Player Pair",
+  anyPair: "Any Pair",
   smlTiger: "Small Tiger",
   bigTiger: "Big Tiger",
+  anyTiger: "Any Tiger",
   tigerTie: "Tiger Tie (6-6)",
   smlDragon: "Small Dragon",
   bigDragon: "Big Dragon",
@@ -51,8 +57,8 @@ export const PAYOUT_LABELS: Record<keyof PayoutTable, string> = {
 
 export type MainSide = "banker" | "player" | "tie";
 export type SideBetType =
-  | "bPair" | "pPair"
-  | "smlTiger" | "bigTiger" | "tigerTie"
+  | "bPair" | "pPair" | "anyPair"
+  | "smlTiger" | "bigTiger" | "anyTiger" | "tigerTie"
   | "smlDragon" | "bigDragon" | "dragonTie"
   | "dragonTiger";
 
@@ -136,6 +142,12 @@ export function settle(
         won = !!hand.bankerPair; rate = table.bPair; break;
       case "pPair":
         won = !!hand.playerPair; rate = table.pPair; break;
+      case "anyPair":
+        if (hand.bankerPair || hand.playerPair) { won = true; rate = table.anyPair; }
+        break;
+      case "anyTiger":
+        if (hand.variant === "sml-tiger" || hand.variant === "lge-tiger") { won = true; rate = table.anyTiger; }
+        break;
       case "smlTiger":
         if (hand.variant === "sml-tiger") { won = true; rate = table.smlTiger; }
         break;
@@ -166,8 +178,8 @@ export function settle(
         break;
     }
     const label: Record<SideBetType, string> = {
-      bPair: "B Pair", pPair: "P Pair",
-      smlTiger: "Sml Tiger", bigTiger: "Big Tiger", tigerTie: "Tiger Tie",
+      bPair: "B Pair", pPair: "P Pair", anyPair: "Any Pair",
+      smlTiger: "Sml Tiger", bigTiger: "Big Tiger", anyTiger: "Any Tiger", tigerTie: "Tiger Tie",
       smlDragon: "Sml Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",
       dragonTiger: "D-Tiger",
     };

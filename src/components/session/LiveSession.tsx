@@ -481,6 +481,7 @@ export default function LiveSession() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     {([
                       ["bPair", "B Pair"], ["pPair", "P Pair"],
+                      ["anyPair", "Any Pair"], ["anyTiger", "Any Tiger"],
                       ["smlTiger", "Sml Tiger"], ["bigTiger", "Big Tiger"],
                       ["smlDragon", "Sml Dragon"], ["bigDragon", "Big Dragon"],
                       ["tigerTie", "Tiger Tie"], ["dragonTie", "Dragon Tie"],
