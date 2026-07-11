@@ -492,10 +492,43 @@ export default function LiveSession() {
                   ))}
                 </div>
 
-                {/* Side bets */}
+                {/* Slip summary + actions */}
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
+                    ↻ Re-bet
+                  </button>
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet} onClick={clearPendingBet}>
+                    ✕ Clear bet
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet ? "var(--gold)" : "var(--text-muted)" }}>
+                  {hasPendingBet
+                    ? `Bet pending: ${totalStake(pendingSlip)} — settles when the result is recorded`
+                    : "No bets placed — assume sit out on next hand"}
+                </div>
+
+                {/* Last settlement */}
+                {lastSettlement && (
+                  <div
+                    className="settlement-flash"
+                    style={{
+                      borderColor: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)",
+                      padding: "5px 10px", fontSize: 12,
+                    }}
+                  >
+                    Last bet:{" "}
+                    <b style={{ color: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
+                      {lastSettlement.profit >= 0
+                        ? `Bet Win ${lastSettlement.profit}`
+                        : `Bet Lose −${Math.abs(lastSettlement.profit)}`}
+                    </b>
+                  </div>
+                )}
+
+                {/* Side bets — bottom of the panel */}
                 <button
                   className="btn btn-ghost"
-                  style={{ width: "100%", fontSize: 11, marginBottom: sideBetMode ? 8 : 0 }}
+                  style={{ width: "100%", fontSize: 11, marginTop: 8, marginBottom: sideBetMode ? 8 : 0 }}
                   onClick={() => setSideBetMode(p => !p)}
                 >
                   {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
@@ -527,40 +560,6 @@ export default function LiveSession() {
                     ))}
                   </div>
                 )}
-
-                {/* Slip summary + actions */}
-                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
-                    ↻ Repeat bet
-                  </button>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet} onClick={clearPendingBet}>
-                    ✕ Clear bet
-                  </button>
-                </div>
-                <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet ? "var(--gold)" : "var(--text-muted)" }}>
-                  {hasPendingBet
-                    ? `Bet pending: ${totalStake(pendingSlip)} — settles when the result is recorded`
-                    : "No bets placed — assume sit out on next hand"}
-                </div>
-
-                {/* Last settlement */}
-                {lastSettlement && (
-                  <div
-                    className="settlement-flash"
-                    style={{
-                      borderColor: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)",
-                      padding: "5px 10px", fontSize: 12,
-                    }}
-                  >
-                    Last bet:{" "}
-                    <b style={{ color: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
-                      {lastSettlement.profit >= 0
-                        ? `Bet Win ${lastSettlement.profit}`
-                        : `Bet Lose −${Math.abs(lastSettlement.profit)}`}
-                    </b>
-                  </div>
-                )}
-
               </div>
             )}
           </div>
