@@ -454,8 +454,8 @@ export default function LiveSession() {
             </div>
             {showBets && (
               <div style={{ marginTop: 10 }}>
-                {/* Main bet: Banker or Player */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+                {/* Main bet: Banker / Player / amount (chips stack into it) */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
                   {(["banker", "player"] as const).map(s => (
                     <button
                       key={s}
@@ -465,32 +465,30 @@ export default function LiveSession() {
                       {s === "banker" ? "庄 B" : "闲 P"}
                     </button>
                   ))}
+                  <input
+                    className="input"
+                    type="number" min={1} placeholder="Amount"
+                    style={{ padding: "6px 8px", fontSize: 13, fontWeight: 700, textAlign: "center", minWidth: 0 }}
+                    value={pendingStake > 0 ? pendingStake : ""}
+                    onChange={e => {
+                      const v = parseInt(e.target.value, 10);
+                      setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
+                    }}
+                  />
                 </div>
 
-                {/* Casino chips */}
+                {/* Casino chips — each press adds to the amount, like stacking chips */}
                 <div className="chip-row">
                   {STAKE_PRESETS.map(v => (
                     <button
                       key={v}
-                      className={`bet-chip chip-${v} ${pendingStake === v ? "selected" : ""}`}
-                      onClick={() => setPendingStake(v)}
+                      className={`bet-chip chip-${v}`}
+                      onClick={() => setPendingStake(s => s + v)}
                     >
                       ${v >= 1000 ? `${v / 1000}k` : v}
                     </button>
                   ))}
                 </div>
-
-                {/* Bet amount — synced with the chips, editable for custom */}
-                <input
-                  className="input"
-                  type="number" min={1} placeholder="Bet amount"
-                  style={{ padding: "6px 10px", fontSize: 12, marginBottom: 8 }}
-                  value={pendingStake > 0 ? pendingStake : ""}
-                  onChange={e => {
-                    const v = parseInt(e.target.value, 10);
-                    setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
-                  }}
-                />
 
                 {/* Side bets */}
                 <button
