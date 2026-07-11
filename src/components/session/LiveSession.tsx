@@ -871,6 +871,7 @@ export default function LiveSession() {
               bankerPair: h.bankerPair,
               playerPair: h.playerPair,
               variant: h.variant,
+              tieTotal: h.tieTotal,
             }))}
           />
         </div>

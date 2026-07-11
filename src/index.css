@@ -633,8 +633,29 @@ select.input { cursor: pointer; }
   align-items: center;
   justify-content: center;
 }
+/* Tie-total badge (Tiger Tie 6-6 / Dragon Tie 7-7) */
+.marker-tietotal {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--tie-green);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.marker-tietotal.tiger  { border: 1.5px solid var(--gold); }
+.marker-tietotal.dragon { border: 1.5px solid #a05ce0; }
+
 /* Inline (non-positioned) versions for legend + stats */
-.marker-natural.inline, .marker-pair.inline, .marker-variant.inline {
+.marker-natural.inline, .marker-pair.inline, .marker-variant.inline, .marker-tietotal.inline {
   position: static;
   transform: none;
   display: inline-flex;

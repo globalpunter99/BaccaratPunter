@@ -14,6 +14,19 @@ export interface HandExtra {
   playerPair?: boolean;
   // sml-tiger | lge-tiger | sml-dragon | big-dragon | dragontiger-4/5/6
   variant?: string;
+  // Total the hand tied on (6 = Tiger Tie, 7 = Dragon Tie)
+  tieTotal?: number;
+}
+
+// Tie-total badge: green disc with the tied total — gold ring for Tiger
+// Tie (6-6), purple ring for Dragon Tie (7-7).
+function TieTotalBadge({ total }: { total: number }) {
+  if (total !== 6 && total !== 7) return null;
+  return (
+    <span className={`marker-tietotal ${total === 6 ? "tiger" : "dragon"}`}>
+      {total}
+    </span>
+  );
 }
 
 interface Props {
@@ -76,6 +89,7 @@ function StoneMarkers({ extra }: { extra?: HandExtra }) {
       {extra.playerPair && <span className="marker-pair player-pair" />}
       {extra.bankerPair && <span className="marker-pair banker-pair" />}
       {extra.variant && <VariantBadge variant={extra.variant} />}
+      {extra.tieTotal !== undefined && <TieTotalBadge total={extra.tieTotal} />}
     </>
   );
 }
@@ -134,7 +148,20 @@ function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?:
   if (extras) {
     let stoneIdx = 0;
     outcomes.forEach((o, handIdx) => {
-      if (o !== "tie") stoneExtra.set(stones[stoneIdx++], extras[handIdx]);
+      if (o !== "tie") {
+        stoneExtra.set(stones[stoneIdx++], extras[handIdx]);
+      } else {
+        // Ties ride on the previous stone — carry the tie total (Tiger/
+        // Dragon Tie badge) across to it. First badge wins if several tie.
+        const t = extras[handIdx]?.tieTotal;
+        const carrier = stones[stoneIdx - 1];
+        if (t !== undefined && carrier) {
+          const existing = stoneExtra.get(carrier);
+          if (existing?.tieTotal === undefined) {
+            stoneExtra.set(carrier, { ...existing, tieTotal: t });
+          }
+        }
+      }
     });
   }
   const placed = placeBigRoad(stones, ROWS);
@@ -391,6 +418,8 @@ function LegendKey() {
               <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={14} /></span> Small Dragon — Player wins 7 v Banker ≤5 (two cards)</div>
               <div className="legend-row"><span className="marker-variant dragon inline"><DragonIcon size={18} big /></span> Big Dragon — Player wins 7 v Banker ≤5 (three cards)</div>
               <div className="legend-row"><span className="marker-variant dragontiger inline">4</span> Dragon Tiger — Player 7 beats Banker 6; number shows total cards dealt (4, 5 or 6; Dragon bets also pay)</div>
+              <div className="legend-row"><span className="marker-tietotal tiger inline">6</span> Tiger Tie — hand ties with both totals 6</div>
+              <div className="legend-row"><span className="marker-tietotal dragon inline">7</span> Dragon Tie — hand ties with both totals 7</div>
             </div>
           </div>
         </div>
