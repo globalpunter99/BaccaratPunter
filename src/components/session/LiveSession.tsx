@@ -529,18 +529,24 @@ export default function LiveSession() {
                 <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet ? "var(--gold)" : "var(--text-muted)" }}>
                   {hasPendingBet
                     ? `Bet pending: ${totalStake(pendingSlip)} — settles when the result is recorded`
-                    : "No bet on the next hand (sitting out)"}
+                    : "No bets placed — assume sit out on next hand"}
                 </div>
 
-                {/* Last settlement flash */}
+                {/* Last settlement */}
                 {lastSettlement && (
-                  <div className="settlement-flash" style={{ borderColor: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
-                    <div style={{ fontWeight: 700, color: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
-                      {lastSettlement.profit >= 0 ? "+" : ""}{lastSettlement.profit}
-                    </div>
-                    {lastSettlement.lines.map((l, i) => (
-                      <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)" }}>{l}</div>
-                    ))}
+                  <div
+                    className="settlement-flash"
+                    style={{
+                      borderColor: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)",
+                      padding: "5px 10px", fontSize: 12,
+                    }}
+                  >
+                    Last bet:{" "}
+                    <b style={{ color: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
+                      {lastSettlement.profit >= 0
+                        ? `Bet Win ${lastSettlement.profit}`
+                        : `Bet Lose −${Math.abs(lastSettlement.profit)}`}
+                    </b>
                   </div>
                 )}
 
