@@ -169,9 +169,11 @@ function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?:
                 {/* One slash per tie, offset within the tile; 5+ consecutive
                     ties fill the tile solid green (more lines add nothing) */}
                 {p.value.ties >= 5 ? (
+                  // Solid green fills the inside of the stone only — the
+                  // banker/player ring stays visible around it
                   <div
                     className="tie-solid"
-                    style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                    style={{ width: cellSize * 0.5, height: cellSize * 0.5 }}
                   />
                 ) : (
                   Array.from({ length: Math.min(p.value.ties, 4) }).map((_, i) => (

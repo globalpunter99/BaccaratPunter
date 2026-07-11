@@ -525,9 +525,10 @@ select.input { cursor: pointer; }
 /* Consecutive ties: each extra slash sits at a visible offset, shorter so
    everything stays inside the tile */
 .tie-slash.tie-pos-0 { transform: translateY(-50%) rotate(-45deg); }
-.tie-slash.tie-pos-1 { width: 52%; left: 24%; transform: translateY(calc(-50% + 5px)) rotate(-45deg); }
-.tie-slash.tie-pos-2 { width: 52%; left: 24%; transform: translateY(calc(-50% - 5px)) rotate(-45deg); }
-.tie-slash.tie-pos-3 { width: 40%; left: 30%; transform: translateY(calc(-50% + 9px)) rotate(-45deg); }
+/* Follow-up lines sit inside the win circle, just touching its inner edge */
+.tie-slash.tie-pos-1 { width: 46%; left: 27%; transform: translateY(calc(-50% + 4px)) rotate(-45deg); }
+.tie-slash.tie-pos-2 { width: 46%; left: 27%; transform: translateY(calc(-50% - 4px)) rotate(-45deg); }
+.tie-slash.tie-pos-3 { width: 28%; left: 36%; transform: translateY(calc(-50% + 7px)) rotate(-45deg); }
 /* 5+ consecutive ties: solid green fill over the stone */
 .tie-solid {
   position: absolute;
