@@ -1,4 +1,6 @@
 import { useState } from "react";
+import type { Outcome } from "../../game/baccarat";
+import RoadsDisplay from "../roads/RoadsDisplay";
 
 type Step = "upload" | "review" | "done";
 
@@ -95,6 +97,12 @@ export default function UploadSession() {
   const [dragOver, setDragOver] = useState(false);
   const [imageName, setImageName] = useState<string | null>(null);
   const [extracted, setExtracted] = useState<string[]>(DEMO_EXTRACTED);
+  const [previewAll, setPreviewAll] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  const extractedOutcomes: Outcome[] = extracted.map(r =>
+    r === "B" ? "banker" : r === "P" ? "player" : "tie",
+  );
 
   function cycleResult(idx: number) {
     const NEXT: Record<string, string> = { B: "P", P: "T", T: "B" };
@@ -122,6 +130,8 @@ export default function UploadSession() {
   }
 
   function saveSession() {
+    // Backend pass will return the real ID; prototype generates one
+    setSessionId(`EX-${String(Date.now()).slice(-6)}`);
     setStep("done");
   }
 
@@ -144,7 +154,8 @@ export default function UploadSession() {
             Session Saved to Library
           </div>
           <div style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 24 }}>
-            {extracted.length} hands extracted and added to your session library.
+            {extracted.length} hands extracted and added to your session library
+            {sessionId ? <> as <b style={{ color: "var(--gold)" }}>{sessionId}</b></> : null}.
             The shoe is now available for analysis, profiling, and practice play.
           </div>
           <div className="flex gap-8" style={{ justifyContent: "center" }}>
@@ -158,76 +169,85 @@ export default function UploadSession() {
 
   if (step === "review") {
     return (
-      <div className="page" style={{ maxWidth: 1000 }}>
+      <div className="page">
         <div className="flex items-center justify-between mb-12">
           <div className="page-title">Review Extracted Results</div>
           <button className="btn btn-ghost" onClick={() => setStep("upload")}>← Back</button>
         </div>
 
-        <div className="panel mb-12">
-          <div className="panel-title">Extracted from image — {extracted.length} hands</div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
-            Check the grid matches the photographed bead plate. Click any result to correct it
-            (cycles B → P → T).
-          </div>
-          <ExtractedBeadPlate results={extracted} onCycle={cycleResult} />
-        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16 }}>
+          {/* Left column — session details, like Live Session */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="panel">
+              <div className="panel-title">Session Details</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>Session ID</label>
+                  <input
+                    readOnly
+                    value={sessionId ?? "Not Yet Saved"}
+                    style={{ ...inputStyle, color: sessionId ? "var(--gold)" : "var(--text-muted)", cursor: "default" }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Venue</label>
+                  <input value={venue} onChange={e => setVenue(e.target.value)}
+                    placeholder="e.g. Crown Melbourne" style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Table Number</label>
+                  <input value={tableNum} onChange={e => setTableNum(e.target.value)}
+                    placeholder="e.g. Table 7" style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Date</label>
+                  <input type="date" value={sessionDate}
+                    onChange={e => setSessionDate(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Notes (optional)</label>
+                  <input value={notes} onChange={e => setNotes(e.target.value)}
+                    placeholder="Any observations..." style={inputStyle} />
+                </div>
+              </div>
+            </div>
 
-        <div className="panel mb-12">
-          <div className="panel-title">Session Details</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                Venue
-              </label>
-              <input
-                className="input-field"
-                value={venue}
-                onChange={e => setVenue(e.target.value)}
-                placeholder="e.g. Crown Melbourne"
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                Table Number
-              </label>
-              <input
-                className="input-field"
-                value={tableNum}
-                onChange={e => setTableNum(e.target.value)}
-                placeholder="e.g. Table 7"
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                Date
-              </label>
-              <input
-                type="date"
-                value={sessionDate}
-                onChange={e => setSessionDate(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                Notes (optional)
-              </label>
-              <input
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Any observations..."
-                style={inputStyle}
-              />
-            </div>
+            <button className="btn btn-gold" onClick={saveSession}>Save to Library</button>
+            <button className="btn btn-secondary" onClick={() => setStep("upload")}>Re-upload</button>
           </div>
-        </div>
 
-        <div className="flex gap-8">
-          <button className="btn btn-gold" onClick={saveSession}>Save to Library</button>
-          <button className="btn btn-secondary" onClick={() => setStep("upload")}>Re-upload</button>
+          {/* Right column — extracted results */}
+          <div className="panel">
+            <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                Extracted from image — {extracted.length} hands
+              </div>
+              <button
+                className="btn btn-secondary"
+                style={{ fontSize: 12, padding: "5px 12px" }}
+                onClick={() => setPreviewAll(p => !p)}
+              >
+                {previewAll ? "← Back to Bead Plate" : "Preview All Screens"}
+              </button>
+            </div>
+            {previewAll ? (
+              <>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
+                  Full Macau screens derived from the extracted results — compare against
+                  any photos or screenshots you took at the table.
+                </div>
+                <RoadsDisplay outcomes={extractedOutcomes} compact />
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
+                  Check the grid matches the photographed bead plate. Click any result to
+                  correct it (cycles B → P → T).
+                </div>
+                <ExtractedBeadPlate results={extracted} onCycle={cycleResult} />
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -308,6 +328,13 @@ export default function UploadSession() {
     </div>
   );
 }
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "var(--text-muted)",
+  display: "block",
+  marginBottom: 4,
+};
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
