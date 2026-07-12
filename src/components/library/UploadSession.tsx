@@ -175,7 +175,7 @@ export default function UploadSession() {
           <button className="btn btn-ghost" onClick={() => setStep("upload")}>← Back</button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14 }}>
           {/* Left column — session details, like Live Session */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div className="panel">
