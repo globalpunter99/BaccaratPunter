@@ -446,9 +446,11 @@ export default function LiveSession() {
                 </span>
                 <span>
                   Bets:{" "}
-                  {ledger.betHands === 0
-                    ? "0"
-                    : `${ledger.wonHands} (W) - ${ledger.betHands - ledger.wonHands} (L)`}
+                  <b style={{ color: "var(--text-primary)" }}>
+                    {ledger.betHands === 0
+                      ? "0"
+                      : `${ledger.wonHands} (W) - ${ledger.betHands - ledger.wonHands} (L)`}
+                  </b>
                 </span>
               </span>
             </div>
