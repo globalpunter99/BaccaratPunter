@@ -39,14 +39,13 @@ function ExtractedBeadPlate({
         </span>
       </div>
       <div style={{ display: "flex", alignItems: "flex-start" }}>
-      <div style={{ overflowX: "auto", flex: 1 }}>
+      <div style={{ overflowX: "auto", flexShrink: 1 }}>
         <div
           className="road-grid"
           style={{
             gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
             gridTemplateRows: `repeat(${BEAD_ROWS}, ${cellSize}px)`,
             width: cols * cellSize,
-            minWidth: "100%",
           }}
         >
           {Array.from({ length: BEAD_ROWS * cols }).map((_, idx) => {
