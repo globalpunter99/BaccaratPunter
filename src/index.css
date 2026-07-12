@@ -388,34 +388,62 @@ body {
   gap: 4px;
   margin-bottom: 8px;
 }
+/* Realistic chip: dashed edge spots (conic ring) around a solid colour
+   band, with a white centre disc carrying the denomination */
 .bet-chip {
-  width: 44px;
-  height: 44px;
+  --chip: #c0392b;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  border: 3px dashed #fff;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
+  border: none;
+  position: relative;
   cursor: pointer;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-  opacity: 0.75;
+  background: repeating-conic-gradient(
+    #f5f5f0 0deg 16deg,
+    var(--chip) 16deg 60deg
+  );
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
 }
-.bet-chip:hover { opacity: 1; }
+.bet-chip::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4);
+}
+.bet-chip::after {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border-radius: 50%;
+  background: #f2f2ec;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.chip-label {
+  position: relative;
+  z-index: 1;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #14141a;
+  letter-spacing: -0.3px;
+}
+.bet-chip:hover { filter: brightness(1.1); }
 .bet-chip:active {
   transform: scale(0.9);
   box-shadow: 0 0 0 2px var(--gold), 0 1px 3px rgba(0,0,0,0.5);
 }
 /* Classic casino chip colours */
-.bet-chip.chip-5    { background: #c0392b; } /* red */
-.bet-chip.chip-25   { background: #1e8449; } /* green */
-.bet-chip.chip-50   { background: #2874c9; } /* blue */
-.bet-chip.chip-100  { background: #1c1c1c; } /* black */
-.bet-chip.chip-500  { background: #6c3483; } /* purple */
-.bet-chip.chip-1000 { background: #b7950b; } /* yellow/gold */
+.bet-chip.chip-5    { --chip: #c0392b; } /* red */
+.bet-chip.chip-25   { --chip: #2eab4d; } /* green */
+.bet-chip.chip-50   { --chip: #2f6fce; } /* blue */
+.bet-chip.chip-100  { --chip: #1c1c1c; } /* black */
+.bet-chip.chip-500  { --chip: #6c3483; } /* purple */
+.bet-chip.chip-1000 { --chip: #c9a227; } /* gold */
 
 /* Pay engine: My Bets panel */
 .bet-header-stats {

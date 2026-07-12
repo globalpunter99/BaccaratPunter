@@ -489,7 +489,7 @@ export default function LiveSession() {
                       className={`bet-chip chip-${v}`}
                       onClick={() => setPendingStake(s => s + v)}
                     >
-                      ${v >= 1000 ? `${v / 1000}k` : v}
+                      <span className="chip-label">${v >= 1000 ? `${v / 1000}k` : v}</span>
                     </button>
                   ))}
                 </div>
