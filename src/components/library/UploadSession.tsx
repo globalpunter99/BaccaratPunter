@@ -8,6 +8,63 @@ const DEMO_EXTRACTED = [
   "B","B","P","P","P","B","B","B","P","P",
 ];
 
+const BEAD_ROWS = 6;
+const BEAD_MIN_COLS = 15;
+
+// Extracted results shown as a corrected-in-place bead plate:
+// 6 rows deep, filled top-to-bottom then left-to-right, click to cycle B→P→T.
+function ExtractedBeadPlate({
+  results, onCycle,
+}: { results: string[]; onCycle: (idx: number) => void }) {
+  const cols = Math.max(Math.ceil(results.length / BEAD_ROWS), BEAD_MIN_COLS);
+  const cellSize = 34;
+  return (
+    <div className="road-section">
+      <div className="road-section-header align-left">
+        <span className="road-section-title-en">Bead Plate</span>
+        <span className="road-section-title-sep">/</span>
+        <span className="road-section-title-cn">珠盘路</span>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <div
+          className="road-grid"
+          style={{
+            gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
+            gridTemplateRows: `repeat(${BEAD_ROWS}, ${cellSize}px)`,
+            width: cols * cellSize,
+            minWidth: "100%",
+          }}
+        >
+          {Array.from({ length: BEAD_ROWS * cols }).map((_, idx) => {
+            const row = Math.floor(idx / cols);
+            const col = idx % cols;
+            const handIdx = col * BEAD_ROWS + row;
+            const r = handIdx < results.length ? results[handIdx] : null;
+            return (
+              <div
+                key={idx}
+                className="road-cell"
+                style={r ? { cursor: "pointer" } : undefined}
+                title={r ? `Hand ${handIdx + 1} — click to correct` : undefined}
+                onClick={r ? () => onCycle(handIdx) : undefined}
+              >
+                {r && (
+                  <div
+                    className={`road-stone ${r === "B" ? "banker" : r === "P" ? "player" : "tie"}`}
+                    style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                  >
+                    {r}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UploadSession() {
   const [step, setStep] = useState<Step>("upload");
   const [venue, setVenue] = useState("");
@@ -16,6 +73,12 @@ export default function UploadSession() {
   const [notes, setNotes] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [imageName, setImageName] = useState<string | null>(null);
+  const [extracted, setExtracted] = useState<string[]>(DEMO_EXTRACTED);
+
+  function cycleResult(idx: number) {
+    const NEXT: Record<string, string> = { B: "P", P: "T", T: "B" };
+    setExtracted(prev => prev.map((r, i) => (i === idx ? NEXT[r] : r)));
+  }
 
   function handleFile(name: string) {
     setImageName(name);
@@ -60,7 +123,7 @@ export default function UploadSession() {
             Session Saved to Library
           </div>
           <div style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 24 }}>
-            {DEMO_EXTRACTED.length} hands extracted and added to your session library.
+            {extracted.length} hands extracted and added to your session library.
             The shoe is now available for analysis, profiling, and practice play.
           </div>
           <div className="flex gap-8" style={{ justifyContent: "center" }}>
@@ -81,21 +144,12 @@ export default function UploadSession() {
         </div>
 
         <div className="panel mb-12">
-          <div className="panel-title">Extracted from image — {DEMO_EXTRACTED.length} hands</div>
+          <div className="panel-title">Extracted from image — {extracted.length} hands</div>
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
-            Check the sequence matches the bead plate. Click any result to correct it.
+            Check the grid matches the photographed bead plate. Click any result to correct it
+            (cycles B → P → T).
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-            {DEMO_EXTRACTED.map((r, i) => (
-              <span
-                key={i}
-                className={`badge ${r === "B" ? "badge-banker" : r === "P" ? "badge-player" : "badge-tie"}`}
-                style={{ cursor: "pointer", fontSize: 12, padding: "4px 8px" }}
-              >
-                {i + 1}:{r}
-              </span>
-            ))}
-          </div>
+          <ExtractedBeadPlate results={extracted} onCycle={cycleResult} />
         </div>
 
         <div className="panel mb-12">
