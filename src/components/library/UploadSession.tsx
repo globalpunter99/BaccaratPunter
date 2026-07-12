@@ -25,6 +25,7 @@ function ExtractedBeadPlate({
   const tie = results.filter(r => r === "T").length;
   const [editing, setEditing] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0); // degrees, 90° steps
 
   return (
     <div>
@@ -95,6 +96,13 @@ function ExtractedBeadPlate({
               <>
                 <div className="photo-viewer-controls">
                   <button className="btn btn-ghost" style={{ padding: "2px 10px", fontSize: 13 }}
+                    title="Rotate left 90°"
+                    onClick={() => setRotation(r => (r + 270) % 360)}>⟲</button>
+                  <button className="btn btn-ghost" style={{ padding: "2px 10px", fontSize: 13 }}
+                    title="Rotate right 90°"
+                    onClick={() => setRotation(r => (r + 90) % 360)}>⟳</button>
+                  <span style={{ width: 10 }} />
+                  <button className="btn btn-ghost" style={{ padding: "2px 10px", fontSize: 13 }}
                     onClick={() => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2)))}>−</button>
                   <span style={{ fontSize: 11, color: "var(--text-muted)", minWidth: 42, textAlign: "center" }}>
                     {Math.round(zoom * 100)}%
@@ -106,7 +114,12 @@ function ExtractedBeadPlate({
                   <img
                     src={imageUrl}
                     alt="Uploaded bead plate"
-                    style={{ width: `${zoom * 100}%`, display: "block" }}
+                    style={{
+                      width: `${zoom * 100}%`,
+                      display: "block",
+                      transform: `rotate(${rotation}deg)`,
+                      transformOrigin: "center center",
+                    }}
                   />
                 </div>
               </>

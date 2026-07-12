@@ -814,9 +814,9 @@ select.input { cursor: pointer; }
   border-bottom: 1px solid var(--border-panel);
 }
 .photo-viewer-frame {
-  flex: 1;
   overflow: auto;
-  min-height: 0;
+  /* ~12 bead-plate tiles tall (12 x 34px) */
+  height: 408px;
 }
 
 /* Bead Plate EDIT/Save button */
