@@ -18,14 +18,28 @@ function ExtractedBeadPlate({
 }: { results: string[]; onCycle: (idx: number) => void }) {
   const cols = Math.max(Math.ceil(results.length / BEAD_ROWS), BEAD_MIN_COLS);
   const cellSize = 34;
+  const banker = results.filter(r => r === "B").length;
+  const player = results.filter(r => r === "P").length;
+  const tie = results.filter(r => r === "T").length;
   return (
     <div className="road-section">
       <div className="road-section-header align-left">
-        <span className="road-section-title-en">Bead Plate</span>
-        <span className="road-section-title-sep">/</span>
-        <span className="road-section-title-cn">珠盘路</span>
+        <span className="road-title-block">
+          <span className="road-section-title-en">Bead Plate</span>
+          <span className="road-section-title-sep">/</span>
+          <span className="road-section-title-cn">珠盘路</span>
+        </span>
+        <span className="header-stats">
+          <span style={{ display: "flex", gap: 14 }}>
+            <span className="header-stat"><span className="header-stat-label">Game</span> <span className="stats-value games" style={{ fontSize: 13 }}>{results.length}</span></span>
+            <span className="header-stat"><span className="header-stat-label">Banker</span> <span className="stats-value banker" style={{ fontSize: 13 }}>{banker}</span></span>
+            <span className="header-stat"><span className="header-stat-label">Player</span> <span className="stats-value player" style={{ fontSize: 13 }}>{player}</span></span>
+            <span className="header-stat"><span className="header-stat-label">Tie</span> <span className="stats-value tie" style={{ fontSize: 13 }}>{tie}</span></span>
+          </span>
+        </span>
       </div>
-      <div style={{ overflowX: "auto" }}>
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
+      <div style={{ overflowX: "auto", flex: 1 }}>
         <div
           className="road-grid"
           style={{
@@ -60,6 +74,14 @@ function ExtractedBeadPlate({
             );
           })}
         </div>
+      </div>
+      {/* Summary table in the free space right of the grid */}
+      <div className="stats-panel" style={{ margin: 10, flexShrink: 0 }}>
+        <div className="stats-row"><span className="stats-label">局数 Games</span><span className="stats-value games">{results.length}</span></div>
+        <div className="stats-row"><span className="stats-label"><span className="stats-dot banker-dot">庄</span>Banker</span><span className="stats-value banker">{banker}</span></div>
+        <div className="stats-row"><span className="stats-label"><span className="stats-dot player-dot">闲</span>Player</span><span className="stats-value player">{player}</span></div>
+        <div className="stats-row"><span className="stats-label"><span className="stats-dot tie-dot">和</span>Tie</span><span className="stats-value tie">{tie}</span></div>
+      </div>
       </div>
     </div>
   );
@@ -137,7 +159,7 @@ export default function UploadSession() {
 
   if (step === "review") {
     return (
-      <div className="page" style={{ maxWidth: 700 }}>
+      <div className="page" style={{ maxWidth: 1000 }}>
         <div className="flex items-center justify-between mb-12">
           <div className="page-title">Review Extracted Results</div>
           <button className="btn btn-ghost" onClick={() => setStep("upload")}>← Back</button>
