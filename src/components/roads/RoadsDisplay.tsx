@@ -35,6 +35,12 @@ interface Props {
   outcomes: Outcome[];
   extras?: (HandExtra | undefined)[];
   compact?: boolean;
+  // Hide the bet-overlay toggle where betting doesn't apply (e.g. uploads)
+  betsToggle?: boolean;
+  // When provided, the Bead Plate header gains an EDIT/Save button; in edit
+  // mode clicking a bead cycles its result B → P → T via this callback, and
+  // every derived road recomputes automatically.
+  onCycleOutcome?: (handIdx: number) => void;
 }
 
 // ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
@@ -103,7 +109,10 @@ const BEAD_MIN_COLS = 18;
 
 // ── Bead Plate ──────────────────────────────────────────────────────────────
 // Populated top-to-bottom, left-to-right (column-major fill).
-function BeadPlate({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number }) {
+function BeadPlate({ outcomes, extras, cellSize, onCycle }: {
+  outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number;
+  onCycle?: (handIdx: number) => void;
+}) {
   const cells = toBeadPlate(outcomes, ROWS);
   const cols = Math.max(Math.ceil(outcomes.length / ROWS), BEAD_MIN_COLS);
 
@@ -124,7 +133,13 @@ function BeadPlate({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras
         const cell = cells.find(c => c.col === col && c.row === row);
         const betResult = cell ? extras?.[handIdx]?.betResult : undefined;
         return (
-          <div key={idx} className={`road-cell${betResult ? ` bet-${betResult}` : ""}`}>
+          <div
+            key={idx}
+            className={`road-cell${betResult ? ` bet-${betResult}` : ""}`}
+            style={cell && onCycle ? { cursor: "pointer" } : undefined}
+            title={cell && onCycle ? `Hand ${handIdx + 1} — click to change` : undefined}
+            onClick={cell && onCycle ? () => onCycle(handIdx) : undefined}
+          >
             {cell && (
               <>
                 <div
@@ -489,11 +504,14 @@ function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
 }
 
 // ── Main export — casino screen layout ───────────────────────────────────────
-export default function RoadsDisplay({ outcomes, extras, compact = false }: Props) {
+export default function RoadsDisplay({
+  outcomes, extras, compact = false, betsToggle = true, onCycleOutcome,
+}: Props) {
   // View mode for Big Road + Bead Plate markers:
   // basic = outcomes, ties and naturals only · detailed = + pairs and exotics
   const [viewMode, setViewMode] = useState<"basic" | "detailed">("detailed");
   const [showBetOverlay, setShowBetOverlay] = useState(true);
+  const [editingBeads, setEditingBeads] = useState(false);
   const shownExtras = extras?.map(e => {
     if (!e) return e;
     const base = viewMode === "detailed"
@@ -531,15 +549,17 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
                 Detailed
               </button>
             </span>
-            <span className="view-toggle" style={{ marginLeft: 20 }}>
-              <button
-                className={`view-toggle-btn ${showBetOverlay ? "active" : ""}`}
-                title="Show/hide your bet results on the tiles"
-                onClick={() => setShowBetOverlay(p => !p)}
-              >
-                Bets
-              </button>
-            </span>
+            {betsToggle && (
+              <span className="view-toggle" style={{ marginLeft: 20 }}>
+                <button
+                  className={`view-toggle-btn ${showBetOverlay ? "active" : ""}`}
+                  title="Show/hide your bet results on the tiles"
+                  onClick={() => setShowBetOverlay(p => !p)}
+                >
+                  Bets
+                </button>
+              </span>
+            )}
             <LegendKey />
           </>
         }>
@@ -564,8 +584,26 @@ export default function RoadsDisplay({ outcomes, extras, compact = false }: Prop
       {/* Row 3 — Bead Plate left · stats panel right */}
       <div className="roads-bottom-grid">
         <RoadSection titleCn="珠盘路" titleEn="Bead Plate"
-          headerExtra={<HeaderStats outcomes={outcomes} />}>
-          <BeadPlate outcomes={outcomes} extras={shownExtras} cellSize={bigCell} />
+          headerExtra={
+            <>
+              <HeaderStats outcomes={outcomes} />
+              {onCycleOutcome && (
+                <button
+                  className="bead-edit-btn"
+                  data-editing={editingBeads || undefined}
+                  onClick={() => setEditingBeads(p => !p)}
+                >
+                  {editingBeads ? "💾 Save" : "✎ EDIT"}
+                </button>
+              )}
+            </>
+          }>
+          <BeadPlate
+            outcomes={outcomes}
+            extras={shownExtras}
+            cellSize={bigCell}
+            onCycle={editingBeads ? onCycleOutcome : undefined}
+          />
         </RoadSection>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
           <StatsPanel outcomes={outcomes} />

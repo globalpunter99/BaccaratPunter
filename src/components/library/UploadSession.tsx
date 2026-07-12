@@ -236,7 +236,11 @@ export default function UploadSession() {
                   Full Macau screens derived from the extracted results — compare against
                   any photos or screenshots you took at the table.
                 </div>
-                <RoadsDisplay outcomes={extractedOutcomes} />
+                <RoadsDisplay
+                  outcomes={extractedOutcomes}
+                  betsToggle={false}
+                  onCycleOutcome={cycleResult}
+                />
               </>
             ) : (
               <>
