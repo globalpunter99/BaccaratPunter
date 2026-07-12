@@ -16,73 +16,115 @@ const BEAD_MIN_COLS = 15;
 // Extracted results shown as a corrected-in-place bead plate:
 // 6 rows deep, filled top-to-bottom then left-to-right, click to cycle B→P→T.
 function ExtractedBeadPlate({
-  results, onCycle,
-}: { results: string[]; onCycle: (idx: number) => void }) {
+  results, onCycle, imageUrl,
+}: { results: string[]; onCycle: (idx: number) => void; imageUrl: string | null }) {
   const cols = Math.max(Math.ceil(results.length / BEAD_ROWS), BEAD_MIN_COLS);
   const cellSize = 34;
   const banker = results.filter(r => r === "B").length;
   const player = results.filter(r => r === "P").length;
   const tie = results.filter(r => r === "T").length;
+  const [editing, setEditing] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
   return (
-    <div className="road-section">
-      <div className="road-section-header align-left">
-        <span className="road-title-block">
-          <span className="road-section-title-en">Bead Plate</span>
-          <span className="road-section-title-sep">/</span>
-          <span className="road-section-title-cn">珠盘路</span>
-        </span>
-        <span className="header-stats">
-          <span style={{ display: "flex", gap: 14 }}>
-            <span className="header-stat"><span className="header-stat-label">Game</span> <span className="stats-value games" style={{ fontSize: 13 }}>{results.length}</span></span>
-            <span className="header-stat"><span className="header-stat-label">Banker</span> <span className="stats-value banker" style={{ fontSize: 13 }}>{banker}</span></span>
-            <span className="header-stat"><span className="header-stat-label">Player</span> <span className="stats-value player" style={{ fontSize: 13 }}>{player}</span></span>
-            <span className="header-stat"><span className="header-stat-label">Tie</span> <span className="stats-value tie" style={{ fontSize: 13 }}>{tie}</span></span>
+    <div>
+      <div className="road-section">
+        <div className="road-section-header align-left">
+          <span className="road-title-block">
+            <span className="road-section-title-en">Bead Plate</span>
+            <span className="road-section-title-sep">/</span>
+            <span className="road-section-title-cn">珠盘路</span>
           </span>
-        </span>
-      </div>
-      <div style={{ display: "flex", alignItems: "flex-start" }}>
-      <div style={{ overflowX: "auto", flexShrink: 1 }}>
-        <div
-          className="road-grid"
-          style={{
-            gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
-            gridTemplateRows: `repeat(${BEAD_ROWS}, ${cellSize}px)`,
-            width: cols * cellSize,
-          }}
-        >
-          {Array.from({ length: BEAD_ROWS * cols }).map((_, idx) => {
-            const row = Math.floor(idx / cols);
-            const col = idx % cols;
-            const handIdx = col * BEAD_ROWS + row;
-            const r = handIdx < results.length ? results[handIdx] : null;
-            return (
-              <div
-                key={idx}
-                className="road-cell"
-                style={r ? { cursor: "pointer" } : undefined}
-                title={r ? `Hand ${handIdx + 1} — click to correct` : undefined}
-                onClick={r ? () => onCycle(handIdx) : undefined}
-              >
-                {r && (
+          <span className="header-stats">
+            <span style={{ display: "flex", gap: 14 }}>
+              <span className="header-stat"><span className="header-stat-label">Game</span> <span className="stats-value games" style={{ fontSize: 13 }}>{results.length}</span></span>
+              <span className="header-stat"><span className="header-stat-label">Banker</span> <span className="stats-value banker" style={{ fontSize: 13 }}>{banker}</span></span>
+              <span className="header-stat"><span className="header-stat-label">Player</span> <span className="stats-value player" style={{ fontSize: 13 }}>{player}</span></span>
+              <span className="header-stat"><span className="header-stat-label">Tie</span> <span className="stats-value tie" style={{ fontSize: 13 }}>{tie}</span></span>
+            </span>
+          </span>
+          <button
+            className="bead-edit-btn"
+            data-editing={editing || undefined}
+            onClick={() => setEditing(p => !p)}
+          >
+            {editing ? "💾 Save" : "✎ Edit"}
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "stretch" }}>
+          <div style={{ overflowX: "auto", flexShrink: 0 }}>
+            <div
+              className="road-grid"
+              style={{
+                gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
+                gridTemplateRows: `repeat(${BEAD_ROWS}, ${cellSize}px)`,
+                width: cols * cellSize,
+              }}
+            >
+              {Array.from({ length: BEAD_ROWS * cols }).map((_, idx) => {
+                const row = Math.floor(idx / cols);
+                const col = idx % cols;
+                const handIdx = col * BEAD_ROWS + row;
+                const r = handIdx < results.length ? results[handIdx] : null;
+                const clickable = !!r && editing;
+                return (
                   <div
-                    className={`road-stone ${r === "B" ? "banker" : r === "P" ? "player" : "tie"}`}
-                    style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                    key={idx}
+                    className="road-cell"
+                    style={clickable ? { cursor: "pointer" } : undefined}
+                    title={clickable ? `Hand ${handIdx + 1} — click to correct` : undefined}
+                    onClick={clickable ? () => onCycle(handIdx) : undefined}
                   >
-                    {r}
+                    {r && (
+                      <div
+                        className={`road-stone ${r === "B" ? "banker" : r === "P" ? "player" : "tie"}`}
+                        style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                      >
+                        {r}
+                      </div>
+                    )}
                   </div>
-                )}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Original photo viewer with zoom, for side-by-side comparison */}
+          <div className="photo-viewer">
+            {imageUrl ? (
+              <>
+                <div className="photo-viewer-controls">
+                  <button className="btn btn-ghost" style={{ padding: "2px 10px", fontSize: 13 }}
+                    onClick={() => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2)))}>−</button>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", minWidth: 42, textAlign: "center" }}>
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button className="btn btn-ghost" style={{ padding: "2px 10px", fontSize: 13 }}
+                    onClick={() => setZoom(z => Math.min(4, +(z + 0.25).toFixed(2)))}>+</button>
+                </div>
+                <div className="photo-viewer-frame">
+                  <img
+                    src={imageUrl}
+                    alt="Uploaded bead plate"
+                    style={{ width: `${zoom * 100}%`, display: "block" }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-muted)", padding: 20, textAlign: "center" }}>
+                Uploaded photo appears here for comparison
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
       </div>
-      {/* Summary table in the free space right of the grid */}
-      <div className="stats-panel" style={{ margin: 10, flexShrink: 0 }}>
+
+      {/* Summary counts below */}
+      <div className="stats-panel" style={{ marginTop: 10, flexDirection: "row", gap: 28, flexWrap: "wrap" }}>
         <div className="stats-row"><span className="stats-label">局数 Games</span><span className="stats-value games">{results.length}</span></div>
         <div className="stats-row"><span className="stats-label"><span className="stats-dot banker-dot">庄</span>Banker</span><span className="stats-value banker">{banker}</span></div>
         <div className="stats-row"><span className="stats-label"><span className="stats-dot player-dot">闲</span>Player</span><span className="stats-value player">{player}</span></div>
         <div className="stats-row"><span className="stats-label"><span className="stats-dot tie-dot">和</span>Tie</span><span className="stats-value tie">{tie}</span></div>
-      </div>
       </div>
     </div>
   );
@@ -96,6 +138,7 @@ export default function UploadSession() {
   const [notes, setNotes] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [imageName, setImageName] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [extracted, setExtracted] = useState<string[]>(DEMO_EXTRACTED);
   const [previewAll, setPreviewAll] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -109,20 +152,24 @@ export default function UploadSession() {
     setExtracted(prev => prev.map((r, i) => (i === idx ? NEXT[r] : r)));
   }
 
-  function handleFile(name: string) {
-    setImageName(name);
+  function handleFile(file: File) {
+    setImageName(file.name);
+    setImageUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file) handleFile(file.name);
+    if (file) handleFile(file);
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) handleFile(file.name);
+    if (file) handleFile(file);
   }
 
   function processImage() {
@@ -142,6 +189,11 @@ export default function UploadSession() {
     setSessionDate("");
     setNotes("");
     setImageName(null);
+    setImageUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setSessionId(null);
   }
 
   if (step === "done") {
@@ -245,10 +297,10 @@ export default function UploadSession() {
             ) : (
               <>
                 <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
-                  Check the grid matches the photographed bead plate. Click any result to
-                  correct it (cycles B → P → T).
+                  Check the grid against your photo on the right. Press ✎ Edit to make
+                  corrections — clicking a result cycles B → P → T — then 💾 Save.
                 </div>
-                <ExtractedBeadPlate results={extracted} onCycle={cycleResult} />
+                <ExtractedBeadPlate results={extracted} onCycle={cycleResult} imageUrl={imageUrl} />
               </>
             )}
           </div>
