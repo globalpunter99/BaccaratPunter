@@ -164,21 +164,6 @@ export default function ShoeReplay() {
             </div>
           </div>
 
-          {/* Sequence up to now */}
-          <div className="panel">
-            <div className="panel-title">Sequence so far</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, maxHeight: 120, overflowY: "auto" }}>
-              {session.hands.slice(0, handIdx + 1).map((h, i) => (
-                <span
-                  key={i}
-                  className={`badge ${h.outcome === "banker" ? "badge-banker" : h.outcome === "player" ? "badge-player" : "badge-tie"}`}
-                  style={{ fontSize: 10, opacity: i === handIdx ? 1 : 0.6 }}
-                >
-                  {h.outcome === "banker" ? "B" : h.outcome === "player" ? "P" : "T"}
-                </span>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Right: roads */}
