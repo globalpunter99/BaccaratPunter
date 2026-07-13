@@ -25,7 +25,7 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "live",            label: "Live Session",   group: "Session" },
   { id: "library",         label: "Library",         group: "Data" },
   { id: "upload",          label: "Upload Session",  group: "Data" },
-  { id: "practice-replay", label: "Practice / Replay", group: "Data" },
+  { id: "practice-replay", label: "Practice Play", group: "Data" },
   { id: "profile-build",   label: "Build Profile",   group: "Profile" },
   { id: "profile-compare", label: "Profiles",        group: "Profile" },
   { id: "stats",           label: "Stats",           group: "Profile" },
