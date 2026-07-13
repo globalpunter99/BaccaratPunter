@@ -217,6 +217,19 @@ export default function PracticeReplay() {
             </div>
           </div>
 
+          {/* Calls summary */}
+          <div className="panel" style={{ padding: "10px 14px" }}>
+            <div className="flex items-center" style={{ gap: 10 }}>
+              <div className="panel-title" style={{ marginBottom: 0 }}>My Calls</div>
+              <div style={{ flex: 1, textAlign: "center", fontSize: 13, color: "var(--text-secondary)" }}>
+                <b style={{ color: "var(--text-primary)" }}>{betHands.length}</b> Bets:{" "}
+                <b style={{ color: "var(--tie-green)" }}>{winCount}</b> (W){" "}
+                <b style={{ color: "var(--banker-red)" }}>{loseCount}</b> (L){" "}
+                <b style={{ color: "var(--text-secondary)" }}>{tieCount}</b> (Tie)
+              </div>
+            </div>
+          </div>
+
           {/* Game panel — call buttons, then the result card after reveal */}
           <div className="panel">
             <div className="panel-title">Game {handIdx + 1}{revealed ? " Result" : ""}</div>
@@ -270,19 +283,6 @@ export default function PracticeReplay() {
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Calls summary */}
-          <div className="panel" style={{ padding: "10px 14px" }}>
-            <div className="flex items-center" style={{ gap: 10 }}>
-              <div className="panel-title" style={{ marginBottom: 0 }}>My Calls</div>
-              <div style={{ flex: 1, textAlign: "center", fontSize: 13, color: "var(--text-secondary)" }}>
-                <b style={{ color: "var(--text-primary)" }}>{betHands.length}</b> Bets:{" "}
-                <b style={{ color: "var(--tie-green)" }}>{winCount}</b> (W){" "}
-                <b style={{ color: "var(--banker-red)" }}>{loseCount}</b> (L){" "}
-                <b style={{ color: "var(--text-secondary)" }}>{tieCount}</b> (Tie)
-              </div>
-            </div>
           </div>
 
           {/* Signal at this point */}
