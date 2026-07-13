@@ -846,6 +846,8 @@ select.input { cursor: pointer; }
   /* ~12 bead-plate tiles tall (12 x 34px) */
   height: 408px;
 }
+.photo-viewer-frame.pannable { cursor: grab; touch-action: none; user-select: none; }
+.photo-viewer-frame.pannable:active { cursor: grabbing; }
 
 /* Bead Plate EDIT/Save button */
 .bead-edit-btn {

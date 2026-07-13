@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
 
@@ -26,6 +26,28 @@ function ExtractedBeadPlate({
   const [editing, setEditing] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0); // degrees, 90° steps
+
+  // Drag-to-pan: dragging inside the frame scrolls it, so the user can
+  // move the photo around and choose what to focus on.
+  const frameRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{ x: number; y: number; sl: number; st: number } | null>(null);
+
+  function panStart(e: React.PointerEvent) {
+    const frame = frameRef.current;
+    if (!frame) return;
+    dragState.current = { x: e.clientX, y: e.clientY, sl: frame.scrollLeft, st: frame.scrollTop };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  }
+  function panMove(e: React.PointerEvent) {
+    const frame = frameRef.current;
+    const d = dragState.current;
+    if (!frame || !d) return;
+    frame.scrollLeft = d.sl - (e.clientX - d.x);
+    frame.scrollTop = d.st - (e.clientY - d.y);
+  }
+  function panEnd() {
+    dragState.current = null;
+  }
 
   return (
     <div>
@@ -110,10 +132,18 @@ function ExtractedBeadPlate({
                   <button className="btn btn-ghost" style={{ padding: "2px 10px", fontSize: 13 }}
                     onClick={() => setZoom(z => Math.min(4, +(z + 0.25).toFixed(2)))}>+</button>
                 </div>
-                <div className="photo-viewer-frame">
+                <div
+                  ref={frameRef}
+                  className="photo-viewer-frame pannable"
+                  onPointerDown={panStart}
+                  onPointerMove={panMove}
+                  onPointerUp={panEnd}
+                  onPointerLeave={panEnd}
+                >
                   <img
                     src={imageUrl}
                     alt="Uploaded bead plate"
+                    draggable={false}
                     style={{
                       width: `${zoom * 100}%`,
                       display: "block",
