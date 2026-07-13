@@ -34,8 +34,10 @@ export default function PracticeReplay() {
   }
 
   const revealedHands = guesses.filter(g => g.revealed);
-  const hitCount = revealedHands.filter(g => g.guess !== null && g.guess !== "tie" && g.guess === g.actual).length;
-  const calledCount = revealedHands.filter(g => g.guess !== null && g.guess !== "tie").length;
+  const betHands = revealedHands.filter(g => g.guess !== null);
+  const winCount  = betHands.filter(g => g.guess === g.actual).length;
+  const tieCount  = betHands.filter(g => g.actual === "tie" && g.guess !== "tie").length;
+  const loseCount = betHands.length - winCount - tieCount;
 
   // One tap plays the game: Skip (null), Banker or Player. The result
   // reveals immediately.
@@ -121,17 +123,19 @@ export default function PracticeReplay() {
 
   // ── Done phase ──
   if (phase === "done") {
-    const pct = calledCount > 0 ? Math.round((hitCount / calledCount) * 100) : 0;
+    // Win rate on decided bets (ties push, so they're excluded)
+    const decided = winCount + loseCount;
+    const pct = decided > 0 ? Math.round((winCount / decided) * 100) : 0;
     return (
       <div className="page" style={{ maxWidth: 500 }}>
         <div className="page-title">Practice Complete</div>
         <div className="panel" style={{ textAlign: "center", padding: 40 }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🎴</div>
           <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>
-            {pct}% Hit Rate
+            {pct}% Win Rate
           </div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
-            You called {hitCount} correct out of {calledCount} called games
+            {betHands.length} Bets: {winCount} (W) · {loseCount} (L) · {tieCount} (Tie)
           </div>
           <div className="grid-3" style={{ marginBottom: 24 }}>
             <div className="stat-block">
@@ -139,12 +143,12 @@ export default function PracticeReplay() {
               <div className="stat-label">Total Games</div>
             </div>
             <div className="stat-block">
-              <div className="stat-value">{calledCount}</div>
-              <div className="stat-label">Games Called</div>
+              <div className="stat-value text-green">{winCount}</div>
+              <div className="stat-label">Wins</div>
             </div>
             <div className="stat-block">
-              <div className="stat-value text-green">{hitCount}</div>
-              <div className="stat-label">Correct</div>
+              <div className="stat-value text-red">{loseCount}</div>
+              <div className="stat-label">Losses</div>
             </div>
           </div>
           <div className="flex gap-8" style={{ justifyContent: "center" }}>
@@ -180,9 +184,6 @@ export default function PracticeReplay() {
           </div>
         </div>
         <div className="flex gap-8 items-center">
-          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-            {hitCount}/{calledCount} calls correct
-          </span>
           <button className="btn btn-ghost" onClick={() => setPhase("pick")}>← End</button>
         </div>
       </div>
@@ -241,8 +242,11 @@ export default function PracticeReplay() {
                     {!currentHand.natural && !currentHand.bankerPair && !currentHand.playerPair ? "Standard hand" : ""}
                   </div>
                   {pendingGuess && (
-                    <div style={{ marginTop: 10, fontSize: 14, fontWeight: 600, color: isCorrect ? "var(--signal-green)" : "var(--banker-red)" }}>
-                      {isCorrect ? "✓ Correct!" : isWrong ? "✗ Wrong" : "—"}
+                    <div style={{
+                      marginTop: 10, fontSize: 14, fontWeight: 700,
+                      color: isCorrect ? "var(--signal-green)" : isWrong ? "var(--banker-red)" : "var(--tie-green)",
+                    }}>
+                      {isCorrect ? "✓ WIN" : actual === "tie" ? "TIE — bet pushes" : "✗ LOSE"}
                     </div>
                   )}
                 </div>
@@ -266,6 +270,19 @@ export default function PracticeReplay() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Calls summary */}
+          <div className="panel" style={{ padding: "10px 14px" }}>
+            <div className="flex items-center justify-between">
+              <div className="panel-title" style={{ marginBottom: 0 }}>My Calls</div>
+              <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                <b style={{ color: "var(--text-primary)" }}>{betHands.length}</b> Bets:{" "}
+                <b style={{ color: "var(--tie-green)" }}>{winCount}</b> (W){" "}
+                <b style={{ color: "var(--banker-red)" }}>{loseCount}</b> (L){" "}
+                <b style={{ color: "var(--text-secondary)" }}>{tieCount}</b> (Tie)
+              </div>
+            </div>
           </div>
 
           {/* Signal at this point */}
