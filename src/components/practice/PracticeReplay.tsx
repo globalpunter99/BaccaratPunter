@@ -202,35 +202,47 @@ export default function PracticeReplay() {
         {/* Left controls */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-          {isReplay ? (
-            <>
-              {/* Replay: scrubber */}
-              <div className="panel">
-                <div className="panel-title">Hand Position</div>
-                <div style={{ textAlign: "center", marginBottom: 12 }}>
-                  <div className="hand-number">{handIdx + 1}</div>
-                  <div className="hand-label">of {session.hands.length} hands</div>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={session.hands.length - 1}
-                  value={handIdx}
-                  onChange={e => setHandIdx(Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "var(--gold)", marginBottom: 12 }}
-                />
-                <div className="flex gap-8">
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setHandIdx(0)}>⏮</button>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} disabled={handIdx === 0} onClick={() => setHandIdx(i => i - 1)}>◀</button>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} disabled={handIdx === session.hands.length - 1} onClick={() => setHandIdx(i => i + 1)}>▶</button>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setHandIdx(session.hands.length - 1)}>⏭</button>
-                </div>
+          {/* Hand position — same panel in both modes; scrubbing unlocks in Replay */}
+          <div className="panel">
+            <div className="panel-title">Hand Position</div>
+            <div style={{ textAlign: "center", marginBottom: 12 }}>
+              <div className="hand-number">{handIdx + 1}</div>
+              <div className="hand-label">of {session.hands.length} hands</div>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={session.hands.length - 1}
+              value={handIdx}
+              disabled={!isReplay}
+              onChange={e => setHandIdx(Number(e.target.value))}
+              style={{ width: "100%", accentColor: "var(--gold)", marginBottom: 12, opacity: isReplay ? 1 : 0.4 }}
+            />
+            <div className="flex gap-8">
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled={!isReplay} onClick={() => setHandIdx(0)}>⏮</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled={!isReplay || handIdx === 0} onClick={() => setHandIdx(i => i - 1)}>◀</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled={!isReplay || handIdx === session.hands.length - 1} onClick={() => setHandIdx(i => i + 1)}>▶</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled={!isReplay} onClick={() => setHandIdx(session.hands.length - 1)}>⏭</button>
+            </div>
+            {!isReplay && (
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, textAlign: "center" }}>
+                Free scrubbing unlocks in Replay mode
               </div>
+            )}
+          </div>
 
-              {/* Replay: current hand result */}
-              <div className="panel">
-                <div className="panel-title">Hand {handIdx + 1} Result</div>
-                <div style={{ textAlign: "center", padding: "16px 0", borderRadius: "var(--radius-sm)", background: "var(--bg-dark)" }}>
+          {/* Hand panel — result card in replay / after reveal; call buttons in practice */}
+          <div className="panel">
+            <div className="panel-title">Hand {handIdx + 1}{isReplay || revealed ? " Result" : ""}</div>
+            {isReplay || revealed ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{
+                  padding: "16px 0",
+                  borderRadius: "var(--radius-md)",
+                  textAlign: "center",
+                  background: isCorrect ? "rgba(0,200,83,0.1)" : isWrong ? "rgba(232,60,60,0.1)" : "var(--bg-dark)",
+                  border: `1px solid ${isCorrect ? "var(--signal-green)" : isWrong ? "var(--banker-red)" : "var(--border-panel)"}`,
+                }}>
                   <div style={{
                     fontSize: 28, fontWeight: 700,
                     color: actual === "banker" ? "var(--banker-red)" : actual === "player" ? "var(--player-blue)" : "var(--tie-green)",
@@ -243,92 +255,47 @@ export default function PracticeReplay() {
                     {currentHand.playerPair ? " · Player Pair" : ""}
                     {!currentHand.natural && !currentHand.bankerPair && !currentHand.playerPair ? "Standard hand" : ""}
                   </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Practice: call + reveal */}
-              <div className="panel">
-                <div className="panel-title">Hand {handIdx + 1}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {!revealed ? (
-                    <>
-                      <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 4 }}>
-                        Study the roads, then place your call:
-                      </div>
-                      <button
-                        className="btn btn-banker"
-                        onClick={() => setPendingGuess("banker")}
-                        style={{ opacity: pendingGuess === "banker" ? 1 : pendingGuess ? 0.5 : 1, outline: pendingGuess === "banker" ? "2px solid white" : "none" }}
-                      >
-                        庄 BANKER
-                      </button>
-                      <button
-                        className="btn btn-player"
-                        onClick={() => setPendingGuess("player")}
-                        style={{ opacity: pendingGuess === "player" ? 1 : pendingGuess ? 0.5 : 1, outline: pendingGuess === "player" ? "2px solid white" : "none" }}
-                      >
-                        闲 PLAYER
-                      </button>
-                      <div className="divider" />
-                      <button className="btn btn-gold" onClick={revealResult} disabled={!pendingGuess}>
-                        Reveal Result
-                      </button>
-                      <button className="btn btn-ghost" onClick={skipHand}>
-                        Skip (no bet)
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{
-                        padding: 20,
-                        borderRadius: "var(--radius-md)",
-                        textAlign: "center",
-                        background: isCorrect ? "rgba(0,200,83,0.1)" : isWrong ? "rgba(232,60,60,0.1)" : "var(--bg-dark)",
-                        border: `1px solid ${isCorrect ? "var(--signal-green)" : isWrong ? "var(--banker-red)" : "var(--border-panel)"}`,
-                      }}>
-                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 6 }}>Result</div>
-                        <div style={{
-                          fontSize: 32, fontWeight: 700,
-                          color: actual === "banker" ? "var(--banker-red)" : actual === "player" ? "var(--player-blue)" : "var(--tie-green)",
-                        }}>
-                          {actual.toUpperCase()}
-                        </div>
-                        {pendingGuess && (
-                          <div style={{ marginTop: 10, fontSize: 14, fontWeight: 600, color: isCorrect ? "var(--signal-green)" : "var(--banker-red)" }}>
-                            {isCorrect ? "✓ Correct!" : isWrong ? "✗ Wrong" : "—"}
-                          </div>
-                        )}
-                      </div>
-                      <button className="btn btn-gold" onClick={nextHand}>
-                        {handIdx + 1 >= session.hands.length ? "Finish" : "Next Hand →"}
-                      </button>
-                    </>
+                  {!isReplay && pendingGuess && (
+                    <div style={{ marginTop: 10, fontSize: 14, fontWeight: 600, color: isCorrect ? "var(--signal-green)" : "var(--banker-red)" }}>
+                      {isCorrect ? "✓ Correct!" : isWrong ? "✗ Wrong" : "—"}
+                    </div>
                   )}
                 </div>
+                {!isReplay && (
+                  <button className="btn btn-gold" onClick={nextHand}>
+                    {handIdx + 1 >= session.hands.length ? "Finish" : "Next Hand →"}
+                  </button>
+                )}
               </div>
-
-              {/* Practice: score */}
-              <div className="panel">
-                <div className="panel-title">Score</div>
-                <div className="grid-3">
-                  <div className="stat-block">
-                    <div className="stat-value">{handIdx + 1}</div>
-                    <div className="stat-label">Hand</div>
-                  </div>
-                  <div className="stat-block">
-                    <div className="stat-value text-green">{hitCount}</div>
-                    <div className="stat-label">Hits</div>
-                  </div>
-                  <div className="stat-block">
-                    <div className="stat-value">{calledCount > 0 ? Math.round(hitCount / calledCount * 100) : "—"}%</div>
-                    <div className="stat-label">Rate</div>
-                  </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 4 }}>
+                  Study the roads, then place your call:
                 </div>
+                <button
+                  className="btn btn-banker"
+                  onClick={() => setPendingGuess("banker")}
+                  style={{ opacity: pendingGuess === "banker" ? 1 : pendingGuess ? 0.5 : 1, outline: pendingGuess === "banker" ? "2px solid white" : "none" }}
+                >
+                  庄 BANKER
+                </button>
+                <button
+                  className="btn btn-player"
+                  onClick={() => setPendingGuess("player")}
+                  style={{ opacity: pendingGuess === "player" ? 1 : pendingGuess ? 0.5 : 1, outline: pendingGuess === "player" ? "2px solid white" : "none" }}
+                >
+                  闲 PLAYER
+                </button>
+                <div className="divider" />
+                <button className="btn btn-gold" onClick={revealResult} disabled={!pendingGuess}>
+                  Reveal Result
+                </button>
+                <button className="btn btn-ghost" onClick={skipHand}>
+                  Skip (no bet)
+                </button>
               </div>
-            </>
-          )}
+            )}
+          </div>
 
           {/* Signal at this point — shown in both modes */}
           <div className="panel">
