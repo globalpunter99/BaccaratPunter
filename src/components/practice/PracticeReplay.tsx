@@ -536,7 +536,7 @@ export default function PracticeReplay() {
 
         {/* Right: roads (revealed so far) */}
         <div>
-          <RoadsDisplay outcomes={visibleOutcomes} extras={visibleExtras} />
+          <RoadsDisplay outcomes={visibleOutcomes} extras={visibleExtras} betsToggleLabel="Bets/Calls" />
         </div>
       </div>
     </div>

@@ -37,6 +37,8 @@ interface Props {
   compact?: boolean;
   // Hide the bet-overlay toggle where betting doesn't apply (e.g. uploads)
   betsToggle?: boolean;
+  // Label for the bet-overlay toggle (e.g. "Bets/Calls" in Practice)
+  betsToggleLabel?: string;
   // When provided, the Bead Plate header gains an EDIT/Save button; in edit
   // mode clicking a bead cycles its result B → P → T via this callback, and
   // every derived road recomputes automatically.
@@ -505,7 +507,7 @@ function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
 
 // ── Main export — casino screen layout ───────────────────────────────────────
 export default function RoadsDisplay({
-  outcomes, extras, compact = false, betsToggle = true, onCycleOutcome,
+  outcomes, extras, compact = false, betsToggle = true, betsToggleLabel = "Bets", onCycleOutcome,
 }: Props) {
   // View mode for Big Road + Bead Plate markers:
   // basic = outcomes, ties and naturals only · detailed = + pairs and exotics
@@ -556,7 +558,7 @@ export default function RoadsDisplay({
                   title="Show/hide your bet results on the tiles"
                   onClick={() => setShowBetOverlay(p => !p)}
                 >
-                  Bets
+                  {betsToggleLabel}
                 </button>
               </span>
             )}
