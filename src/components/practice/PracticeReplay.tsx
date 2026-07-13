@@ -3,6 +3,11 @@ import { mockSessions } from "../../mock/data";
 import type { Session } from "../../mock/data";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
+import {
+  settle, totalStake,
+  type BetSlip, type SideBetType, type Settlement,
+} from "../../game/payouts";
+import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
 
 // Practice Play: walk a real library session with the results hidden,
 // call each hand, then reveal. (The separate Replay mode was removed —
@@ -23,6 +28,55 @@ export default function PracticeReplay() {
   const [guesses, setGuesses] = useState<Guess[]>([]);
   const [pendingGuess, setPendingGuess] = useState<Outcome | null>(null);
   const [revealed, setRevealed] = useState(false);
+
+  // ── My Bets (same engine as Live Session, practice money) ──
+  const [sideBetMode, setSideBetMode] = useState(false);
+  const [pendingMain, setPendingMain] = useState<"banker" | "player" | null>(null);
+  const [pendingStake, setPendingStake] = useState(0);
+  const [pendingSides, setPendingSides] = useState<Partial<Record<SideBetType, number>>>({});
+  const [lastSlip, setLastSlip] = useState<BetSlip | null>(null);
+  const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
+  const [settledGame, setSettledGame] = useState<number | null>(null);
+  const [ledger, setLedger] = useState({ staked: 0, returned: 0 });
+  const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
+
+  const pendingSlip: BetSlip = {
+    main: pendingMain && pendingStake > 0 ? { side: pendingMain, stake: pendingStake } : undefined,
+    side: pendingSides,
+  };
+  const hasPendingBet = totalStake(pendingSlip) > 0;
+
+  function clearPendingBet() {
+    setPendingMain(null);
+    setPendingStake(0);
+    setPendingSides({});
+  }
+
+  function repeatLastBet() {
+    if (!lastSlip) return;
+    setPendingMain(lastSlip.main?.side === "tie" ? null : lastSlip.main?.side ?? null);
+    setPendingStake(lastSlip.main?.stake ?? 0);
+    setPendingSides({ ...lastSlip.side });
+  }
+
+  // Place the bet: settles against the hidden result and reveals it
+  function placeBet() {
+    if (!session || !hasPendingBet) return;
+    const h = session.hands[handIdx];
+    const table = tableForCasino(loadPayoutSettings(), session.venue);
+    const result = settle(pendingSlip, {
+      outcome: h.outcome,
+      natural: h.natural,
+      bankerPair: h.bankerPair,
+      playerPair: h.playerPair,
+    }, true, table);
+    setLedger(l => ({ staked: l.staked + result.staked, returned: l.returned + result.returned }));
+    setLastSettlement(result);
+    setSettledGame(handIdx);
+    setLastSlip(pendingSlip);
+    playCall(pendingMain);
+    clearPendingBet();
+  }
 
   function start(s: Session) {
     setSession(s);
@@ -240,6 +294,15 @@ export default function PracticeReplay() {
             <div className="flex items-center" style={{ gap: 10 }}>
               <div className="panel-title" style={{ marginBottom: 0 }}>My Calls</div>
               <div style={{ flex: 1, textAlign: "center", fontSize: 13, color: "var(--text-secondary)" }}>
+                P/(L):{" "}
+                <b className={`ledger-pl ${ledger.returned - ledger.staked >= 0 ? "up" : "down"}`} style={{ fontSize: 13 }}>
+                  {ledger.returned - ledger.staked > 0
+                    ? `+${ledger.returned - ledger.staked}`
+                    : ledger.returned - ledger.staked < 0
+                    ? `(${Math.abs(ledger.returned - ledger.staked)})`
+                    : "0"}
+                </b>
+                {" · "}
                 <b style={{ color: "var(--text-primary)" }}>{betHands.length}</b> Bets:{" "}
                 <b style={{ color: "var(--tie-green)" }}>{winCount}</b> (W){" "}
                 <b style={{ color: "var(--banker-red)" }}>{loseCount}</b> (L){" "}
@@ -250,7 +313,7 @@ export default function PracticeReplay() {
 
           {/* Game panel — call buttons, then the result card after reveal */}
           <div className="panel">
-            <div className="panel-title">Game {handIdx + 1}{revealed ? " Result" : ""}</div>
+            <div className="panel-title">{revealed ? `Game ${handIdx + 1} Result` : `My Bets — Game ${handIdx + 1}`}</div>
             {revealed ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{
@@ -281,24 +344,123 @@ export default function PracticeReplay() {
                     </div>
                   )}
                 </div>
+                {lastSettlement && settledGame === handIdx && (
+                  <div
+                    className="settlement-flash"
+                    style={{
+                      borderColor: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)",
+                      padding: "5px 10px", fontSize: 12,
+                    }}
+                  >
+                    Last bet:{" "}
+                    <b style={{ color: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
+                      {lastSettlement.profit >= 0
+                        ? `Bet Win ${lastSettlement.profit}`
+                        : `Bet Lose −${Math.abs(lastSettlement.profit)}`}
+                    </b>
+                  </div>
+                )}
                 <button className="btn btn-gold" onClick={nextHand}>
                   {handIdx + 1 >= session.hands.length ? "Finish" : "Next Game →"}
                 </button>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 4 }}>
-                  Study the roads, then play the game:
+              <div>
+                {/* Main bet: Banker / Player / amount (chips stack into it) */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+                  {(["banker", "player"] as const).map(s => (
+                    <button
+                      key={s}
+                      className={`btn bet-side-btn ${s} ${pendingMain === s ? "selected" : ""}`}
+                      onClick={() => setPendingMain(m => (m === s ? null : s))}
+                    >
+                      {s === "banker" ? "庄 B" : "闲 P"}
+                    </button>
+                  ))}
+                  <span className={`amount-wrap${pendingStake > 0 ? " has-value" : ""}`}>
+                    <span className="amount-prefix">$</span>
+                    <input
+                      className="input amount-input"
+                      type="number" min={1} placeholder="Amount $"
+                      value={pendingStake > 0 ? pendingStake : ""}
+                      onChange={e => {
+                        const v = parseInt(e.target.value, 10);
+                        setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
+                      }}
+                    />
+                  </span>
                 </div>
-                <button className="btn skip-btn" onClick={() => playCall(null)}>
+
+                {/* Casino chips — each press adds to the amount */}
+                <div className="chip-row">
+                  {STAKE_PRESETS.map(v => (
+                    <button
+                      key={v}
+                      className={`bet-chip chip-${v}`}
+                      onClick={() => setPendingStake(s => s + v)}
+                    >
+                      <span className="chip-label">${v >= 1000 ? `${v / 1000}k` : v}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Play actions */}
+                <button
+                  className="btn btn-gold"
+                  style={{ width: "100%", marginBottom: 6 }}
+                  disabled={!hasPendingBet}
+                  onClick={placeBet}
+                >
+                  Place Bet — Reveal Result
+                </button>
+                <button className="btn skip-btn" style={{ width: "100%", padding: "9px 0", marginBottom: 8 }} onClick={() => { clearPendingBet(); playCall(null); }}>
                   Skip (no bet)
                 </button>
-                <button className="btn btn-banker" onClick={() => playCall("banker")}>
-                  庄 BANKER
+
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
+                    ↻ Re-bet
+                  </button>
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet} onClick={clearPendingBet}>
+                    ✕ Clear bet
+                  </button>
+                </div>
+
+                {/* Side bets */}
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: "100%", fontSize: 11, marginTop: 8, marginBottom: sideBetMode ? 8 : 0 }}
+                  onClick={() => setSideBetMode(p => !p)}
+                >
+                  {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
                 </button>
-                <button className="btn btn-player" onClick={() => playCall("player")}>
-                  闲 PLAYER
-                </button>
+                {sideBetMode && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {([
+                      ["tie", "Tie"],
+                      ["bPair", "B Pair"], ["pPair", "P Pair"],
+                      ["anyPair", "Any Pair"], ["anyTiger", "Any Tiger"],
+                      ["smlTiger", "Sml Tiger"], ["bigTiger", "Big Tiger"],
+                      ["smlDragon", "Sml Dragon"], ["bigDragon", "Big Dragon"],
+                      ["tigerTie", "Tiger Tie"], ["dragonTie", "Dragon Tie"],
+                      ["dragonTiger", "D-Tiger"],
+                    ] as [SideBetType, string][]).map(([type, label]) => (
+                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 62, flexShrink: 0 }}>{label}</span>
+                        <input
+                          className="input"
+                          type="number" min={0} placeholder="stake"
+                          style={{ padding: "4px 6px", fontSize: 11, minWidth: 0 }}
+                          value={pendingSides[type] ?? ""}
+                          onChange={e => {
+                            const v = parseInt(e.target.value, 10);
+                            setPendingSides(p => ({ ...p, [type]: isNaN(v) || v <= 0 ? undefined : v }));
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
