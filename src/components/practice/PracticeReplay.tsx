@@ -58,6 +58,26 @@ export default function PracticeReplay() {
     setRevealed(false);
   }
 
+  // On-demand position jump. Moving forward auto-reveals every game passed
+  // over (recorded as no-bet skips) so the roads stay a contiguous sequence;
+  // moving back just reviews already-revealed games.
+  function goToGame(target: number) {
+    if (!session) return;
+    const idx = Math.max(0, Math.min(target, session.hands.length - 1));
+    if (idx > handIdx) {
+      setGuesses(prev => {
+        const next = [...prev];
+        for (let i = handIdx; i < idx; i++) {
+          if (!next[i].revealed) next[i] = { ...next[i], revealed: true };
+        }
+        return next;
+      });
+    }
+    setHandIdx(idx);
+    setPendingGuess(null);
+    setRevealed(guesses[idx]?.revealed ?? false);
+  }
+
   function skipHand() {
     setGuesses(prev => {
       const next = [...prev];
@@ -177,31 +197,29 @@ export default function PracticeReplay() {
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16 }}>
         {/* Left controls */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Game position — visible but locked in practice: scrubbing
-              forward would leak hidden results */}
-          <div className="panel">
-            <div className="panel-title">Game Position</div>
-            <div style={{ textAlign: "center", marginBottom: 12 }}>
-              <div className="hand-number">{handIdx + 1}</div>
-              <div className="hand-label">of {session.hands.length} games</div>
+          {/* Game position — compact, usable on demand. Moving forward
+              auto-reveals the games passed over (no-bet skips). */}
+          <div className="panel" style={{ padding: "10px 14px" }}>
+            <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+              <div className="panel-title" style={{ marginBottom: 0 }}>Game Position</div>
+              <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                <b style={{ fontSize: 16, color: "var(--gold)" }}>{handIdx + 1}</b>
+                {" "}of {session.hands.length} Games
+              </div>
             </div>
             <input
               type="range"
               min={0}
               max={session.hands.length - 1}
               value={handIdx}
-              disabled
-              readOnly
-              style={{ width: "100%", accentColor: "var(--gold)", marginBottom: 12, opacity: 0.4 }}
+              onChange={e => goToGame(Number(e.target.value))}
+              style={{ width: "100%", accentColor: "var(--gold)", marginBottom: 8 }}
             />
             <div className="flex gap-8">
-              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>⏮</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>◀</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>▶</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>⏭</button>
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, textAlign: "center" }}>
-              Free scrubbing unlocks in Replay mode
+              <button className="btn btn-ghost" style={{ flex: 1, padding: "4px 0" }} onClick={() => goToGame(0)}>⏮</button>
+              <button className="btn btn-ghost" style={{ flex: 1, padding: "4px 0" }} disabled={handIdx === 0} onClick={() => goToGame(handIdx - 1)}>◀</button>
+              <button className="btn btn-ghost" style={{ flex: 1, padding: "4px 0" }} disabled={handIdx === session.hands.length - 1} onClick={() => goToGame(handIdx + 1)}>▶</button>
+              <button className="btn btn-ghost" style={{ flex: 1, padding: "4px 0" }} onClick={() => goToGame(session.hands.length - 1)}>⏭</button>
             </div>
           </div>
 
