@@ -37,11 +37,13 @@ export default function PracticeReplay() {
   const hitCount = revealedHands.filter(g => g.guess !== null && g.guess !== "tie" && g.guess === g.actual).length;
   const calledCount = revealedHands.filter(g => g.guess !== null && g.guess !== "tie").length;
 
-  function revealResult() {
-    if (!pendingGuess && !revealed) return;
+  // One tap plays the game: Skip (null), Banker or Player. The result
+  // reveals immediately.
+  function playCall(call: Outcome | null) {
+    setPendingGuess(call);
     setGuesses(prev => {
       const next = [...prev];
-      next[handIdx] = { ...next[handIdx], guess: pendingGuess, revealed: true };
+      next[handIdx] = { ...next[handIdx], guess: call, revealed: true };
       return next;
     });
     setRevealed(true);
@@ -76,15 +78,6 @@ export default function PracticeReplay() {
     setHandIdx(idx);
     setPendingGuess(null);
     setRevealed(guesses[idx]?.revealed ?? false);
-  }
-
-  function skipHand() {
-    setGuesses(prev => {
-      const next = [...prev];
-      next[handIdx] = { ...next[handIdx], guess: null, revealed: true };
-      return next;
-    });
-    nextHand();
   }
 
   // ── Pick phase ──
@@ -260,28 +253,16 @@ export default function PracticeReplay() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 4 }}>
-                  Study the roads, then place your call:
+                  Study the roads, then play the game:
                 </div>
-                <button
-                  className="btn btn-banker"
-                  onClick={() => setPendingGuess("banker")}
-                  style={{ opacity: pendingGuess === "banker" ? 1 : pendingGuess ? 0.5 : 1, outline: pendingGuess === "banker" ? "2px solid white" : "none" }}
-                >
+                <button className="btn skip-btn" onClick={() => playCall(null)}>
+                  Skip (no bet)
+                </button>
+                <button className="btn btn-banker" onClick={() => playCall("banker")}>
                   庄 BANKER
                 </button>
-                <button
-                  className="btn btn-player"
-                  onClick={() => setPendingGuess("player")}
-                  style={{ opacity: pendingGuess === "player" ? 1 : pendingGuess ? 0.5 : 1, outline: pendingGuess === "player" ? "2px solid white" : "none" }}
-                >
+                <button className="btn btn-player" onClick={() => playCall("player")}>
                   闲 PLAYER
-                </button>
-                <div className="divider" />
-                <button className="btn btn-gold" onClick={revealResult} disabled={!pendingGuess}>
-                  Reveal Result
-                </button>
-                <button className="btn btn-ghost" onClick={skipHand}>
-                  Skip (no bet)
                 </button>
               </div>
             )}

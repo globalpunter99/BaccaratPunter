@@ -445,6 +445,18 @@ body {
 .bet-chip.chip-500  { --chip: #6c3483; } /* purple */
 .bet-chip.chip-1000 { --chip: #c9a227; } /* gold */
 
+/* Practice: Skip play option */
+.skip-btn {
+  background: #4a6572;
+  color: #fff;
+  font-weight: 700;
+  padding: 14px 0;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.skip-btn:hover { background: #56747f; }
+
 /* Pay engine: My Bets panel */
 .bet-header-stats {
   display: flex;
