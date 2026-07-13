@@ -3,11 +3,10 @@ import "./index.css";
 import LiveSession from "./components/session/LiveSession";
 import SessionLibrary from "./components/library/SessionLibrary";
 import UploadSession from "./components/library/UploadSession";
-import PracticePlay from "./components/practice/PracticePlay";
+import PracticeReplay from "./components/practice/PracticeReplay";
 import ProfileBuilder from "./components/profile/ProfileBuilder";
 import ProfileComparison from "./components/profile/ProfileComparison";
 import StatsLeaderboard from "./components/stats/StatsLeaderboard";
-import ShoeReplay from "./components/replay/ShoeReplay";
 import Guide from "./components/guide/Guide";
 import SettingsPage from "./components/settings/SettingsPage";
 
@@ -15,11 +14,10 @@ type Tab =
   | "live"
   | "library"
   | "upload"
-  | "practice"
+  | "practice-replay"
   | "profile-build"
   | "profile-compare"
   | "stats"
-  | "replay"
   | "guide"
   | "settings";
 
@@ -27,8 +25,7 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "live",            label: "Live Session",   group: "Session" },
   { id: "library",         label: "Library",         group: "Data" },
   { id: "upload",          label: "Upload Session",  group: "Data" },
-  { id: "practice",        label: "Practice Play",   group: "Data" },
-  { id: "replay",          label: "Shoe Replay",     group: "Data" },
+  { id: "practice-replay", label: "Practice / Replay", group: "Data" },
   { id: "profile-build",   label: "Build Profile",   group: "Profile" },
   { id: "profile-compare", label: "Profiles",        group: "Profile" },
   { id: "stats",           label: "Stats",           group: "Profile" },
@@ -44,11 +41,10 @@ export default function App() {
       case "live":            return <LiveSession />;
       case "library":         return <SessionLibrary />;
       case "upload":          return <UploadSession />;
-      case "practice":        return <PracticePlay />;
+      case "practice-replay": return <PracticeReplay />;
       case "profile-build":   return <ProfileBuilder />;
       case "profile-compare": return <ProfileComparison />;
       case "stats":           return <StatsLeaderboard />;
-      case "replay":          return <ShoeReplay />;
       case "guide":           return <Guide />;
       case "settings":        return <SettingsPage />;
     }
