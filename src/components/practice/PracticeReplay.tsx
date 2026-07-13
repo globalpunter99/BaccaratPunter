@@ -392,7 +392,7 @@ export default function PracticeReplay() {
                 </div>
 
                 {/* Casino chips — each press adds to the amount */}
-                <div className="chip-row">
+                <div className="chip-row" style={{ justifyContent: "center" }}>
                   {STAKE_PRESETS.map(v => (
                     <button
                       key={v}
