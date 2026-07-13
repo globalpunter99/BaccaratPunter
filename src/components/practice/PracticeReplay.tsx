@@ -274,9 +274,9 @@ export default function PracticeReplay() {
 
           {/* Calls summary */}
           <div className="panel" style={{ padding: "10px 14px" }}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center" style={{ gap: 10 }}>
               <div className="panel-title" style={{ marginBottom: 0 }}>My Calls</div>
-              <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+              <div style={{ flex: 1, textAlign: "center", fontSize: 13, color: "var(--text-secondary)" }}>
                 <b style={{ color: "var(--text-primary)" }}>{betHands.length}</b> Bets:{" "}
                 <b style={{ color: "var(--tie-green)" }}>{winCount}</b> (W){" "}
                 <b style={{ color: "var(--banker-red)" }}>{loseCount}</b> (L){" "}
