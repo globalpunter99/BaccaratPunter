@@ -30,6 +30,9 @@ export default function PracticeReplay() {
   const [revealed, setRevealed] = useState(false);
 
   // ── My Bets (same engine as Live Session, practice money) ──
+  // "bets" = full staking mode · "calls" = zero-bet mode, one-tap
+  // Skip/Banker/Player with no amounts
+  const [betMode, setBetMode] = useState<"bets" | "calls">("bets");
   const [sideBetMode, setSideBetMode] = useState(false);
   const [pendingMain, setPendingMain] = useState<"banker" | "player" | null>(null);
   const [pendingStake, setPendingStake] = useState(0);
@@ -366,6 +369,39 @@ export default function PracticeReplay() {
               </div>
             ) : (
               <div>
+                {/* Mode: full bets vs zero-bet calls */}
+                <div className="mode-tabs" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                  <button
+                    className={`mode-tab ${betMode === "bets" ? "active" : ""}`}
+                    onClick={() => setBetMode("bets")}
+                  >
+                    BETS
+                  </button>
+                  <button
+                    className={`mode-tab ${betMode === "calls" ? "active" : ""}`}
+                    onClick={() => setBetMode("calls")}
+                  >
+                    CALLS ONLY
+                  </button>
+                </div>
+
+                {betMode === "calls" ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 2 }}>
+                      No money down — just call the game:
+                    </div>
+                    <button className="btn skip-btn" onClick={() => { clearPendingBet(); playCall(null); }}>
+                      Skip (no bet)
+                    </button>
+                    <button className="btn btn-banker" onClick={() => { clearPendingBet(); playCall("banker"); }}>
+                      庄 BANKER
+                    </button>
+                    <button className="btn btn-player" onClick={() => { clearPendingBet(); playCall("player"); }}>
+                      闲 PLAYER
+                    </button>
+                  </div>
+                ) : (
+                <>
                 {/* Main bet: Banker / Player / amount (chips stack into it) */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
                   {(["banker", "player"] as const).map(s => (
@@ -460,6 +496,8 @@ export default function PracticeReplay() {
                       </div>
                     ))}
                   </div>
+                )}
+                </>
                 )}
               </div>
             )}
