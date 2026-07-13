@@ -447,7 +447,7 @@ body {
 
 /* Practice: Skip play option */
 .skip-btn {
-  background: #4a6572;
+  background: #1a7a4a;
   color: #fff;
   font-weight: 700;
   padding: 14px 0;
@@ -455,7 +455,7 @@ body {
   border-radius: var(--radius-md);
   cursor: pointer;
 }
-.skip-btn:hover { background: #56747f; }
+.skip-btn:hover { background: #1f8f57; }
 
 /* Pay engine: My Bets panel */
 .bet-header-stats {
