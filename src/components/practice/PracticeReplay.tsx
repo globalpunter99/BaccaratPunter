@@ -161,7 +161,25 @@ export default function PracticeReplay() {
   }
 
   // ── Active phase ──
-  const visibleOutcomes: Outcome[] = guesses.filter(g => g.revealed).map(g => g.actual);
+  // Revealed games drive the roads; each carries the hand's markers plus
+  // the user's bet result (win = light tile, loss = dark tile; ties and
+  // skips leave no wash), matching the Live Session behaviour.
+  const visible = session.hands
+    .map((h, i) => ({ h, g: guesses[i] }))
+    .filter(x => x.g.revealed);
+  const visibleOutcomes: Outcome[] = visible.map(x => x.h.outcome);
+  const visibleExtras = visible.map(({ h, g }) => {
+    let betResult: "win" | "loss" | undefined;
+    if (g.guess && g.guess !== "tie" && h.outcome !== "tie") {
+      betResult = g.guess === h.outcome ? "win" : "loss";
+    }
+    return {
+      natural: h.natural,
+      bankerPair: h.bankerPair,
+      playerPair: h.playerPair,
+      betResult,
+    };
+  });
   const currentHand = session.hands[handIdx];
   const actual = currentHand.outcome;
   const isCorrect = revealed && pendingGuess !== null && pendingGuess !== "tie" && pendingGuess === actual;
@@ -318,7 +336,7 @@ export default function PracticeReplay() {
 
         {/* Right: roads (revealed so far) */}
         <div>
-          <RoadsDisplay outcomes={visibleOutcomes} betsToggle={false} />
+          <RoadsDisplay outcomes={visibleOutcomes} extras={visibleExtras} />
         </div>
       </div>
     </div>
