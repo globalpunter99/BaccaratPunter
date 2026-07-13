@@ -73,8 +73,8 @@ export default function PracticeReplay() {
       <div className="page" style={{ maxWidth: 700 }}>
         <div className="page-title">Practice Play</div>
         <div style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 20 }}>
-          Select a session from your library. The results will be hidden — play through it hand
-          by hand as if you're at the table. After placing your call, reveal the actual result.
+          Select a session from your library. The results will be hidden — play through it game
+          by game as if you're at the table. After placing your call, reveal the actual result.
           Because these are real recorded shoes, you'll never quite remember every hand.
         </div>
 
@@ -92,7 +92,7 @@ export default function PracticeReplay() {
                 <div>
                   <div style={{ fontWeight: 600 }}>{s.venue}</div>
                   <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                    {s.tableNumber} · {s.date} · {s.hands.length} hands
+                    {s.tableNumber} · {s.date} · {s.hands.length} games
                   </div>
                 </div>
                 <button className="btn btn-gold" style={{ fontSize: 12, padding: "6px 14px" }}>
@@ -118,16 +118,16 @@ export default function PracticeReplay() {
             {pct}% Hit Rate
           </div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
-            You called {hitCount} correct out of {calledCount} called hands
+            You called {hitCount} correct out of {calledCount} called games
           </div>
           <div className="grid-3" style={{ marginBottom: 24 }}>
             <div className="stat-block">
               <div className="stat-value">{guesses.length}</div>
-              <div className="stat-label">Total Hands</div>
+              <div className="stat-label">Total Games</div>
             </div>
             <div className="stat-block">
               <div className="stat-value">{calledCount}</div>
-              <div className="stat-label">Hands Called</div>
+              <div className="stat-label">Games Called</div>
             </div>
             <div className="stat-block">
               <div className="stat-value text-green">{hitCount}</div>
@@ -163,7 +163,7 @@ export default function PracticeReplay() {
         <div>
           <div className="page-title">Practice Play</div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-            {session.venue} · {session.tableNumber} · Hand {handIdx + 1} of {session.hands.length}
+            {session.venue} · {session.tableNumber} · Game {handIdx + 1} of {session.hands.length}
           </div>
         </div>
         <div className="flex gap-8 items-center">
@@ -177,9 +177,37 @@ export default function PracticeReplay() {
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16 }}>
         {/* Left controls */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Hand panel — call buttons, then the result card after reveal */}
+          {/* Game position — visible but locked in practice: scrubbing
+              forward would leak hidden results */}
           <div className="panel">
-            <div className="panel-title">Hand {handIdx + 1}{revealed ? " Result" : ""}</div>
+            <div className="panel-title">Game Position</div>
+            <div style={{ textAlign: "center", marginBottom: 12 }}>
+              <div className="hand-number">{handIdx + 1}</div>
+              <div className="hand-label">of {session.hands.length} games</div>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={session.hands.length - 1}
+              value={handIdx}
+              disabled
+              readOnly
+              style={{ width: "100%", accentColor: "var(--gold)", marginBottom: 12, opacity: 0.4 }}
+            />
+            <div className="flex gap-8">
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>⏮</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>◀</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>▶</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} disabled>⏭</button>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, textAlign: "center" }}>
+              Free scrubbing unlocks in Replay mode
+            </div>
+          </div>
+
+          {/* Game panel — call buttons, then the result card after reveal */}
+          <div className="panel">
+            <div className="panel-title">Game {handIdx + 1}{revealed ? " Result" : ""}</div>
             {revealed ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{
@@ -208,7 +236,7 @@ export default function PracticeReplay() {
                   )}
                 </div>
                 <button className="btn btn-gold" onClick={nextHand}>
-                  {handIdx + 1 >= session.hands.length ? "Finish" : "Next Hand →"}
+                  {handIdx + 1 >= session.hands.length ? "Finish" : "Next Game →"}
                 </button>
               </div>
             ) : (
@@ -243,7 +271,7 @@ export default function PracticeReplay() {
 
           {/* Signal at this point */}
           <div className="panel">
-            <div className="panel-title">Signal at Hand {handIdx + 1}</div>
+            <div className="panel-title">Signal at Game {handIdx + 1}</div>
             <div className={`signal-band ${sig.playability}`} style={{ marginBottom: 10 }}>
               <div className={`signal-dot ${sig.playability}`} />
               <span style={{ fontWeight: 700 }}>{sig.label}</span>
