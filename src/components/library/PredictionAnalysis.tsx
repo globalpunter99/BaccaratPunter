@@ -59,6 +59,26 @@ function statsFor(preds: (Outcome | null)[], outcomes: Outcome[]) {
   return { calls, wins, losses, ties, pct: decided ? Math.round((wins / decided) * 100) : 0 };
 }
 
+// Winning-streak counts: runs of consecutive correct calls (losses reset,
+// ties push and skipped games don't break a run), bucketed 2 / 3 / 4+.
+function streakCounts(preds: (Outcome | null)[], outcomes: Outcome[]) {
+  let s2 = 0, s3 = 0, s4 = 0, run = 0;
+  const close = () => {
+    if (run === 2) s2++;
+    else if (run === 3) s3++;
+    else if (run >= 4) s4++;
+    run = 0;
+  };
+  preds.forEach((p, i) => {
+    if (!p) return;               // skipped game — run continues
+    if (outcomes[i] === "tie") return; // push — run continues
+    if (p === outcomes[i]) run++;
+    else close();
+  });
+  close();
+  return { s2, s3, s4 };
+}
+
 // View selector: which entities' arrow lines are overlaid on the Big Road
 const VIEWS: { id: string; label: string; entities: EntityId[] }[] = [
   { id: "off", label: "Overlay: Off", entities: [] },
@@ -102,6 +122,7 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
         <div className="scoreboard-strip">
           {ENTITIES.map(id => {
             const s = statsFor(predictions[id], outcomes);
+            const st = streakCounts(predictions[id], outcomes);
             return (
               <div key={id} className="scoreboard-entity">
                 <div className="flex items-center" style={{ gap: 8 }}>
@@ -120,6 +141,11 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                   {s.calls} calls · <b style={{ color: "var(--tie-green)" }}>{s.wins}</b> (W){" "}
                   <b style={{ color: "var(--banker-red)" }}>{s.losses}</b> (L){" "}
                   <b>{s.ties}</b> (T) · <b style={{ color: "var(--gold)" }}>{s.pct}%</b>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+                  Win streaks: <b style={{ color: "var(--tie-green)" }}>{st.s2}</b>×2{" "}
+                  <b style={{ color: "var(--tie-green)" }}>{st.s3}</b>×3{" "}
+                  <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>×4+
                 </div>
               </div>
             );

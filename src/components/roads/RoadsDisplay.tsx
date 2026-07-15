@@ -293,25 +293,63 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
         </defs>
         {analysisOverlay.entities.map(e => {
           const preds = analysisOverlay.predictions[e];
-          const called = preds
-            .map((p, i) => (p ? i : -1))
-            .filter(i => i >= 0 && i < outcomes.length && gameCentre[i]);
-          return called.slice(1).map((gameIdx, k) => {
-            const from = gameCentre[called[k]]!;
-            const to = gameCentre[gameIdx]!;
-            const kind = outcomes[gameIdx] !== "tie" && preds[gameIdx] === outcomes[gameIdx] ? "correct" : "wrong";
-            return (
-              <line
-                key={`${e}-${gameIdx}`}
-                x1={from.x} y1={from.y + entityOffset[e]}
-                x2={to.x} y2={to.y + entityOffset[e]}
-                stroke={ENTITY_COLOURS[e][kind]}
-                strokeWidth={2.5}
-                markerEnd={`url(#bigroad-arrow-${e}-${kind})`}
-                opacity={0.9}
-              />
-            );
+          // Selective entities (You, Sniper) also show the games they sat
+          // out, as thin dashed grey segments; Grinder bets nearly every
+          // game so skip segments would just be noise.
+          const showSkips = e !== "grinder";
+          const off = entityOffset[e];
+          const elems: React.ReactNode[] = [];
+          let prev: { x: number; y: number } | null = null;
+          let streak = 0;
+
+          outcomes.forEach((o, i) => {
+            const pos = gameCentre[i];
+            if (!pos) return;
+            const called = !!preds[i];
+            if (!called && !showSkips) return;
+            const pt = { x: pos.x + off, y: pos.y + off };
+
+            if (prev && (prev.x !== pt.x || prev.y !== pt.y)) {
+              // Orthogonal elbow: horizontal first, then vertical
+              const d = `M ${prev.x} ${prev.y} H ${pt.x} V ${pt.y}`;
+              if (called) {
+                const correct = o !== "tie" && preds[i] === o;
+                if (correct) streak++;
+                else if (o !== "tie") streak = 0;
+                const kind = correct ? "correct" : "wrong";
+                elems.push(
+                  <path
+                    key={`${e}-${i}`}
+                    d={d}
+                    fill="none"
+                    stroke={ENTITY_COLOURS[e][kind]}
+                    strokeWidth={correct ? Math.min(1.5 + streak * 0.9, 6) : 2}
+                    markerEnd={`url(#bigroad-arrow-${e}-${kind})`}
+                    opacity={0.9}
+                  />,
+                );
+              } else {
+                elems.push(
+                  <path
+                    key={`${e}-skip-${i}`}
+                    d={d}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.45)"
+                    strokeWidth={1.2}
+                    strokeDasharray="3 4"
+                    opacity={0.8}
+                  />,
+                );
+              }
+            } else if (called) {
+              // Same cell (e.g. tie riding its carrier): still update streak
+              const correct = o !== "tie" && preds[i] === o;
+              if (correct) streak++;
+              else if (o !== "tie") streak = 0;
+            }
+            prev = pt;
           });
+          return elems;
         })}
       </svg>
     )}
