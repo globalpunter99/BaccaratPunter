@@ -277,20 +277,6 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
         height={ROWS * cellSize}
         style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
       >
-        <defs>
-          {analysisOverlay.entities.map(e => (["correct", "wrong"] as const).map(kind => (
-            <marker
-              key={`${e}-${kind}`}
-              id={`bigroad-arrow-${e}-${kind}`}
-              viewBox="0 0 8 8"
-              refX="7" refY="4"
-              markerWidth="5" markerHeight="5"
-              orient="auto-start-reverse"
-            >
-              <path d="M0 0 L8 4 L0 8 Z" fill={ENTITY_COLOURS[e][kind]} />
-            </marker>
-          )))}
-        </defs>
         {analysisOverlay.entities.map(e => {
           const preds = analysisOverlay.predictions[e];
           // Selective entities (You, Sniper) also show the games they sat
@@ -355,9 +341,21 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
             elems.push(
               <path key={`${e}-${j}`} d={d} fill="none"
                 stroke={ENTITY_COLOURS[e][kind]} strokeWidth={width} opacity={0.92}
-                strokeLinejoin="round" strokeLinecap="round"
-                markerEnd={isEnd ? `url(#bigroad-arrow-${e}-${kind})` : undefined} />,
+                strokeLinejoin="round" strokeLinecap="round" />,
             );
+            if (isEnd) {
+              // Fixed-size downward triangle at the streak end — never scales
+              // with line thickness, never crosses into the next tile.
+              const w = 5, h = 7;
+              elems.push(
+                <path
+                  key={`${e}-head-${j}`}
+                  d={`M ${b.x - w} ${b.y - h} L ${b.x + w} ${b.y - h} L ${b.x} ${b.y + 1} Z`}
+                  fill={ENTITY_COLOURS[e][kind]}
+                  opacity={0.95}
+                />,
+              );
+            }
           }
           return elems;
         })}
