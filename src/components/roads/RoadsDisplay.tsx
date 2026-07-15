@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
+import { ENTITY_COLOURS, type EntityId } from "../../lib/entities";
 import {
   toBeadPlate, toBigRoad, bigEyeBoy, smallRoad, cockroachPig,
   placeBigRoad, placeMarks,
@@ -43,6 +44,12 @@ interface Props {
   // mode clicking a bead cycles its result B → P → T via this callback, and
   // every derived road recomputes automatically.
   onCycleOutcome?: (handIdx: number) => void;
+  // Prediction analysis overlay: fills Big Road tiles with the result colour
+  // and draws per-entity arrow lines linking consecutive calls.
+  analysisOverlay?: {
+    entities: EntityId[];
+    predictions: Record<EntityId, (Outcome | null)[]>;
+  };
 }
 
 // ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
@@ -161,7 +168,10 @@ function BeadPlate({ outcomes, extras, cellSize, onCycle }: {
 }
 
 // ── Big Road ─────────────────────────────────────────────────────────────────
-function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number }) {
+function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
+  outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number;
+  analysisOverlay?: Props["analysisOverlay"];
+}) {
   const stones = toBigRoad(outcomes);
   // Stones drop ties, so stone i corresponds to the i-th non-tie hand.
   const stoneExtra = new Map<BigRoadStone, HandExtra | undefined>();
@@ -191,7 +201,23 @@ function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?:
   const byPos = new Map<string, PlacedCell<BigRoadStone>>();
   for (const p of placed) byPos.set(`${p.col},${p.row}`, p);
 
+  // Analysis overlay geometry: map each game to its stone's cell centre
+  // (ties ride on the previous stone's cell).
+  const stonePos = new Map<BigRoadStone, { col: number; row: number }>();
+  for (const p of placed) stonePos.set(p.value, { col: p.col, row: p.row });
+  const gameCentre: ({ x: number; y: number } | null)[] = [];
+  {
+    let stoneIdx = 0;
+    outcomes.forEach(o => {
+      const stone = o !== "tie" ? stones[stoneIdx++] : stones[stoneIdx - 1];
+      const pos = stone ? stonePos.get(stone) : undefined;
+      gameCentre.push(pos ? { x: pos.col * cellSize + cellSize / 2, y: pos.row * cellSize + cellSize / 2 } : null);
+    });
+  }
+  const entityOffset: Record<EntityId, number> = { you: -6, sniper: 0, grinder: 6 };
+
   return (
+    <div style={{ position: "relative", width: cols * cellSize, minWidth: "100%" }}>
     <div
       className="road-grid"
       style={{
@@ -206,13 +232,21 @@ function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?:
         const col = idx % cols;
         const p = byPos.get(`${col},${row}`);
         const betResult = p ? stoneExtra.get(p.value)?.betResult : undefined;
+        // Overlay mode: fill occupied tiles with the result colour,
+        // keeping the cell outline
+        const overlayFill = analysisOverlay && p
+          ? { background: p.value.side === "banker" ? "var(--banker-red)" : "var(--player-blue)" }
+          : undefined;
         return (
-          <div key={idx} className={`road-cell${betResult ? ` bet-${betResult}` : ""}`}>
+          <div key={idx} className={`road-cell${betResult ? ` bet-${betResult}` : ""}`} style={overlayFill}>
             {p && (
               <>
                 <div
                   className={`road-stone big-road-${p.value.side}`}
-                  style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                  style={{
+                    width: cellSize * 0.72, height: cellSize * 0.72,
+                    ...(analysisOverlay ? { borderColor: "rgba(255,255,255,0.55)" } : {}),
+                  }}
                 />
                 {/* One slash per tie, offset within the tile; 5+ consecutive
                     ties fill the tile solid green (more lines add nothing) */}
@@ -234,6 +268,53 @@ function BigRoad({ outcomes, extras, cellSize }: { outcomes: Outcome[]; extras?:
           </div>
         );
       })}
+    </div>
+
+    {/* Prediction arrows: link each entity's consecutive calls */}
+    {analysisOverlay && (
+      <svg
+        width={cols * cellSize}
+        height={ROWS * cellSize}
+        style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+      >
+        <defs>
+          {analysisOverlay.entities.map(e => (["correct", "wrong"] as const).map(kind => (
+            <marker
+              key={`${e}-${kind}`}
+              id={`bigroad-arrow-${e}-${kind}`}
+              viewBox="0 0 8 8"
+              refX="7" refY="4"
+              markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse"
+            >
+              <path d="M0 0 L8 4 L0 8 Z" fill={ENTITY_COLOURS[e][kind]} />
+            </marker>
+          )))}
+        </defs>
+        {analysisOverlay.entities.map(e => {
+          const preds = analysisOverlay.predictions[e];
+          const called = preds
+            .map((p, i) => (p ? i : -1))
+            .filter(i => i >= 0 && i < outcomes.length && gameCentre[i]);
+          return called.slice(1).map((gameIdx, k) => {
+            const from = gameCentre[called[k]]!;
+            const to = gameCentre[gameIdx]!;
+            const kind = outcomes[gameIdx] !== "tie" && preds[gameIdx] === outcomes[gameIdx] ? "correct" : "wrong";
+            return (
+              <line
+                key={`${e}-${gameIdx}`}
+                x1={from.x} y1={from.y + entityOffset[e]}
+                x2={to.x} y2={to.y + entityOffset[e]}
+                stroke={ENTITY_COLOURS[e][kind]}
+                strokeWidth={2.5}
+                markerEnd={`url(#bigroad-arrow-${e}-${kind})`}
+                opacity={0.9}
+              />
+            );
+          });
+        })}
+      </svg>
+    )}
     </div>
   );
 }
@@ -507,7 +588,7 @@ function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
 
 // ── Main export — casino screen layout ───────────────────────────────────────
 export default function RoadsDisplay({
-  outcomes, extras, compact = false, betsToggle = true, betsToggleLabel = "Bets", onCycleOutcome,
+  outcomes, extras, compact = false, betsToggle = true, betsToggleLabel = "Bets", onCycleOutcome, analysisOverlay,
 }: Props) {
   // View mode for Big Road + Bead Plate markers:
   // basic = outcomes, ties and naturals only · detailed = + pairs and exotics
@@ -565,7 +646,7 @@ export default function RoadsDisplay({
             <LegendKey />
           </>
         }>
-        <BigRoad outcomes={outcomes} extras={shownExtras} cellSize={bigCell} />
+        <BigRoad outcomes={outcomes} extras={shownExtras} cellSize={bigCell} analysisOverlay={analysisOverlay} />
       </RoadSection>
 
       {/* Row 2 — left: Big Eye above Small Road · right: Cockroach two bands */}

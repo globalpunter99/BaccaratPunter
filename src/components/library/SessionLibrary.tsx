@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { mockSessions, type Session } from "../../mock/data";
-import RoadsDisplay from "../roads/RoadsDisplay";
 import PredictionAnalysis from "./PredictionAnalysis";
 
 export default function SessionLibrary() {
@@ -34,9 +33,7 @@ export default function SessionLibrary() {
           </div>
         )}
 
-        <PredictionAnalysis session={selected}>
-          <RoadsDisplay outcomes={selected.hands.map(h => h.outcome)} betsToggle={false} />
-        </PredictionAnalysis>
+        <PredictionAnalysis session={selected} />
       </div>
     );
   }
