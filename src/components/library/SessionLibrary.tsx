@@ -28,32 +28,11 @@ export default function SessionLibrary() {
           </button>
         </div>
 
-        {/* Stats row */}
-        <div className="panel mb-12">
-          <div className="grid-4">
-            <div className="stat-block">
-              <div className="stat-value">{selected.hands.length}</div>
-              <div className="stat-label">Total Hands</div>
-            </div>
-            <div className="stat-block">
-              <div className="stat-value text-red">{bankerCount(selected)}</div>
-              <div className="stat-label">Banker</div>
-            </div>
-            <div className="stat-block">
-              <div className="stat-value text-blue">{playerCount(selected)}</div>
-              <div className="stat-label">Player</div>
-            </div>
-            <div className="stat-block">
-              <div className="stat-value text-green">{tieCount(selected)}</div>
-              <div className="stat-label">Tie</div>
-            </div>
+        {selected.notes && (
+          <div className="mb-12" style={{ padding: "8px 12px", background: "var(--bg-dark)", borderRadius: "var(--radius-sm)", fontSize: 13, color: "var(--text-secondary)" }}>
+            {selected.notes}
           </div>
-          {selected.notes && (
-            <div style={{ marginTop: 10, padding: "8px 12px", background: "var(--bg-dark)", borderRadius: "var(--radius-sm)", fontSize: 13, color: "var(--text-secondary)" }}>
-              {selected.notes}
-            </div>
-          )}
-        </div>
+        )}
 
         <PredictionAnalysis session={selected}>
           <RoadsDisplay outcomes={selected.hands.map(h => h.outcome)} betsToggle={false} />
