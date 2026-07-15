@@ -836,6 +836,43 @@ select.input { cursor: pointer; }
   color: var(--text-primary);
 }
 
+/* Prediction analysis */
+.scoreboard-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.scoreboard-entity {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+}
+.scoreboard-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.overlay-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+.legend-line {
+  display: inline-block;
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+}
+@media (max-width: 900px) {
+  .scoreboard-strip { grid-template-columns: 1fr; }
+}
+
 /* Upload photo comparison viewer */
 .photo-viewer {
   flex: 1;
