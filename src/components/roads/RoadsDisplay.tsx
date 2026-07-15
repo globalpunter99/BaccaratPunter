@@ -294,61 +294,71 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
         {analysisOverlay.entities.map(e => {
           const preds = analysisOverlay.predictions[e];
           // Selective entities (You, Sniper) also show the games they sat
-          // out, as thin dashed grey segments; Grinder bets nearly every
-          // game so skip segments would just be noise.
+          // out as thin dashed grey bridges; Grinder bets nearly every game.
           const showSkips = e !== "grinder";
           const off = entityOffset[e];
-          const elems: React.ReactNode[] = [];
-          let prev: { x: number; y: number } | null = null;
-          let streak = 0;
 
+          // Ordered points (games with a Big-Road cell). Ties push (kind
+          // inherits the surrounding streak); skips are sit-outs.
+          type Kind = "correct" | "wrong" | "push" | "skip";
+          const pts: { x: number; y: number; kind: Kind }[] = [];
           outcomes.forEach((o, i) => {
             const pos = gameCentre[i];
             if (!pos) return;
-            const called = !!preds[i];
-            if (!called && !showSkips) return;
-            const pt = { x: pos.x + off, y: pos.y + off };
-
-            if (prev && (prev.x !== pt.x || prev.y !== pt.y)) {
-              // Orthogonal elbow: horizontal first, then vertical
-              const d = `M ${prev.x} ${prev.y} H ${pt.x} V ${pt.y}`;
-              if (called) {
-                const correct = o !== "tie" && preds[i] === o;
-                if (correct) streak++;
-                else if (o !== "tie") streak = 0;
-                const kind = correct ? "correct" : "wrong";
-                elems.push(
-                  <path
-                    key={`${e}-${i}`}
-                    d={d}
-                    fill="none"
-                    stroke={ENTITY_COLOURS[e][kind]}
-                    strokeWidth={correct ? Math.min(1.5 + streak * 0.9, 6) : 2}
-                    markerEnd={`url(#bigroad-arrow-${e}-${kind})`}
-                    opacity={0.9}
-                  />,
-                );
-              } else {
-                elems.push(
-                  <path
-                    key={`${e}-skip-${i}`}
-                    d={d}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.45)"
-                    strokeWidth={1.2}
-                    strokeDasharray="3 4"
-                    opacity={0.8}
-                  />,
-                );
-              }
-            } else if (called) {
-              // Same cell (e.g. tie riding its carrier): still update streak
-              const correct = o !== "tie" && preds[i] === o;
-              if (correct) streak++;
-              else if (o !== "tie") streak = 0;
-            }
-            prev = pt;
+            if (!preds[i]) { if (showSkips) pts.push({ x: pos.x + off, y: pos.y + off, kind: "skip" }); return; }
+            const kind: Kind = o === "tie" ? "push" : preds[i] === o ? "correct" : "wrong";
+            pts.push({ x: pos.x + off, y: pos.y + off, kind });
           });
+
+          // Effective kind for each point — pushes inherit the nearest
+          // decisive (correct/wrong) call so a streak reads through a tie.
+          const ek: ("correct" | "wrong" | "skip")[] = pts.map(p => {
+            if (p.kind === "skip") return "skip";
+            return p.kind === "push" ? "correct" : p.kind;
+          });
+          pts.forEach((p, i) => {
+            if (p.kind !== "push") return;
+            let k: "correct" | "wrong" | null = null;
+            for (let j = i - 1; j >= 0 && !k; j--) if (pts[j].kind === "correct" || pts[j].kind === "wrong") k = pts[j].kind as "correct" | "wrong";
+            for (let j = i + 1; j < pts.length && !k; j++) if (pts[j].kind === "correct" || pts[j].kind === "wrong") k = pts[j].kind as "correct" | "wrong";
+            ek[i] = k ?? "correct";
+          });
+
+          // Running win-streak length at each point (loss resets; push/skip
+          // don't break it — matches the scoreboard streak counts).
+          const streakAt = pts.map(() => 0);
+          let s = 0;
+          pts.forEach((p, i) => {
+            if (p.kind === "correct") s++;
+            else if (p.kind === "wrong") s = 0;
+            streakAt[i] = s;
+          });
+
+          const elems: React.ReactNode[] = [];
+          for (let j = 1; j < pts.length; j++) {
+            const a = pts[j - 1], b = pts[j];
+            // Orthogonal elbow: horizontal then vertical (snake along the grid)
+            const d = `M ${a.x} ${a.y} H ${b.x} V ${b.y}`;
+            if (a.kind === "skip" || b.kind === "skip") {
+              elems.push(
+                <path key={`${e}-s${j}`} d={d} fill="none"
+                  stroke="rgba(255,255,255,0.4)" strokeWidth={1.2}
+                  strokeDasharray="3 4" opacity={0.7} />,
+              );
+              continue;
+            }
+            const kind = ek[j] === "wrong" ? "wrong" : "correct";
+            // Arrowhead only at the end of a streak: next game is a sit-out,
+            // the last game, or the kind flips.
+            const isEnd = j === pts.length - 1 || pts[j + 1].kind === "skip" || ek[j + 1] !== ek[j];
+            const width = kind === "correct" ? Math.min(2 + streakAt[j] * 0.9, 6) : 2;
+            elems.push(
+              <path key={`${e}-${j}`} d={d} fill="none"
+                stroke={ENTITY_COLOURS[e][kind]} strokeWidth={width} opacity={0.92}
+                strokeLinejoin="round" strokeLinecap="round"
+                markerEnd={isEnd ? `url(#bigroad-arrow-${e}-${kind})` : undefined} />,
+            );
+          }
           return elems;
         })}
       </svg>
