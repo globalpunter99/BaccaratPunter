@@ -353,16 +353,23 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
                 strokeLinejoin="round" strokeLinecap="round" />,
             );
             if (isEnd) {
-              // Fixed-size downward triangle at the streak end — never scales
-              // with line thickness, never crosses into the next tile.
+              // Arrowhead sits at the BOTTOM edge of the terminal tile so it
+              // clearly marks that tile as the last call of the streak. Tip
+              // touches the bottom edge (never the top, where it would be
+              // mistaken for the result marker).
+              const bottomY = b.y - off + cellSize / 2; // true tile bottom edge
               const w = 5, h = 7;
               elems.push(
-                <path
-                  key={`${e}-head-${j}`}
-                  d={`M ${b.x - w} ${b.y - h} L ${b.x + w} ${b.y - h} L ${b.x} ${b.y + 1} Z`}
+                <path key={`${e}-stub-${j}`}
+                  d={`M ${b.x} ${b.y} V ${bottomY - h + 1}`}
+                  fill="none" stroke={ENTITY_COLOURS[e][kind]} strokeWidth={width}
+                  strokeLinecap="round" opacity={0.92} />,
+              );
+              elems.push(
+                <path key={`${e}-head-${j}`}
+                  d={`M ${b.x - w} ${bottomY - h} L ${b.x + w} ${bottomY - h} L ${b.x} ${bottomY} Z`}
                   fill={ENTITY_COLOURS[e][kind]}
-                  opacity={0.95}
-                />,
+                  opacity={0.95} />,
               );
             }
           }
