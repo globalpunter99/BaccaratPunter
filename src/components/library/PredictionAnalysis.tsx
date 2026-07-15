@@ -91,12 +91,35 @@ const VIEWS: { id: string; label: string; entities: EntityId[] }[] = [
   { id: "all", label: "All three", entities: ["you", "sniper", "grinder"] },
 ];
 
+type TypeFilter = Record<EntityId, { correct: boolean; wrong: boolean; nocall: boolean }>;
+const ALL_ON = { correct: true, wrong: true, nocall: true };
+
 export default function PredictionAnalysis({ session }: { session: Session }) {
-  const [viewId, setViewId] = useState("off");
+  const [active, setActive] = useState<Set<EntityId>>(new Set());
+  const [filter, setFilter] = useState<TypeFilter>({ you: { ...ALL_ON }, sniper: { ...ALL_ON }, grinder: { ...ALL_ON } });
   const [versions, setVersions] = useState<Record<EntityId, number>>({ you: 0, sniper: 0, grinder: 0 });
 
   const outcomes = session.hands.map(h => h.outcome);
-  const view = VIEWS.find(v => v.id === viewId)!;
+  const activeArr = ENTITIES.filter(e => active.has(e));
+
+  // Keep the dropdown in sync with the active set
+  const sameSet = (a: EntityId[]) => a.length === activeArr.length && a.every(x => active.has(x));
+  const viewId = VIEWS.find(v => sameSet(v.entities))?.id ?? "off";
+
+  function setView(id: string) {
+    setActive(new Set(VIEWS.find(v => v.id === id)!.entities));
+  }
+  function toggleEntity(e: EntityId) {
+    setActive(prev => {
+      const n = new Set(prev);
+      n.has(e) ? n.delete(e) : n.add(e);
+      return n;
+    });
+  }
+  function toggleType(e: EntityId, t: "correct" | "wrong" | "nocall") {
+    setActive(prev => new Set(prev).add(e));
+    setFilter(prev => ({ ...prev, [e]: { ...prev[e], [t]: !prev[e][t] } }));
+  }
 
   const predictions = useMemo(() => ({
     you: mockPredictions(session.id, "you", versions.you, outcomes.length),
@@ -114,7 +137,7 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
             className="input"
             style={{ width: "auto", padding: "4px 8px", fontSize: 12 }}
             value={viewId}
-            onChange={e => setViewId(e.target.value)}
+            onChange={e => setView(e.target.value)}
           >
             {VIEWS.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
           </select>
@@ -123,11 +146,20 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
           {ENTITIES.map(id => {
             const s = statsFor(predictions[id], outcomes);
             const st = streakCounts(predictions[id], outcomes);
+            const on = active.has(id);
             return (
-              <div key={id} className="scoreboard-entity">
+              <div key={id} className="scoreboard-entity" data-active={on || undefined}>
                 <div className="flex items-center" style={{ gap: 8 }}>
-                  <span className="scoreboard-dot" style={{ background: ENTITY_COLOURS[id].correct }} />
-                  <b style={{ fontSize: 13 }}>{ENTITY_LABELS[id]}</b>
+                  {/* Entity name = overlay on/off toggle */}
+                  <button
+                    className="entity-toggle"
+                    data-on={on || undefined}
+                    onClick={() => toggleEntity(id)}
+                    title="Show / hide this profile's overlay"
+                  >
+                    <span className="scoreboard-dot" style={{ background: ENTITY_COLOURS[id].correct }} />
+                    {ENTITY_LABELS[id]}
+                  </button>
                   <select
                     className="input"
                     style={{ width: "auto", padding: "2px 6px", fontSize: 11 }}
@@ -147,37 +179,37 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                   <b style={{ color: "var(--tie-green)" }}>{st.s3}</b>×3{" "}
                   <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>×4+
                 </div>
+
+                {/* Per-entity legend = line-type filter buttons (centred) */}
+                <div className="entity-legend">
+                  <button className="type-btn" data-on={filter[id].correct || undefined}
+                    onClick={() => toggleType(id, "correct")}>
+                    <span className="legend-line" style={{ background: ENTITY_COLOURS[id].correct }} /> Correct
+                  </button>
+                  <button className="type-btn" data-on={filter[id].wrong || undefined}
+                    onClick={() => toggleType(id, "wrong")}>
+                    <span className="legend-line" style={{ background: ENTITY_COLOURS[id].wrong }} /> Incorrect
+                  </button>
+                  {id !== "grinder" && (
+                    <button className="type-btn" data-on={filter[id].nocall || undefined}
+                      onClick={() => toggleType(id, "nocall")}>
+                      <span className="legend-line legend-line-dashed" /> No call
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
-
-        {/* Overlay legend (only when active) */}
-        {view.entities.length > 0 && (
-          <div className="overlay-legend" style={{ marginTop: 10, marginBottom: 0 }}>
-            {view.entities.map(e => (
-              <span key={e} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <b style={{ fontSize: 12 }}>{ENTITY_LABELS[e]}:</b>
-                <span className="legend-line" style={{ background: ENTITY_COLOURS[e].correct }} /> correct
-                <span className="legend-line" style={{ background: ENTITY_COLOURS[e].wrong }} /> incorrect
-                {e !== "grinder" && (
-                  <>
-                    <span className="legend-line legend-line-dashed" /> no call
-                  </>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* All roads stay visible; the Big Road carries the coloured tiles
-          and prediction arrows when an overlay view is selected */}
+          and prediction arrows for the active profiles */}
       <RoadsDisplay
         outcomes={outcomes}
         betsToggle={false}
-        analysisOverlay={view.entities.length > 0
-          ? { entities: view.entities, predictions }
+        analysisOverlay={activeArr.length > 0
+          ? { entities: activeArr, predictions, filter }
           : undefined}
       />
     </div>

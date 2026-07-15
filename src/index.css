@@ -848,6 +848,46 @@ select.input { cursor: pointer; }
   border-radius: var(--radius-md);
   padding: 8px 12px;
 }
+.scoreboard-entity[data-active] { border-color: var(--border-accent); }
+.entity-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.entity-toggle:hover { background: rgba(255,255,255,0.05); }
+.entity-toggle[data-on] { background: rgba(255,255,255,0.1); border-color: var(--border-accent); }
+.entity-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-panel);
+}
+.type-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.type-btn[data-on] { color: var(--text-primary); border-color: var(--border-accent); }
+.type-btn:not([data-on]) { opacity: 0.4; }
+.type-btn .legend-line { width: 16px; }
 .scoreboard-dot {
   width: 10px;
   height: 10px;

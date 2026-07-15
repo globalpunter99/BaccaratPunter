@@ -49,6 +49,8 @@ interface Props {
   analysisOverlay?: {
     entities: EntityId[];
     predictions: Record<EntityId, (Outcome | null)[]>;
+    // Per-entity line-type visibility; absent = all shown
+    filter?: Record<EntityId, { correct: boolean; wrong: boolean; nocall: boolean }>;
   };
 }
 
@@ -283,6 +285,7 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
           // out as thin dashed grey bridges; Grinder bets nearly every game.
           const showSkips = e !== "grinder";
           const off = entityOffset[e];
+          const f = analysisOverlay.filter?.[e];
 
           // Ordered points (games with a Big-Road cell). Ties push (kind
           // inherits the surrounding streak); skips are sit-outs.
@@ -339,6 +342,10 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
             } else {
               while (end + 1 < pts.length && pts[end + 1].kind !== "skip" && ek[end + 1] === ek[i]) end++;
             }
+            // Skip this run entirely if its type is filtered off for e
+            const ftype = skipRun ? "nocall" : kind;
+            if (f && !f[ftype]) { i = end + 1; continue; }
+
             const colour = skipRun ? NOCALL : ENTITY_COLOURS[e][kind];
             const dash = skipRun ? "3 4" : undefined;
             const runWidth = (pos: number) =>
