@@ -310,16 +310,6 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
             ek[i] = k ?? "correct";
           });
 
-          // Running win-streak length at each point (loss resets; push/skip
-          // don't break it — matches the scoreboard streak counts).
-          const streakAt = pts.map(() => 0);
-          let s = 0;
-          pts.forEach((p, i) => {
-            if (p.kind === "correct") s++;
-            else if (p.kind === "wrong") s = 0;
-            streakAt[i] = s;
-          });
-
           // Routing: straight down within a column; across a column change
           // run to the target column's border, up (or down) that border,
           // then in — so vertical runs sit on the tile border, never
@@ -331,47 +321,57 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
           };
 
           const elems: React.ReactNode[] = [];
+
+          // Dashed sit-out bridges (You / Sniper)
           for (let j = 1; j < pts.length; j++) {
-            const a = pts[j - 1], b = pts[j];
-            const d = route(a, b);
-            if (a.kind === "skip" || b.kind === "skip") {
+            if (pts[j - 1].kind === "skip" || pts[j].kind === "skip") {
               elems.push(
-                <path key={`${e}-s${j}`} d={d} fill="none"
+                <path key={`${e}-s${j}`} d={route(pts[j - 1], pts[j])} fill="none"
                   stroke="rgba(255,255,255,0.4)" strokeWidth={1.2}
                   strokeDasharray="3 4" opacity={0.7} />,
               );
-              continue;
             }
-            const kind = ek[j] === "wrong" ? "wrong" : "correct";
-            // Arrowhead only at the end of a streak: next game is a sit-out,
-            // the last game, or the kind flips.
-            const isEnd = j === pts.length - 1 || pts[j + 1].kind === "skip" || ek[j + 1] !== ek[j];
-            const width = kind === "correct" ? Math.min(2 + streakAt[j] * 0.9, 6) : 2;
+          }
+
+          // Streaks: maximal runs of consecutive non-skip calls with the same
+          // result. Each run is one continuous line ending in an arrowhead;
+          // no line crosses a win↔loss flip, so a tile never carries two
+          // colours.
+          let i = 0;
+          while (i < pts.length) {
+            if (pts[i].kind === "skip") { i++; continue; }
+            const kind: "correct" | "wrong" = ek[i] === "wrong" ? "wrong" : "correct";
+            let end = i;
+            while (end + 1 < pts.length && pts[end + 1].kind !== "skip" && ek[end + 1] === ek[i]) end++;
+
+            // Line through the run (thickness grows with a correct streak)
+            for (let k = i + 1; k <= end; k++) {
+              const width = kind === "correct" ? Math.min(2 + (k - i) * 0.9, 6) : 2;
+              elems.push(
+                <path key={`${e}-${k}`} d={route(pts[k - 1], pts[k])} fill="none"
+                  stroke={ENTITY_COLOURS[e][kind]} strokeWidth={width} opacity={0.92}
+                  strokeLinejoin="round" strokeLinecap="round" />,
+              );
+            }
+
+            // Arrowhead at the run's last tile, tip touching its bottom edge
+            const b = pts[end];
+            const bottomY = b.y - off + cellSize / 2;
+            const w = 5, h = 7;
+            const endWidth = kind === "correct" ? Math.min(2 + (end - i) * 0.9, 6) : 2;
             elems.push(
-              <path key={`${e}-${j}`} d={d} fill="none"
-                stroke={ENTITY_COLOURS[e][kind]} strokeWidth={width} opacity={0.92}
-                strokeLinejoin="round" strokeLinecap="round" />,
+              <path key={`${e}-stub-${end}`}
+                d={`M ${b.x} ${b.y} V ${bottomY - h + 1}`}
+                fill="none" stroke={ENTITY_COLOURS[e][kind]} strokeWidth={endWidth}
+                strokeLinecap="round" opacity={0.92} />,
             );
-            if (isEnd) {
-              // Arrowhead sits at the BOTTOM edge of the terminal tile so it
-              // clearly marks that tile as the last call of the streak. Tip
-              // touches the bottom edge (never the top, where it would be
-              // mistaken for the result marker).
-              const bottomY = b.y - off + cellSize / 2; // true tile bottom edge
-              const w = 5, h = 7;
-              elems.push(
-                <path key={`${e}-stub-${j}`}
-                  d={`M ${b.x} ${b.y} V ${bottomY - h + 1}`}
-                  fill="none" stroke={ENTITY_COLOURS[e][kind]} strokeWidth={width}
-                  strokeLinecap="round" opacity={0.92} />,
-              );
-              elems.push(
-                <path key={`${e}-head-${j}`}
-                  d={`M ${b.x - w} ${bottomY - h} L ${b.x + w} ${bottomY - h} L ${b.x} ${bottomY} Z`}
-                  fill={ENTITY_COLOURS[e][kind]}
-                  opacity={0.95} />,
-              );
-            }
+            elems.push(
+              <path key={`${e}-head-${end}`}
+                d={`M ${b.x - w} ${bottomY - h} L ${b.x + w} ${bottomY - h} L ${b.x} ${bottomY} Z`}
+                fill={ENTITY_COLOURS[e][kind]} opacity={0.95} />,
+            );
+
+            i = end + 1;
           }
           return elems;
         })}
