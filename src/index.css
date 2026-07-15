@@ -869,6 +869,12 @@ select.input { cursor: pointer; }
   height: 3px;
   border-radius: 2px;
 }
+.legend-line-dashed {
+  height: 0;
+  background: none;
+  border-top: 2px dashed rgba(190, 205, 210, 0.8);
+  border-radius: 0;
+}
 @media (max-width: 900px) {
   .scoreboard-strip { grid-template-columns: 1fr; }
 }

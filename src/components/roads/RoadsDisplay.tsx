@@ -321,54 +321,51 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
           };
 
           const elems: React.ReactNode[] = [];
+          const NOCALL = "rgba(190,205,210,0.8)"; // no-call / still-forming
+          const w = 5, h = 7;
 
-          // Dashed sit-out bridges (You / Sniper)
-          for (let j = 1; j < pts.length; j++) {
-            if (pts[j - 1].kind === "skip" || pts[j].kind === "skip") {
-              elems.push(
-                <path key={`${e}-s${j}`} d={route(pts[j - 1], pts[j])} fill="none"
-                  stroke="rgba(255,255,255,0.4)" strokeWidth={1.2}
-                  strokeDasharray="3 4" opacity={0.7} />,
-              );
-            }
-          }
-
-          // Streaks: maximal runs of consecutive non-skip calls with the same
-          // result. Each run is one continuous line ending in an arrowhead;
-          // no line crosses a win↔loss flip, so a tile never carries two
-          // colours.
+          // Runs: maximal stretches of the same state — a win streak, a loss
+          // streak, or a no-call (sit-out) streak. Each run is one continuous
+          // line ending in an arrowhead; no line crosses a state change, so a
+          // tile never carries two colours. No-call runs are dashed grey and
+          // treated exactly like correct/incorrect runs.
           let i = 0;
           while (i < pts.length) {
-            if (pts[i].kind === "skip") { i++; continue; }
+            const skipRun = pts[i].kind === "skip";
             const kind: "correct" | "wrong" = ek[i] === "wrong" ? "wrong" : "correct";
             let end = i;
-            while (end + 1 < pts.length && pts[end + 1].kind !== "skip" && ek[end + 1] === ek[i]) end++;
+            if (skipRun) {
+              while (end + 1 < pts.length && pts[end + 1].kind === "skip") end++;
+            } else {
+              while (end + 1 < pts.length && pts[end + 1].kind !== "skip" && ek[end + 1] === ek[i]) end++;
+            }
+            const colour = skipRun ? NOCALL : ENTITY_COLOURS[e][kind];
+            const dash = skipRun ? "3 4" : undefined;
+            const runWidth = (pos: number) =>
+              skipRun ? 1.6 : kind === "correct" ? Math.min(2 + pos * 0.9, 6) : 2;
 
-            // Line through the run (thickness grows with a correct streak)
+            // Continuous line through the run
             for (let k = i + 1; k <= end; k++) {
-              const width = kind === "correct" ? Math.min(2 + (k - i) * 0.9, 6) : 2;
               elems.push(
                 <path key={`${e}-${k}`} d={route(pts[k - 1], pts[k])} fill="none"
-                  stroke={ENTITY_COLOURS[e][kind]} strokeWidth={width} opacity={0.92}
-                  strokeLinejoin="round" strokeLinecap="round" />,
+                  stroke={colour} strokeWidth={runWidth(k - i)} opacity={skipRun ? 0.8 : 0.92}
+                  strokeDasharray={dash} strokeLinejoin="round" strokeLinecap="round" />,
               );
             }
 
             // Arrowhead at the run's last tile, tip touching its bottom edge
             const b = pts[end];
             const bottomY = b.y - off + cellSize / 2;
-            const w = 5, h = 7;
-            const endWidth = kind === "correct" ? Math.min(2 + (end - i) * 0.9, 6) : 2;
             elems.push(
               <path key={`${e}-stub-${end}`}
                 d={`M ${b.x} ${b.y} V ${bottomY - h + 1}`}
-                fill="none" stroke={ENTITY_COLOURS[e][kind]} strokeWidth={endWidth}
-                strokeLinecap="round" opacity={0.92} />,
+                fill="none" stroke={colour} strokeWidth={runWidth(end - i)}
+                strokeDasharray={dash} strokeLinecap="round" opacity={skipRun ? 0.8 : 0.92} />,
             );
             elems.push(
               <path key={`${e}-head-${end}`}
                 d={`M ${b.x - w} ${bottomY - h} L ${b.x + w} ${bottomY - h} L ${b.x} ${bottomY} Z`}
-                fill={ENTITY_COLOURS[e][kind]} opacity={0.95} />,
+                fill={colour} opacity={skipRun ? 0.85 : 0.95} />,
             );
 
             i = end + 1;

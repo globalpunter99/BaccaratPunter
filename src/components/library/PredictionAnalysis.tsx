@@ -160,6 +160,11 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                 <b style={{ fontSize: 12 }}>{ENTITY_LABELS[e]}:</b>
                 <span className="legend-line" style={{ background: ENTITY_COLOURS[e].correct }} /> correct
                 <span className="legend-line" style={{ background: ENTITY_COLOURS[e].wrong }} /> incorrect
+                {e !== "grinder" && (
+                  <>
+                    <span className="legend-line legend-line-dashed" /> no call
+                  </>
+                )}
               </span>
             ))}
           </div>
