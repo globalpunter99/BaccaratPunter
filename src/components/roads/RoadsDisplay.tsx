@@ -320,11 +320,20 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
             streakAt[i] = s;
           });
 
+          // Routing: straight down within a column; across a column change
+          // run to the target column's border, up (or down) that border,
+          // then in — so vertical runs sit on the tile border, never
+          // cutting across tile faces. Diagonals never occur.
+          const route = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+            if (Math.abs(a.x - b.x) < 0.5) return `M ${a.x} ${a.y} V ${b.y}`;
+            const borderX = b.x - (cellSize / 2) * Math.sign(b.x - a.x);
+            return `M ${a.x} ${a.y} H ${borderX} V ${b.y} H ${b.x}`;
+          };
+
           const elems: React.ReactNode[] = [];
           for (let j = 1; j < pts.length; j++) {
             const a = pts[j - 1], b = pts[j];
-            // Orthogonal elbow: horizontal then vertical (snake along the grid)
-            const d = `M ${a.x} ${a.y} H ${b.x} V ${b.y}`;
+            const d = route(a, b);
             if (a.kind === "skip" || b.kind === "skip") {
               elems.push(
                 <path key={`${e}-s${j}`} d={d} fill="none"
