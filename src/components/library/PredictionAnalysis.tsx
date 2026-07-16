@@ -190,54 +190,60 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
             const on = active.has(id);
             return (
               <div key={id} className="scoreboard-entity" data-active={on || undefined}>
-                <div className="flex items-center" style={{ gap: 8 }}>
-                  {/* Entity name is just a label for the card */}
-                  <span className="scoreboard-label">
-                    <span className="scoreboard-dot" style={{ background: ENTITY_COLOURS[id].correct }} />
-                    {ENTITY_LABELS[id]}
-                  </span>
-                  <select
-                    className="input"
-                    style={{ width: "auto", padding: "2px 6px", fontSize: 11 }}
-                    value={versions[id]}
-                    onChange={e => setVersions(v => ({ ...v, [id]: Number(e.target.value) }))}
-                  >
-                    {PROFILE_VERSIONS[id].map((v, i) => <option key={i} value={i}>{v}</option>)}
-                  </select>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
-                  {s.calls} calls · <b style={{ color: "var(--tie-green)" }}>{s.wins}</b> (W){" "}
-                  <b style={{ color: "var(--banker-red)" }}>{s.losses}</b> (L){" "}
-                  <b>{s.ties}</b> (T) · <b style={{ color: "var(--gold)" }}>{s.pct}%</b>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4, whiteSpace: "nowrap" }}
-                  title="How many times this profile won that many calls in a row (each run counted once)">
-                  Win Streaks: 1 win = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b>
-                  <span className="streak-sep">·</span>2 win = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b>
-                  <span className="streak-sep">·</span>3 win = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b>
-                  <span className="streak-sep">·</span>4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>
-                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                  {/* Left: label, dropdown, stats, streaks */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex items-center" style={{ gap: 8 }}>
+                      <span className="scoreboard-label">
+                        <span className="scoreboard-dot" style={{ background: ENTITY_COLOURS[id].correct }} />
+                        {ENTITY_LABELS[id]}
+                      </span>
+                      <select
+                        className="input"
+                        style={{ width: "auto", padding: "2px 6px", fontSize: 11 }}
+                        value={versions[id]}
+                        onChange={e => setVersions(v => ({ ...v, [id]: Number(e.target.value) }))}
+                      >
+                        {PROFILE_VERSIONS[id].map((v, i) => <option key={i} value={i}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
+                      {s.calls} calls · <b style={{ color: "var(--tie-green)" }}>{s.wins}</b> (W){" "}
+                      <b style={{ color: "var(--banker-red)" }}>{s.losses}</b> (L){" "}
+                      <b>{s.ties}</b> (T) · <b style={{ color: "var(--gold)" }}>{s.pct}%</b>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4, whiteSpace: "nowrap" }}
+                      title="How many times this profile won that many calls in a row (each run counted once)">
+                      Win Streaks: 1 win = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b>
+                      <span className="streak-sep">·</span>2 win = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b>
+                      <span className="streak-sep">·</span>3 win = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b>
+                      <span className="streak-sep">·</span>4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>
+                    </div>
+                  </div>
 
-                {/* Money P/L — only for You, and only on the "as recorded" lens */}
-                {id === "you" && versions.you === 0 && (() => {
-                  const m = mockMoney(session.id, predictions.you, outcomes);
-                  if (m.betHands === 0) return (
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 3 }}>
-                      No money bets placed this session
-                    </div>
-                  );
-                  const won = m.pl >= 0;
-                  return (
-                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 3 }}>
-                      P/(L):{" "}
-                      <b style={{ color: won ? "var(--tie-green)" : "var(--banker-red)" }}>
-                        {won ? `$${m.pl} Won` : `($${Math.abs(m.pl)}) Loss`}
-                      </b>
-                      {" · "}
-                      {won ? `${m.betWins} win` : `${m.betLosses} loss`} / {m.betHands} bet hands
-                    </div>
-                  );
-                })()}
+                  {/* Right: compact P/L box in the empty space (You, as-recorded lens) */}
+                  {id === "you" && versions.you === 0 && (() => {
+                    const m = mockMoney(session.id, predictions.you, outcomes);
+                    if (m.betHands === 0) return (
+                      <div className="pl-box">
+                        <div className="pl-box-label">Profit / (Loss)</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>No bets</div>
+                      </div>
+                    );
+                    const won = m.pl >= 0;
+                    return (
+                      <div className="pl-box">
+                        <div className="pl-box-label">Profit / (Loss)</div>
+                        <div className="pl-box-amount" style={{ color: won ? "var(--tie-green)" : "var(--banker-red)" }}>
+                          {won ? `$${m.pl}` : `($${Math.abs(m.pl)})`}
+                        </div>
+                        <div className="pl-box-sub">
+                          {won ? "Won" : "Loss"} · {won ? `${m.betWins} W` : `${m.betLosses} L`} / {m.betHands} bets
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 {/* Per-entity legend: View on/off pill + line-type filters (centred) */}
                 <div className="entity-legend">

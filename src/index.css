@@ -978,6 +978,25 @@ select.input { cursor: pointer; }
   margin: 0 6px;
   vertical-align: middle;
 }
+/* Compact P/L box in the empty right space of the You card */
+.pl-box {
+  flex-shrink: 0;
+  align-self: center;
+  border: 1px solid var(--gold-muted);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  padding: 4px 12px;
+  text-align: center;
+  min-width: 96px;
+}
+.pl-box-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.pl-box-amount { font-size: 17px; font-weight: 800; line-height: 1.15; }
+.pl-box-sub { font-size: 10px; color: var(--text-secondary); }
 .overlay-legend {
   display: flex;
   flex-wrap: wrap;
