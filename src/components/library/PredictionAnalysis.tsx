@@ -168,6 +168,13 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
     grinder: mockPredictions(session.id, "grinder", versions.grinder, outcomes.length),
   }), [session.id, versions, outcomes.length]);
 
+  // Tile-wash bet results always follow the selected You profile
+  const youExtras = useMemo(() => outcomes.map((o, i) => {
+    const p = predictions.you[i];
+    if (!p || o === "tie") return undefined;
+    return { betResult: (p === o ? "win" : "loss") as "win" | "loss" };
+  }), [predictions, outcomes]);
+
   return (
     <div>
       {/* Scoreboard strip with profile-drift dropdowns */}
@@ -277,7 +284,8 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
           and prediction arrows for the active profiles */}
       <RoadsDisplay
         outcomes={outcomes}
-        betsToggle={false}
+        extras={youExtras}
+        betsToggleLabel="Bets/Calls"
         analysisOverlay={activeArr.length > 0
           ? { entities: activeArr, predictions, filter }
           : undefined}
