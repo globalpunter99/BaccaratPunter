@@ -249,16 +249,18 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay, selectedGame, on
         const betResult = p ? stoneExtra.get(p.value)?.betResult : undefined;
         const game = p ? stoneGame.get(p.value) : undefined;
         const selected = game !== undefined && game === selectedGame;
-        // Overlay mode: fill occupied tiles with the result colour,
-        // keeping the cell outline
-        const overlayFill = analysisOverlay && p
-          ? { background: p.value.side === "banker" ? "var(--banker-red)" : "var(--player-blue)" }
-          : undefined;
+        const sideColour = p ? (p.value.side === "banker" ? "var(--banker-red)" : "var(--player-blue)") : undefined;
+        // Selected tile turns white (overriding any overlay fill); otherwise
+        // the analysis overlay fills the tile with the result colour.
+        const bg = selected ? "#ffffff" : (analysisOverlay && p ? sideColour : undefined);
+        // Ring border: coloured on a white/plain tile so it reads; white-ish
+        // only on a colour-filled overlay tile.
+        const ringBorder = analysisOverlay && !selected ? "rgba(255,255,255,0.55)" : undefined;
         return (
           <div
             key={idx}
             className={`road-cell${betResult ? ` bet-${betResult}` : ""}${selected ? " tile-selected" : ""}`}
-            style={{ ...(overlayFill ?? {}), ...(p && onSelectGame ? { cursor: "pointer" } : {}) }}
+            style={{ ...(bg ? { background: bg } : {}), ...(p && onSelectGame ? { cursor: "pointer" } : {}) }}
             title={p && game !== undefined ? `Game ${game + 1}` : undefined}
             onClick={p && game !== undefined && onSelectGame ? () => onSelectGame(game) : undefined}
           >
@@ -268,7 +270,7 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay, selectedGame, on
                   className={`road-stone big-road-${p.value.side}`}
                   style={{
                     width: cellSize * 0.72, height: cellSize * 0.72,
-                    ...(analysisOverlay ? { borderColor: "rgba(255,255,255,0.55)" } : {}),
+                    ...(ringBorder ? { borderColor: ringBorder } : {}),
                   }}
                 />
                 {/* One slash per tie, offset within the tile; 5+ consecutive
