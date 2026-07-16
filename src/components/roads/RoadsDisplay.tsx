@@ -1,9 +1,9 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import { ENTITY_COLOURS, type EntityId } from "../../lib/entities";
 import {
   toBeadPlate, toBigRoad, bigEyeBoy, smallRoad, cockroachPig,
-  placeBigRoad, placeMarks,
+  placeBigRoad, placeMarks, deriveRoadDetailed,
   type RoadMark, type PlacedCell, type BigRoadStone,
 } from "../../game/roads";
 
@@ -120,9 +120,11 @@ const BEAD_MIN_COLS = 18;
 
 // ── Bead Plate ──────────────────────────────────────────────────────────────
 // Populated top-to-bottom, left-to-right (column-major fill).
-function BeadPlate({ outcomes, extras, cellSize, onCycle }: {
+function BeadPlate({ outcomes, extras, cellSize, onCycle, selectedGame, onSelectGame }: {
   outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number;
   onCycle?: (handIdx: number) => void;
+  selectedGame?: number | null;
+  onSelectGame?: (handIdx: number) => void;
 }) {
   const cells = toBeadPlate(outcomes, ROWS);
   const cols = Math.max(Math.ceil(outcomes.length / ROWS), BEAD_MIN_COLS);
@@ -143,13 +145,15 @@ function BeadPlate({ outcomes, extras, cellSize, onCycle }: {
         const handIdx = col * ROWS + row;
         const cell = cells.find(c => c.col === col && c.row === row);
         const betResult = cell ? extras?.[handIdx]?.betResult : undefined;
+        const selected = cell && selectedGame === handIdx;
+        const clickable = cell && (onCycle || onSelectGame);
         return (
           <div
             key={idx}
-            className={`road-cell${betResult ? ` bet-${betResult}` : ""}`}
-            style={cell && onCycle ? { cursor: "pointer" } : undefined}
-            title={cell && onCycle ? `Hand ${handIdx + 1} — click to change` : undefined}
-            onClick={cell && onCycle ? () => onCycle(handIdx) : undefined}
+            className={`road-cell${betResult ? ` bet-${betResult}` : ""}${selected ? " tile-selected" : ""}`}
+            style={clickable ? { cursor: "pointer" } : undefined}
+            title={cell ? (onCycle ? `Hand ${handIdx + 1} — click to change` : `Game ${handIdx + 1}`) : undefined}
+            onClick={cell ? () => (onCycle ? onCycle(handIdx) : onSelectGame?.(handIdx)) : undefined}
           >
             {cell && (
               <>
@@ -170,13 +174,22 @@ function BeadPlate({ outcomes, extras, cellSize, onCycle }: {
 }
 
 // ── Big Road ─────────────────────────────────────────────────────────────────
-function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
+function BigRoad({ outcomes, extras, cellSize, analysisOverlay, selectedGame, onSelectGame }: {
   outcomes: Outcome[]; extras?: (HandExtra | undefined)[]; cellSize: number;
   analysisOverlay?: Props["analysisOverlay"];
+  selectedGame?: number | null;
+  onSelectGame?: (handIdx: number) => void;
 }) {
   const stones = toBigRoad(outcomes);
   // Stones drop ties, so stone i corresponds to the i-th non-tie hand.
   const stoneExtra = new Map<BigRoadStone, HandExtra | undefined>();
+  const stoneGame = new Map<BigRoadStone, number>();
+  {
+    let si = 0;
+    outcomes.forEach((o, handIdx) => {
+      if (o !== "tie") stoneGame.set(stones[si++], handIdx);
+    });
+  }
   if (extras) {
     let stoneIdx = 0;
     outcomes.forEach((o, handIdx) => {
@@ -234,13 +247,21 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
         const col = idx % cols;
         const p = byPos.get(`${col},${row}`);
         const betResult = p ? stoneExtra.get(p.value)?.betResult : undefined;
+        const game = p ? stoneGame.get(p.value) : undefined;
+        const selected = game !== undefined && game === selectedGame;
         // Overlay mode: fill occupied tiles with the result colour,
         // keeping the cell outline
         const overlayFill = analysisOverlay && p
           ? { background: p.value.side === "banker" ? "var(--banker-red)" : "var(--player-blue)" }
           : undefined;
         return (
-          <div key={idx} className={`road-cell${betResult ? ` bet-${betResult}` : ""}`} style={overlayFill}>
+          <div
+            key={idx}
+            className={`road-cell${betResult ? ` bet-${betResult}` : ""}${selected ? " tile-selected" : ""}`}
+            style={{ ...(overlayFill ?? {}), ...(p && onSelectGame ? { cursor: "pointer" } : {}) }}
+            title={p && game !== undefined ? `Game ${game + 1}` : undefined}
+            onClick={p && game !== undefined && onSelectGame ? () => onSelectGame(game) : undefined}
+          >
             {p && (
               <>
                 <div
@@ -393,8 +414,11 @@ function BigRoad({ outcomes, extras, cellSize, analysisOverlay }: {
 type MarkStyle = "donut" | "solid" | "slash";
 
 function PlacedRoadGrid({
-  placed, cellSize, markStyle, cols,
-}: { placed: PlacedCell<RoadMark>[]; cellSize: number; markStyle: MarkStyle; cols: number }) {
+  placed, cellSize, markStyle, cols, cellGame, selectedGame,
+}: {
+  placed: PlacedCell<RoadMark>[]; cellSize: number; markStyle: MarkStyle; cols: number;
+  cellGame?: Map<string, number>; selectedGame?: number | null;
+}) {
   const byPos = new Map<string, RoadMark>();
   for (const p of placed) byPos.set(`${p.col},${p.row}`, p.value);
 
@@ -411,10 +435,12 @@ function PlacedRoadGrid({
       {Array.from({ length: ROWS * cols }).map((_, idx) => {
         const row = Math.floor(idx / cols);
         const col = idx % cols;
-        const mark = byPos.get(`${col},${row}`);
+        const key = `${col},${row}`;
+        const mark = byPos.get(key);
+        const selected = selectedGame != null && cellGame?.get(key) === selectedGame;
         const size = cellSize * (markStyle === "slash" ? 0.8 : 0.66);
         return (
-          <div key={idx} className="road-cell">
+          <div key={idx} className={`road-cell${selected ? " tile-selected" : ""}`}>
             {mark && (
               markStyle === "slash" ? (
                 <div className={`mark-slash ${mark}`} style={{ width: size, height: size }} />
@@ -430,29 +456,51 @@ function PlacedRoadGrid({
 }
 
 function DerivedRoad({
-  marks, cellSize, markStyle, minCols = DERIVED_MIN_COLS,
-}: { marks: RoadMark[]; cellSize: number; markStyle: MarkStyle; minCols?: number }) {
+  marks, markGames, cellSize, markStyle, minCols = DERIVED_MIN_COLS, selectedGame,
+}: {
+  marks: RoadMark[]; markGames?: number[]; cellSize: number; markStyle: MarkStyle;
+  minCols?: number; selectedGame?: number | null;
+}) {
   const placed = placeMarks(marks, ROWS);
   const maxCol = placed.length ? Math.max(...placed.map(p => p.col)) + 1 : 0;
   const cols = Math.max(maxCol, minCols);
-  return <PlacedRoadGrid placed={placed} cellSize={cellSize} markStyle={markStyle} cols={cols} />;
+  // placeMarks preserves input order, so placed[k] ↔ markGames[k]
+  const cellGame = new Map<string, number>();
+  if (markGames) placed.forEach((p, k) => cellGame.set(`${p.col},${p.row}`, markGames[k]));
+  return <PlacedRoadGrid placed={placed} cellSize={cellSize} markStyle={markStyle} cols={cols}
+    cellGame={cellGame} selectedGame={selectedGame} />;
 }
 
 // Cockroach Road — two stacked bands. Sticks travel left to right; when the
 // top band runs out of columns the marks continue on the bottom band
 // (matches casino display behaviour).
 function CockroachBands({
-  marks, cellSize, bandCols,
-}: { marks: RoadMark[]; cellSize: number; bandCols: number }) {
+  marks, markGames, cellSize, bandCols, selectedGame,
+}: {
+  marks: RoadMark[]; markGames?: number[]; cellSize: number; bandCols: number;
+  selectedGame?: number | null;
+}) {
   const placed = placeMarks(marks, ROWS);
-  const top = placed.filter(p => p.col < bandCols);
-  const bottom = placed
-    .filter(p => p.col >= bandCols)
-    .map(p => ({ ...p, col: p.col - bandCols }));
+  const gameOf = new Map<string, number>();
+  if (markGames) placed.forEach((p, k) => gameOf.set(`${p.col},${p.row}`, markGames[k]));
+
+  const topCells = placed.filter(p => p.col < bandCols);
+  const bottomCells = placed.filter(p => p.col >= bandCols).map(p => ({ ...p, col: p.col - bandCols }));
+
+  const topGame = new Map<string, number>();
+  topCells.forEach(p => { const g = gameOf.get(`${p.col},${p.row}`); if (g !== undefined) topGame.set(`${p.col},${p.row}`, g); });
+  const bottomGame = new Map<string, number>();
+  placed.filter(p => p.col >= bandCols).forEach(p => {
+    const g = gameOf.get(`${p.col},${p.row}`);
+    if (g !== undefined) bottomGame.set(`${p.col - bandCols},${p.row}`, g);
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <PlacedRoadGrid placed={top} cellSize={cellSize} markStyle="slash" cols={bandCols} />
-      <PlacedRoadGrid placed={bottom} cellSize={cellSize} markStyle="slash" cols={bandCols} />
+      <PlacedRoadGrid placed={topCells} cellSize={cellSize} markStyle="slash" cols={bandCols}
+        cellGame={topGame} selectedGame={selectedGame} />
+      <PlacedRoadGrid placed={bottomCells} cellSize={cellSize} markStyle="slash" cols={bandCols}
+        cellGame={bottomGame} selectedGame={selectedGame} />
     </div>
   );
 }
@@ -488,11 +536,11 @@ function HeaderStats({ outcomes }: { outcomes: Outcome[] }) {
 
 // ── Section wrapper ──────────────────────────────────────────────────────────
 function RoadSection({
-  titleCn, titleEn, children, style, align = "center", headerExtra,
+  titleCn, titleEn, children, style, align = "center", headerExtra, selectionKey,
 }: {
   titleCn: string; titleEn: string; children: React.ReactNode;
   style?: React.CSSProperties; align?: "left" | "center";
-  headerExtra?: React.ReactNode;
+  headerExtra?: React.ReactNode; selectionKey?: React.ReactNode;
 }) {
   return (
     <div className="road-section" style={style}>
@@ -503,9 +551,17 @@ function RoadSection({
           <span className="road-section-title-cn">{titleCn}</span>
         </span>
         {headerExtra && <span className="header-extra">{headerExtra}</span>}
+        {selectionKey && <span className="road-sel-key">{selectionKey}</span>}
       </div>
       <div style={{ overflowX: "auto" }}>{children}</div>
     </div>
+  );
+}
+
+// Small key shown in a road header when a game is highlighted across screens
+function SelectionKey({ game }: { game: number }) {
+  return (
+    <span className="selection-key"><span className="sel-square" /> Game {game + 1}</span>
   );
 }
 
@@ -670,9 +726,41 @@ export default function RoadsDisplay({
     return base;
   });
   const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
-  const beb    = useMemo(() => bigEyeBoy(stones),    [stones]);
-  const sr     = useMemo(() => smallRoad(stones),    [stones]);
-  const cp     = useMemo(() => cockroachPig(stones), [stones]);
+
+  // Cross-road tile highlight: tap a Big Road / Bead Plate tile to light up
+  // every screen's cell for that game. Reset when the shoe changes.
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
+  const outcomesKey = outcomes.join("|");
+  useEffect(() => { setSelectedGame(null); }, [outcomesKey]);
+  const selectGame = (g: number) => setSelectedGame(prev => (prev === g ? null : g));
+
+  // Stone index → game index (stones drop ties)
+  const stoneToGame = useMemo(() => {
+    const arr: number[] = [];
+    let si = 0;
+    outcomes.forEach((o, gi) => { if (o !== "tie") arr[si++] = gi; });
+    return arr;
+  }, [outcomes]);
+
+  // Derived roads with per-mark game mapping
+  const bebDet = useMemo(() => deriveRoadDetailed(stones, 1), [stones]);
+  const srDet  = useMemo(() => deriveRoadDetailed(stones, 2), [stones]);
+  const cpDet  = useMemo(() => deriveRoadDetailed(stones, 3), [stones]);
+  const beb = bebDet.map(d => d.mark);
+  const sr  = srDet.map(d => d.mark);
+  const cp  = cpDet.map(d => d.mark);
+  const bebGames = bebDet.map(d => stoneToGame[d.stoneIndex]);
+  const srGames  = srDet.map(d => stoneToGame[d.stoneIndex]);
+  const cpGames  = cpDet.map(d => stoneToGame[d.stoneIndex]);
+
+  // Which roads contain the selected game (drives the header key)
+  const hasSel = selectedGame != null && selectedGame < outcomes.length;
+  const beadHasSel = hasSel;
+  const bigRoadHasSel = hasSel && outcomes[selectedGame!] !== "tie";
+  const bebHasSel = hasSel && bebGames.includes(selectedGame!);
+  const srHasSel  = hasSel && srGames.includes(selectedGame!);
+  const cpHasSel  = hasSel && cpGames.includes(selectedGame!);
+  const selKey = (show: boolean) => (show && selectedGame != null ? <SelectionKey game={selectedGame} /> : undefined);
 
   const bigCell   = compact ? 20 : 26;
   const smallCell = compact ? 11 : 13;
@@ -711,22 +799,24 @@ export default function RoadsDisplay({
             )}
             <LegendKey />
           </>
-        }>
-        <BigRoad outcomes={outcomes} extras={shownExtras} cellSize={bigCell} analysisOverlay={analysisOverlay} />
+        }
+        selectionKey={selKey(bigRoadHasSel)}>
+        <BigRoad outcomes={outcomes} extras={shownExtras} cellSize={bigCell} analysisOverlay={analysisOverlay}
+          selectedGame={selectedGame} onSelectGame={selectGame} />
       </RoadSection>
 
       {/* Row 2 — left: Big Eye above Small Road · right: Cockroach two bands */}
       <div className="roads-mid-grid">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <RoadSection titleCn="大眼仔" titleEn="Big Eye Boy">
-            <DerivedRoad marks={beb} cellSize={smallCell} markStyle="donut" />
+          <RoadSection titleCn="大眼仔" titleEn="Big Eye Boy" selectionKey={selKey(bebHasSel)}>
+            <DerivedRoad marks={beb} markGames={bebGames} cellSize={smallCell} markStyle="donut" selectedGame={selectedGame} />
           </RoadSection>
-          <RoadSection titleCn="小路" titleEn="Small Road">
-            <DerivedRoad marks={sr} cellSize={smallCell} markStyle="solid" />
+          <RoadSection titleCn="小路" titleEn="Small Road" selectionKey={selKey(srHasSel)}>
+            <DerivedRoad marks={sr} markGames={srGames} cellSize={smallCell} markStyle="solid" selectedGame={selectedGame} />
           </RoadSection>
         </div>
-        <RoadSection titleCn="曱甴路" titleEn="Cockroach Road">
-          <CockroachBands marks={cp} cellSize={smallCell} bandCols={DERIVED_MIN_COLS} />
+        <RoadSection titleCn="曱甴路" titleEn="Cockroach Road" selectionKey={selKey(cpHasSel)}>
+          <CockroachBands marks={cp} markGames={cpGames} cellSize={smallCell} bandCols={DERIVED_MIN_COLS} selectedGame={selectedGame} />
         </RoadSection>
       </div>
 
@@ -746,12 +836,15 @@ export default function RoadsDisplay({
                 </button>
               )}
             </>
-          }>
+          }
+          selectionKey={selKey(beadHasSel)}>
           <BeadPlate
             outcomes={outcomes}
             extras={shownExtras}
             cellSize={bigCell}
             onCycle={editingBeads ? onCycleOutcome : undefined}
+            selectedGame={selectedGame}
+            onSelectGame={editingBeads ? undefined : selectGame}
           />
         </RoadSection>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>

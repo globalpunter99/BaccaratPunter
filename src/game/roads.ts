@@ -114,6 +114,32 @@ export function deriveRoad(stones: BigRoadStone[], lookback: 1 | 2 | 3): RoadMar
   return marks;
 }
 
+/**
+ * Like deriveRoad, but also reports which stone (by index into `stones`)
+ * produced each mark — needed to map a derived-road cell back to its game.
+ */
+export function deriveRoadDetailed(
+  stones: BigRoadStone[], lookback: 1 | 2 | 3,
+): { mark: RoadMark; stoneIndex: number }[] {
+  const heights = bigRoadColumnHeights(stones);
+  const out: { mark: RoadMark; stoneIndex: number }[] = [];
+
+  stones.forEach((s, idx) => {
+    if (s.rowInCol === 1) {
+      const a = s.col - 1;
+      const b = s.col - 1 - lookback;
+      if (a < 0 || b < 0) return;
+      out.push({ mark: heights[a] === heights[b] ? "red" : "blue", stoneIndex: idx });
+    } else {
+      const ref = s.col - lookback;
+      if (ref < 0) return;
+      out.push({ mark: heights[ref] === s.rowInCol - 1 ? "blue" : "red", stoneIndex: idx });
+    }
+  });
+
+  return out;
+}
+
 // ---- Columnar layout (display placement) ---------------------------------
 // Casino screens place derived-road marks exactly like Big Road stones:
 // a run of the same colour stacks downward; a colour change starts a new
