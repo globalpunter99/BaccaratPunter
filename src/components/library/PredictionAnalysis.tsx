@@ -117,7 +117,6 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
     });
   }
   function toggleType(e: EntityId, t: "correct" | "wrong" | "nocall") {
-    setActive(prev => new Set(prev).add(e));
     setFilter(prev => ({ ...prev, [e]: { ...prev[e], [t]: !prev[e][t] } }));
   }
 
@@ -150,16 +149,11 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
             return (
               <div key={id} className="scoreboard-entity" data-active={on || undefined}>
                 <div className="flex items-center" style={{ gap: 8 }}>
-                  {/* Entity name = overlay on/off toggle */}
-                  <button
-                    className="entity-toggle"
-                    data-on={on || undefined}
-                    onClick={() => toggleEntity(id)}
-                    title="Show / hide this profile's overlay"
-                  >
+                  {/* Entity name is just a label for the card */}
+                  <span className="scoreboard-label">
                     <span className="scoreboard-dot" style={{ background: ENTITY_COLOURS[id].correct }} />
                     {ENTITY_LABELS[id]}
-                  </button>
+                  </span>
                   <select
                     className="input"
                     style={{ width: "auto", padding: "2px 6px", fontSize: 11 }}
@@ -180,8 +174,13 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                   <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>×4+
                 </div>
 
-                {/* Per-entity legend = line-type filter buttons (centred) */}
+                {/* Per-entity legend: View on/off pill + line-type filters (centred) */}
                 <div className="entity-legend">
+                  <button className="view-pill" data-on={on || undefined}
+                    onClick={() => toggleEntity(id)} title="Show / hide this profile on the roads">
+                    <span className="view-switch"><span className="view-switch-knob" /></span>
+                    View
+                  </button>
                   <button className="type-btn" data-on={filter[id].correct || undefined}
                     onClick={() => toggleType(id, "correct")}>
                     <span className="legend-line" style={{ background: ENTITY_COLOURS[id].correct }} /> Correct
