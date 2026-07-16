@@ -81,6 +81,7 @@ export default function LiveSession() {
   const [pendingSides, setPendingSides] = useState<Partial<Record<SideBetType, number>>>({});
   const [lastSlip, setLastSlip] = useState<BetSlip | null>(null);
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
+  const [lastCall, setLastCall] = useState<{ side: "banker" | "player"; result: "win" | "loss" | "push" } | null>(null);
   const [ledger, setLedger] = useState({ staked: 0, returned: 0, betHands: 0, wonHands: 0 });
   const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
 
@@ -89,6 +90,9 @@ export default function LiveSession() {
     side: pendingSides,
   };
   const hasPendingBet = totalStake(pendingSlip) > 0;
+  // A call = a Banker/Player prediction with no money down (captured for
+  // post-game analysis even when the user chose not to bet).
+  const hasPendingCall = pendingMain === "banker" || pendingMain === "player";
 
   function clearPendingBet() {
     setPendingMain(null);
@@ -104,30 +108,45 @@ export default function LiveSession() {
   }
 
   function settlePendingBet(hand: HandRecord) {
-    if (!hasPendingBet) return; // no bet = user skipped this hand
-    const table = tableForCasino(loadPayoutSettings(), details.casino);
-    const result = settle(pendingSlip, {
-      outcome: hand.outcome,
-      natural: hand.natural,
-      bankerPair: hand.bankerPair,
-      playerPair: hand.playerPair,
-      variant: hand.variant,
-      tieTotal: hand.tieTotal,
-    }, details.commission, table);
-    setLedger(l => ({
-      staked: l.staked + result.staked,
-      returned: l.returned + result.returned,
-      betHands: l.betHands + 1,
-      wonHands: l.wonHands + (result.profit > 0 ? 1 : 0),
-    }));
-    setLastSettlement(result);
-    setLastSlip(pendingSlip);
-    // Mark the hand with the main-bet outcome (Banker/Player bets only)
-    const m = pendingSlip.main;
-    if (m && (m.side === "banker" || m.side === "player") && hand.outcome !== "tie") {
-      const betResult = m.side === hand.outcome ? "win" as const : "loss" as const;
-      setHands(prev => prev.map(h => (h.id === hand.id ? { ...h, betResult } : h)));
+    if (!hasPendingBet && !hasPendingCall) return; // nothing = user sat out
+
+    // Money bet: settle against the pay engine and update the ledger
+    if (hasPendingBet) {
+      const table = tableForCasino(loadPayoutSettings(), details.casino);
+      const result = settle(pendingSlip, {
+        outcome: hand.outcome,
+        natural: hand.natural,
+        bankerPair: hand.bankerPair,
+        playerPair: hand.playerPair,
+        variant: hand.variant,
+        tieTotal: hand.tieTotal,
+      }, details.commission, table);
+      setLedger(l => ({
+        staked: l.staked + result.staked,
+        returned: l.returned + result.returned,
+        betHands: l.betHands + 1,
+        wonHands: l.wonHands + (result.profit > 0 ? 1 : 0),
+      }));
+      setLastSettlement(result);
+      setLastSlip(pendingSlip);
+      setLastCall(null);
     }
+
+    // Record the Banker/Player call on the hand (bet or call-only) so it
+    // drives the tile wash and post-game analysis. Ties push.
+    if (hasPendingCall) {
+      const side = pendingMain as "banker" | "player";
+      if (hand.outcome !== "tie") {
+        const betResult = side === hand.outcome ? "win" as const : "loss" as const;
+        setHands(prev => prev.map(h => (h.id === hand.id ? { ...h, betResult } : h)));
+      }
+      if (!hasPendingBet) {
+        // Call-only: no money, just show the call result
+        setLastCall({ side, result: hand.outcome === "tie" ? "push" : side === hand.outcome ? "win" : "loss" });
+        setLastSettlement(null);
+      }
+    }
+
     clearPendingBet();
   }
 
@@ -499,18 +518,20 @@ export default function LiveSession() {
                   <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
                     ↻ Re-bet
                   </button>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet} onClick={clearPendingBet}>
-                    ✕ Clear bet
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet && !hasPendingCall} onClick={clearPendingBet}>
+                    ✕ Clear
                   </button>
                 </div>
-                <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet ? "var(--gold)" : "var(--text-muted)" }}>
+                <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet || hasPendingCall ? "var(--gold)" : "var(--text-muted)" }}>
                   {hasPendingBet
                     ? `Bet pending: ${totalStake(pendingSlip)} — settles when the result is recorded`
-                    : "No bets placed — assume sit out on next hand"}
+                    : hasPendingCall
+                    ? `Call pending: ${pendingMain === "banker" ? "Banker" : "Player"} (no money) — records when the result is entered`
+                    : "No bet or call — tap Banker/Player to call (amount optional); otherwise sitting out"}
                 </div>
 
-                {/* Last settlement */}
-                {lastSettlement && (
+                {/* Last settlement (money bet) or call result */}
+                {lastSettlement ? (
                   <div
                     className="settlement-flash"
                     style={{
@@ -523,6 +544,19 @@ export default function LiveSession() {
                       {lastSettlement.profit >= 0
                         ? `Bet Win ${lastSettlement.profit}`
                         : `Bet Lose −${Math.abs(lastSettlement.profit)}`}
+                    </b>
+                  </div>
+                ) : lastCall && (
+                  <div
+                    className="settlement-flash"
+                    style={{
+                      borderColor: lastCall.result === "win" ? "var(--tie-green)" : lastCall.result === "loss" ? "var(--banker-red)" : "var(--border-panel)",
+                      padding: "5px 10px", fontSize: 12,
+                    }}
+                  >
+                    Last call ({lastCall.side === "banker" ? "Banker" : "Player"}):{" "}
+                    <b style={{ color: lastCall.result === "win" ? "var(--tie-green)" : lastCall.result === "loss" ? "var(--banker-red)" : "var(--text-secondary)" }}>
+                      {lastCall.result === "win" ? "WIN" : lastCall.result === "loss" ? "LOSE" : "TIE — push"}
                     </b>
                   </div>
                 )}
