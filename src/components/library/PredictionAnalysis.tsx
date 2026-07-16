@@ -59,12 +59,14 @@ function statsFor(preds: (Outcome | null)[], outcomes: Outcome[]) {
   return { calls, wins, losses, ties, pct: decided ? Math.round((wins / decided) * 100) : 0 };
 }
 
-// Winning-streak counts: runs of consecutive correct calls (losses reset,
-// ties push and skipped games don't break a run), bucketed 2 / 3 / 4+.
+// Winning-streak counts: each run of consecutive correct calls (losses reset,
+// ties push and skipped games don't break a run) is counted once, in the
+// bucket for its exact length — 1 / 2 / 3 / 4+ (no double counting).
 function streakCounts(preds: (Outcome | null)[], outcomes: Outcome[]) {
-  let s2 = 0, s3 = 0, s4 = 0, run = 0;
+  let s1 = 0, s2 = 0, s3 = 0, s4 = 0, run = 0;
   const close = () => {
-    if (run === 2) s2++;
+    if (run === 1) s1++;
+    else if (run === 2) s2++;
     else if (run === 3) s3++;
     else if (run >= 4) s4++;
     run = 0;
@@ -76,7 +78,7 @@ function streakCounts(preds: (Outcome | null)[], outcomes: Outcome[]) {
     else close();
   });
   close();
-  return { s2, s3, s4 };
+  return { s1, s2, s3, s4 };
 }
 
 // View selector: which entities' arrow lines are overlaid on the Big Road
@@ -190,10 +192,15 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                   <b style={{ color: "var(--banker-red)" }}>{s.losses}</b> (L){" "}
                   <b>{s.ties}</b> (T) · <b style={{ color: "var(--gold)" }}>{s.pct}%</b>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-                  Win streaks: <b style={{ color: "var(--tie-green)" }}>{st.s2}</b>×2{" "}
-                  <b style={{ color: "var(--tie-green)" }}>{st.s3}</b>×3{" "}
-                  <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>×4+
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}
+                  title="How many times this profile won that many calls in a row (each run counted once)">
+                  <div style={{ marginBottom: 2 }}>Win streaks (games won in a row):</div>
+                  <div className="streak-grid">
+                    <span>1 win = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b></span>
+                    <span>2 win = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b></span>
+                    <span>3 win = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b></span>
+                    <span>4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b></span>
+                  </div>
                 </div>
 
                 {/* Per-entity legend: View on/off pill + line-type filters (centred) */}

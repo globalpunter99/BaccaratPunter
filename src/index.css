@@ -954,6 +954,11 @@ select.input { cursor: pointer; }
   display: inline-block;
   flex-shrink: 0;
 }
+.streak-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 10px;
+}
 .overlay-legend {
   display: flex;
   flex-wrap: wrap;
