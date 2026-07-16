@@ -192,9 +192,9 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                   <b style={{ color: "var(--banker-red)" }}>{s.losses}</b> (L){" "}
                   <b>{s.ties}</b> (T) · <b style={{ color: "var(--gold)" }}>{s.pct}%</b>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, fontSize: 12, color: "var(--text-secondary)" }}
                   title="How many times this profile won that many calls in a row (each run counted once)">
-                  <div style={{ marginBottom: 2 }}>Win streaks (games won in a row):</div>
+                  <span style={{ flexShrink: 0 }}>Win streaks:</span>
                   <div className="streak-grid">
                     <span>1 win = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b></span>
                     <span>2 win = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b></span>
