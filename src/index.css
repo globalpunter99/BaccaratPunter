@@ -959,6 +959,13 @@ select.input { cursor: pointer; }
   grid-template-columns: 1fr 1fr;
   gap: 2px 10px;
 }
+.streak-sep {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--text-primary);
+  margin: 0 6px;
+  vertical-align: middle;
+}
 .overlay-legend {
   display: flex;
   flex-wrap: wrap;

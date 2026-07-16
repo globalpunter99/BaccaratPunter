@@ -194,10 +194,10 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                 </div>
                 <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4, whiteSpace: "nowrap" }}
                   title="How many times this profile won that many calls in a row (each run counted once)">
-                  Win streaks: 1 = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b> ·{" "}
-                  2 = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b> ·{" "}
-                  3 = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b> ·{" "}
-                  4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>
+                  Win Streaks: 1 win = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b>
+                  <span className="streak-sep">·</span>2 win = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b>
+                  <span className="streak-sep">·</span>3 win = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b>
+                  <span className="streak-sep">·</span>4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>
                 </div>
 
                 {/* Per-entity legend: View on/off pill + line-type filters (centred) */}
