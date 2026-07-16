@@ -106,18 +106,40 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
   const sameSet = (a: EntityId[]) => a.length === activeArr.length && a.every(x => active.has(x));
   const viewId = VIEWS.find(v => sameSet(v.entities))?.id ?? "off";
 
+  const isolate = (t: "correct" | "wrong" | "nocall") => ({
+    correct: t === "correct", wrong: t === "wrong", nocall: t === "nocall",
+  });
+
   function setView(id: string) {
     setActive(new Set(VIEWS.find(v => v.id === id)!.entities));
+    setFilter({ you: { ...ALL_ON }, sniper: { ...ALL_ON }, grinder: { ...ALL_ON } });
   }
-  function toggleEntity(e: EntityId) {
+  // View pill: turning on shows all lines by default; turning off hides.
+  function toggleView(e: EntityId) {
+    const turningOn = !active.has(e);
     setActive(prev => {
       const n = new Set(prev);
-      n.has(e) ? n.delete(e) : n.add(e);
+      turningOn ? n.add(e) : n.delete(e);
       return n;
     });
+    if (turningOn) setFilter(prev => ({ ...prev, [e]: { ...ALL_ON } }));
   }
-  function toggleType(e: EntityId, t: "correct" | "wrong" | "nocall") {
-    setFilter(prev => ({ ...prev, [e]: { ...prev[e], [t]: !prev[e][t] } }));
+  // Line-type tap:
+  //  · profile off  → activate it and isolate to just this line
+  //  · profile on, all lines showing → isolate to just this line
+  //  · profile on, already filtered → toggle this line in/out
+  function tapType(e: EntityId, t: "correct" | "wrong" | "nocall") {
+    if (!active.has(e)) {
+      setActive(prev => new Set(prev).add(e));
+      setFilter(prev => ({ ...prev, [e]: isolate(t) }));
+      return;
+    }
+    const f = filter[e];
+    const applicable: ("correct" | "wrong" | "nocall")[] =
+      e === "grinder" ? ["correct", "wrong"] : ["correct", "wrong", "nocall"];
+    const allOn = applicable.every(k => f[k]);
+    if (allOn) setFilter(prev => ({ ...prev, [e]: isolate(t) }));
+    else setFilter(prev => ({ ...prev, [e]: { ...prev[e], [t]: !prev[e][t] } }));
   }
 
   const predictions = useMemo(() => ({
@@ -177,21 +199,21 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                 {/* Per-entity legend: View on/off pill + line-type filters (centred) */}
                 <div className="entity-legend">
                   <button className="view-pill" data-on={on || undefined}
-                    onClick={() => toggleEntity(id)} title="Show / hide this profile on the roads">
+                    onClick={() => toggleView(id)} title="Show / hide this profile on the roads">
                     <span className="view-switch"><span className="view-switch-knob" /></span>
                     View
                   </button>
-                  <button className="type-btn" data-on={filter[id].correct || undefined}
-                    onClick={() => toggleType(id, "correct")}>
+                  <button className="type-btn" data-on={(on && filter[id].correct) || undefined}
+                    onClick={() => tapType(id, "correct")}>
                     <span className="legend-line" style={{ background: ENTITY_COLOURS[id].correct }} /> Correct
                   </button>
-                  <button className="type-btn" data-on={filter[id].wrong || undefined}
-                    onClick={() => toggleType(id, "wrong")}>
+                  <button className="type-btn" data-on={(on && filter[id].wrong) || undefined}
+                    onClick={() => tapType(id, "wrong")}>
                     <span className="legend-line" style={{ background: ENTITY_COLOURS[id].wrong }} /> Incorrect
                   </button>
                   {id !== "grinder" && (
-                    <button className="type-btn" data-on={filter[id].nocall || undefined}
-                      onClick={() => toggleType(id, "nocall")}>
+                    <button className="type-btn" data-on={(on && filter[id].nocall) || undefined}
+                      onClick={() => tapType(id, "nocall")}>
                       <span className="legend-line legend-line-dashed" /> No call
                     </button>
                   )}
