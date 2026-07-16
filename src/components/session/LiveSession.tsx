@@ -82,6 +82,7 @@ export default function LiveSession() {
   const [lastSlip, setLastSlip] = useState<BetSlip | null>(null);
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
   const [lastCall, setLastCall] = useState<{ side: "banker" | "player"; result: "win" | "loss" | "push" } | null>(null);
+  const [lastGame, setLastGame] = useState<number | null>(null);
   const [ledger, setLedger] = useState({ staked: 0, returned: 0, betHands: 0, wonHands: 0 });
   const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
 
@@ -109,6 +110,7 @@ export default function LiveSession() {
 
   function settlePendingBet(hand: HandRecord) {
     if (!hasPendingBet && !hasPendingCall) return; // nothing = user sat out
+    setLastGame(hand.id);
 
     // Money bet: settle against the pay engine and update the ledger
     if (hasPendingBet) {
@@ -539,11 +541,11 @@ export default function LiveSession() {
                       padding: "5px 10px", fontSize: 12,
                     }}
                   >
-                    Last bet:{" "}
+                    Last Bet: Game {lastGame} —{" "}
                     <b style={{ color: lastSettlement.profit >= 0 ? "var(--tie-green)" : "var(--banker-red)" }}>
                       {lastSettlement.profit >= 0
-                        ? `Bet Win ${lastSettlement.profit}`
-                        : `Bet Lose −${Math.abs(lastSettlement.profit)}`}
+                        ? `Bet Win (+ ${lastSettlement.profit})`
+                        : `Bet Lose (- ${Math.abs(lastSettlement.profit)})`}
                     </b>
                   </div>
                 ) : lastCall && (
@@ -554,7 +556,7 @@ export default function LiveSession() {
                       padding: "5px 10px", fontSize: 12,
                     }}
                   >
-                    Last call ({lastCall.side === "banker" ? "Banker" : "Player"}):{" "}
+                    Last Call: Game {lastGame} — {lastCall.side === "banker" ? "Banker" : "Player"}{" "}
                     <b style={{ color: lastCall.result === "win" ? "var(--tie-green)" : lastCall.result === "loss" ? "var(--banker-red)" : "var(--text-secondary)" }}>
                       {lastCall.result === "win" ? "WIN" : lastCall.result === "loss" ? "LOSE" : "TIE — push"}
                     </b>
