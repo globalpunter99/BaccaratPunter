@@ -529,7 +529,7 @@ export default function LiveSession() {
                     ? `Bet pending: ${totalStake(pendingSlip)} — settles when the result is recorded`
                     : hasPendingCall
                     ? `Call pending: ${pendingMain === "banker" ? "Banker" : "Player"} (no money) — records when the result is entered`
-                    : "No bet or call — tap Banker/Player to call (amount optional); otherwise sitting out"}
+                    : "To bet or call - tap Banker/Player & amount (optional)"}
                 </div>
 
                 {/* Last settlement (money bet) or call result */}
