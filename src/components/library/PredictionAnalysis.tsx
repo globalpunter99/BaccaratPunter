@@ -11,10 +11,13 @@ import { ENTITY_COLOURS, ENTITY_LABELS, type EntityId } from "../../lib/entities
 
 const ENTITIES: EntityId[] = ["you", "sniper", "grinder"];
 
-// Profile versions (drift): predictions differ per version. "As recorded"
-// is the snapshot made at play time; later versions are backtests.
+// Profile options. For You these are two lenses on the SAME shoe:
+//  index 0 — what the player actually did (their recorded bets/calls)
+//  index 1 — what the player's system profile would have recommended
+// (the player may have overridden the profile live, so the two differ).
+// Sniper/Grinder are machine profiles that drift across saved versions.
 const PROFILE_VERSIONS: Record<EntityId, string[]> = {
-  you:     ["v1 — as recorded", "v2 — 12 May", "v3 — current"],
+  you:     ["v1 — as recorded (bets/calls)", "v1 — system profile 10/10/26"],
   sniper:  ["v1 — as recorded", "v2 — retuned", "v3 — current"],
   grinder: ["v1 — as recorded", "v2 — current"],
 };
@@ -44,6 +47,21 @@ function mockPredictions(
     if (rand() > callRate) return null;
     return rand() < 0.53 ? "banker" : "player";
   });
+}
+
+// Mock money ledger for the player's actual bets: only a subset of calls
+// carried a stake (the rest were calls with no money down).
+function mockMoney(sessionId: string, preds: (Outcome | null)[], outcomes: Outcome[]) {
+  const rand = seededRand(`${sessionId}|money`);
+  let betWins = 0, betLosses = 0, pl = 0;
+  preds.forEach((p, i) => {
+    if (!p || outcomes[i] === "tie") return;
+    if (rand() > 0.42) return; // money down on ~42% of calls
+    const stake = [50, 100, 200, 500][Math.floor(rand() * 4)];
+    if (p === outcomes[i]) { betWins++; pl += Math.round(stake * (p === "banker" ? 0.95 : 1)); }
+    else { betLosses++; pl -= stake; }
+  });
+  return { betWins, betLosses, betHands: betWins + betLosses, pl };
 }
 
 function statsFor(preds: (Outcome | null)[], outcomes: Outcome[]) {
@@ -199,6 +217,27 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                   <span className="streak-sep">·</span>3 win = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b>
                   <span className="streak-sep">·</span>4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>
                 </div>
+
+                {/* Money P/L — only for You, and only on the "as recorded" lens */}
+                {id === "you" && versions.you === 0 && (() => {
+                  const m = mockMoney(session.id, predictions.you, outcomes);
+                  if (m.betHands === 0) return (
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 3 }}>
+                      No money bets placed this session
+                    </div>
+                  );
+                  const won = m.pl >= 0;
+                  return (
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 3 }}>
+                      P/(L):{" "}
+                      <b style={{ color: won ? "var(--tie-green)" : "var(--banker-red)" }}>
+                        {won ? `$${m.pl} Won` : `($${Math.abs(m.pl)}) Loss`}
+                      </b>
+                      {" · "}
+                      {won ? `${m.betWins} win` : `${m.betLosses} loss`} / {m.betHands} bet hands
+                    </div>
+                  );
+                })()}
 
                 {/* Per-entity legend: View on/off pill + line-type filters (centred) */}
                 <div className="entity-legend">
