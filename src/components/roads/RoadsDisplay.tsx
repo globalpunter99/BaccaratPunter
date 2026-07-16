@@ -560,10 +560,14 @@ function RoadSection({
   );
 }
 
-// Small key shown in a road header when a game is highlighted across screens
-function SelectionKey({ game }: { game: number }) {
+// Small key shown in a road header when a game is highlighted across screens.
+// The white square doubles as a clickable × to clear the highlight.
+function SelectionKey({ game, onClear }: { game: number; onClear: () => void }) {
   return (
-    <span className="selection-key"><span className="sel-square" /> Game {game + 1}</span>
+    <span className="selection-key">
+      <button className="sel-square" onClick={onClear} title="Clear highlight">×</button>
+      Game {game + 1}
+    </span>
   );
 }
 
@@ -762,7 +766,9 @@ export default function RoadsDisplay({
   const bebHasSel = hasSel && bebGames.includes(selectedGame!);
   const srHasSel  = hasSel && srGames.includes(selectedGame!);
   const cpHasSel  = hasSel && cpGames.includes(selectedGame!);
-  const selKey = (show: boolean) => (show && selectedGame != null ? <SelectionKey game={selectedGame} /> : undefined);
+  const selKey = (show: boolean) => (show && selectedGame != null
+    ? <SelectionKey game={selectedGame} onClear={() => setSelectedGame(null)} />
+    : undefined);
 
   const bigCell   = compact ? 20 : 26;
   const smallCell = compact ? 11 : 13;

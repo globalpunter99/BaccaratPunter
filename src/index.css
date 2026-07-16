@@ -205,12 +205,24 @@ body {
   white-space: nowrap;
 }
 .selection-key .sel-square {
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
   background: #ffffff;
   border: 1px solid var(--border-panel);
   border-radius: 2px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+.selection-key .sel-square:hover {
+  background: var(--banker-red);
+  color: #ffffff;
 }
 
 /* Bet-result washes: lit tile = main bet won, dimmed tile = lost */
