@@ -192,15 +192,12 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                   <b style={{ color: "var(--banker-red)" }}>{s.losses}</b> (L){" "}
                   <b>{s.ties}</b> (T) · <b style={{ color: "var(--gold)" }}>{s.pct}%</b>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, fontSize: 12, color: "var(--text-secondary)" }}
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4, whiteSpace: "nowrap" }}
                   title="How many times this profile won that many calls in a row (each run counted once)">
-                  <span style={{ flexShrink: 0 }}>Win streaks:</span>
-                  <div className="streak-grid">
-                    <span>1 win = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b></span>
-                    <span>2 win = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b></span>
-                    <span>3 win = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b></span>
-                    <span>4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b></span>
-                  </div>
+                  Win streaks: 1 = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b> ·{" "}
+                  2 = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b> ·{" "}
+                  3 = <b style={{ color: "var(--tie-green)" }}>{st.s3}</b> ·{" "}
+                  4+ = <b style={{ color: "var(--tie-green)" }}>{st.s4}</b>
                 </div>
 
                 {/* Per-entity legend: View on/off pill + line-type filters (centred) */}
