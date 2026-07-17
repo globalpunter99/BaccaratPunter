@@ -197,7 +197,7 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
             const on = active.has(id);
             return (
               <div key={id} className="scoreboard-entity" data-active={on || undefined}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   {/* Left: label, dropdown, stats, streaks */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="flex items-center" style={{ gap: 8 }}>
@@ -219,7 +219,7 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                       <b style={{ color: "var(--banker-red)" }}>{s.losses}</b> (L){" "}
                       <b>{s.ties}</b> (T) · <b style={{ color: "var(--gold)" }}>{s.pct}%</b>
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4, whiteSpace: "nowrap" }}
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}
                       title="How many times this profile won that many calls in a row (each run counted once)">
                       Win Streaks: 1 win = <b style={{ color: "var(--tie-green)" }}>{st.s1}</b>
                       <span className="streak-sep">·</span>2 win = <b style={{ color: "var(--tie-green)" }}>{st.s2}</b>

@@ -973,30 +973,30 @@ select.input { cursor: pointer; }
 }
 .streak-sep {
   font-weight: 800;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--text-primary);
-  margin: 0 6px;
+  margin: 0 4px;
   vertical-align: middle;
 }
-/* Compact P/L box in the empty right space of the You card */
+/* Compact P/L box, top-right corner of the You card */
 .pl-box {
   flex-shrink: 0;
-  align-self: center;
+  align-self: flex-start;
   border: 1px solid var(--gold-muted);
   border-radius: var(--radius-sm);
   background: var(--bg-panel);
-  padding: 4px 12px;
+  padding: 3px 9px;
   text-align: center;
-  min-width: 96px;
+  min-width: 84px;
 }
 .pl-box-label {
-  font-size: 9px;
+  font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
 }
-.pl-box-amount { font-size: 17px; font-weight: 800; line-height: 1.15; }
-.pl-box-sub { font-size: 10px; color: var(--text-secondary); }
+.pl-box-amount { font-size: 14px; font-weight: 700; line-height: 1.15; }
+.pl-box-sub { font-size: 10px; color: var(--text-secondary); white-space: nowrap; }
 .overlay-legend {
   display: flex;
   flex-wrap: wrap;
