@@ -1,17 +1,8 @@
 import { useState } from "react";
+import type { Answers } from "../../game/profile";
+import { saveAnswers } from "../../lib/profileStore";
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
-
-interface Answers {
-  sessionFrequency: string;
-  primaryStrategy: string;
-  windowDefinition: string[];
-  minimumRoadsAligned: string;
-  streakOrChop: string;
-  sitOutThreshold: string;
-  handsPerSession: string;
-  confidenceThreshold: string;
-}
 
 const INITIAL: Answers = {
   sessionFrequency: "",
@@ -265,7 +256,7 @@ export default function ProfileBuilder() {
       key={5}
       title="Profile ready to save"
       subtitle="Here's a summary of your play style based on your answers."
-      onNext={() => setDone(true)}
+      onNext={() => { saveAnswers(answers); setDone(true); }}
       onBack={() => setStep(4)}
       nextLabel="Save Profile"
       canProceed

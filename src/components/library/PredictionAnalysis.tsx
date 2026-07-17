@@ -3,11 +3,17 @@ import type { Session } from "../../mock/data";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
 import { ENTITY_COLOURS, ENTITY_LABELS, type EntityId } from "../../lib/entities";
+import { predictBoard } from "../../game/signals";
+import { configForVersion } from "../../game/profile";
+import { loadYouConfig } from "../../lib/profileStore";
 
 // Prediction analysis for a library session: how You / Sniper / Grinder
-// would have called each game. Predictions are mocked until the signal
-// engine lands, but deterministic per (session, entity, profile version)
-// so the profile-drift dropdowns visibly move the stats.
+// would have called each game. Calls now come from the real signal engine
+// (game/signals.ts) reading the roads under each entity's profile — a
+// description of what that ruleset would have called on this recorded board,
+// not a claim about independent rounds. The version dropdown selects the
+// profile variant fed to the engine. Money P/L stays mocked until live-session
+// bets are persisted (that needs the backend pass).
 
 const ENTITIES: EntityId[] = ["you", "sniper", "grinder"];
 
@@ -34,19 +40,6 @@ function seededRand(seed: string): () => number {
     h = Math.imul(h ^ (h >>> 13), 3266489917);
     return ((h ^= h >>> 16) >>> 0) / 4294967296;
   };
-}
-
-/** Per-game predicted side, or null where the entity sat out. */
-function mockPredictions(
-  sessionId: string, entity: EntityId, version: number, gameCount: number,
-): (Outcome | null)[] {
-  const rand = seededRand(`${sessionId}|${entity}|${version}`);
-  // Entity personality: Sniper calls rarely, Grinder calls most games
-  const callRate = entity === "sniper" ? 0.35 : entity === "grinder" ? 0.85 : 0.55;
-  return Array.from({ length: gameCount }, () => {
-    if (rand() > callRate) return null;
-    return rand() < 0.53 ? "banker" : "player";
-  });
 }
 
 // Mock money ledger for the player's actual bets: only a subset of calls
@@ -162,11 +155,15 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
     else setFilter(prev => ({ ...prev, [e]: { ...prev[e], [t]: !prev[e][t] } }));
   }
 
+  // The player's saved profile (localStorage) drives the "You" engine config.
+  const youConfig = useMemo(() => loadYouConfig(), []);
+
   const predictions = useMemo(() => ({
-    you: mockPredictions(session.id, "you", versions.you, outcomes.length),
-    sniper: mockPredictions(session.id, "sniper", versions.sniper, outcomes.length),
-    grinder: mockPredictions(session.id, "grinder", versions.grinder, outcomes.length),
-  }), [session.id, versions, outcomes.length]);
+    you: predictBoard(outcomes, configForVersion("you", versions.you, youConfig)),
+    sniper: predictBoard(outcomes, configForVersion("sniper", versions.sniper, youConfig)),
+    grinder: predictBoard(outcomes, configForVersion("grinder", versions.grinder, youConfig)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [session.id, versions, youConfig]);
 
   // Tile-wash bet results always follow the selected You profile
   const youExtras = useMemo(() => outcomes.map((o, i) => {
