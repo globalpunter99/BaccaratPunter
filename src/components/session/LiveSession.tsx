@@ -877,77 +877,6 @@ export default function LiveSession() {
             )}
           </div>
 
-          {/* Window status + road alignment (You profile) */}
-          {(() => {
-            const sig = signals.you;
-            const band = sig ? (sig.window ? "green" : "amber") : "grey";
-            const label = sig ? (sig.window ? "Window Open" : "No Window") : "Analysing";
-            const sub = sig
-              ? sig.window
-                ? `${sig.predictedSide === "banker" ? "Banker" : "Player"} read fits your profile — ${sig.confidence}% conviction`
-                : "Your profile says sit this hand out"
-              : "Record hands to open the signal";
-            const roads: { name: string; cn: string; vote: RoadVote }[] = sig
-              ? [
-                  { name: "Big Eye Boy", cn: "大眼仔", vote: sig.roadVotes[0] },
-                  { name: "Small Road", cn: "小路", vote: sig.roadVotes[1] },
-                  { name: "Cockroach", cn: "曱甴路", vote: sig.roadVotes[2] },
-                ]
-              : [];
-            return (
-              <div className="panel">
-                <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-                  <div className="panel-title" style={{ marginBottom: 0 }}>Window Status</div>
-                  {sig && (
-                    <span style={{
-                      fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 999,
-                      color: sig.alignment >= 2 ? "var(--tie-green)" : "var(--text-secondary)",
-                      border: `1px solid ${sig.alignment >= 2 ? "var(--tie-green)" : "var(--border-panel)"}`,
-                    }}>
-                      {sig.alignment}/3 aligned
-                    </span>
-                  )}
-                </div>
-                <div className={`signal-band ${band}`}>
-                  <div className={`signal-dot ${band}`} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
-                    <div style={{ fontSize: 11, opacity: 0.85, marginTop: 1 }}>{sub}</div>
-                  </div>
-                </div>
-                {sig && (
-                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                    {roads.map(r => (
-                      <div key={r.name} style={{
-                        display: "flex", alignItems: "center", gap: 8,
-                        fontSize: 12, padding: "4px 8px", borderRadius: "var(--radius-sm)",
-                        background: "var(--bg-dark)",
-                      }}>
-                        <span style={{
-                          fontWeight: 700, width: 14, textAlign: "center",
-                          color: r.vote === "aligned" ? "var(--tie-green)"
-                            : r.vote === "against" ? "var(--banker-red)" : "var(--text-muted)",
-                        }}>
-                          {r.vote === "aligned" ? "✓" : r.vote === "against" ? "✗" : "–"}
-                        </span>
-                        <span style={{ color: "var(--text-secondary)", flex: 1 }}>
-                          {r.name} <span style={{ color: "var(--text-muted)", fontSize: 11 }}>{r.cn}</span>
-                        </span>
-                        <span style={{
-                          fontSize: 11,
-                          color: r.vote === "aligned" ? "var(--tie-green)"
-                            : r.vote === "against" ? "var(--banker-red)" : "var(--text-muted)",
-                        }}>
-                          {r.vote === "aligned" ? "Aligned" : r.vote === "against" ? "Against" : "No read"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
           {/* Comment assistant */}
           <div className="panel">
             <div className="panel-title">Assistant</div>
@@ -1012,6 +941,77 @@ export default function LiveSession() {
               </div>
             )}
           </div>
+
+          {/* Road alignment (You profile) */}
+          {(() => {
+            const sig = signals.you;
+            const band = sig ? (sig.window ? "green" : "amber") : "grey";
+            const label = sig ? (sig.window ? "Window Open" : "No Window") : "Analysing";
+            const sub = sig
+              ? sig.window
+                ? `${sig.predictedSide === "banker" ? "Banker" : "Player"} read fits your profile — ${sig.confidence}% conviction`
+                : "Your profile says sit this hand out"
+              : "Record hands to open the signal";
+            const roads: { name: string; cn: string; vote: RoadVote }[] = sig
+              ? [
+                  { name: "Big Eye Boy", cn: "大眼仔", vote: sig.roadVotes[0] },
+                  { name: "Small Road", cn: "小路", vote: sig.roadVotes[1] },
+                  { name: "Cockroach", cn: "曱甴路", vote: sig.roadVotes[2] },
+                ]
+              : [];
+            return (
+              <div className="panel">
+                <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+                  <div className="panel-title" style={{ marginBottom: 0 }}>Road Alignment</div>
+                  {sig && (
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 999,
+                      color: sig.alignment >= 2 ? "var(--tie-green)" : "var(--text-secondary)",
+                      border: `1px solid ${sig.alignment >= 2 ? "var(--tie-green)" : "var(--border-panel)"}`,
+                    }}>
+                      {sig.alignment}/3 aligned
+                    </span>
+                  )}
+                </div>
+                <div className={`signal-band ${band}`}>
+                  <div className={`signal-dot ${band}`} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginTop: 1 }}>{sub}</div>
+                  </div>
+                </div>
+                {sig && (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                    {roads.map(r => (
+                      <div key={r.name} style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        fontSize: 12, padding: "4px 8px", borderRadius: "var(--radius-sm)",
+                        background: "var(--bg-dark)",
+                      }}>
+                        <span style={{
+                          fontWeight: 700, width: 14, textAlign: "center",
+                          color: r.vote === "aligned" ? "var(--tie-green)"
+                            : r.vote === "against" ? "var(--banker-red)" : "var(--text-muted)",
+                        }}>
+                          {r.vote === "aligned" ? "✓" : r.vote === "against" ? "✗" : "–"}
+                        </span>
+                        <span style={{ color: "var(--text-secondary)", flex: 1 }}>
+                          {r.name} <span style={{ color: "var(--text-muted)", fontSize: 11 }}>{r.cn}</span>
+                        </span>
+                        <span style={{
+                          fontSize: 11,
+                          color: r.vote === "aligned" ? "var(--tie-green)"
+                            : r.vote === "against" ? "var(--banker-red)" : "var(--text-muted)",
+                        }}>
+                          {r.vote === "aligned" ? "Aligned" : r.vote === "against" ? "Against" : "No read"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
         </div>
 
