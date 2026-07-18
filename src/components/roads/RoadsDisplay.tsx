@@ -707,8 +707,9 @@ function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
   return (
     // The table keeps its fixed position (CSS margin-top aligns it with the
     // Games stat row); the highlight chip is absolutely positioned so it
-    // floats above the table without shifting it, sitting in the gap without
-    // touching the Cockroach box above.
+    // floats above the table without shifting it. It reads as a rectangular
+    // box whose bottom edge sits on the predictor's top edge (shared line),
+    // clearing the Cockroach box above.
     <div style={{ position: "relative", display: "flex", flexDirection: "column", alignSelf: "flex-start" }}>
       {rewound && (
         <button
@@ -716,10 +717,10 @@ function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
           onClick={onClearSelection}
           title="Clear highlight — return to the live shoe position"
           style={{
-            position: "absolute", left: "50%", transform: "translateX(-50%)", top: -6, zIndex: 2,
+            position: "absolute", left: "50%", top: 18, transform: "translate(-50%, -100%)", zIndex: 2,
             background: "var(--bg-panel)", cursor: "pointer",
-            border: "1px solid rgba(255,255,255,0.6)",
-            borderRadius: 999, padding: "3px 12px", whiteSpace: "nowrap",
+            border: "1px solid rgba(255,255,255,0.6)", borderBottom: "none",
+            borderRadius: "3px 3px 0 0", padding: "3px 12px", whiteSpace: "nowrap",
           }}
         >
           <span className="sel-square">×</span> Game {selectedGame + 1}
