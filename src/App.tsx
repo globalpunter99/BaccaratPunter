@@ -4,8 +4,7 @@ import LiveSession from "./components/session/LiveSession";
 import SessionLibrary from "./components/library/SessionLibrary";
 import UploadSession from "./components/library/UploadSession";
 import PracticeReplay from "./components/practice/PracticeReplay";
-import ProfileBuilder from "./components/profile/ProfileBuilder";
-import ProfileComparison from "./components/profile/ProfileComparison";
+import ProfileHub from "./components/profile/ProfileHub";
 import StatsLeaderboard from "./components/stats/StatsLeaderboard";
 import Guide from "./components/guide/Guide";
 import SettingsPage from "./components/settings/SettingsPage";
@@ -15,8 +14,7 @@ type Tab =
   | "library"
   | "upload"
   | "practice-replay"
-  | "profile-build"
-  | "profile-compare"
+  | "profile"
   | "stats"
   | "guide"
   | "settings";
@@ -26,8 +24,7 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "library",         label: "Library",         group: "Data" },
   { id: "upload",          label: "Upload Session",  group: "Data" },
   { id: "practice-replay", label: "Practice Play", group: "Data" },
-  { id: "profile-build",   label: "Build Profile",   group: "Profile" },
-  { id: "profile-compare", label: "Profiles",        group: "Profile" },
+  { id: "profile",         label: "Profile",         group: "Profile" },
   { id: "stats",           label: "Stats",           group: "Profile" },
   { id: "guide",           label: "Guide",           group: "Help" },
   { id: "settings",        label: "Settings",        group: "Help" },
@@ -42,8 +39,7 @@ export default function App() {
       case "library":         return <SessionLibrary />;
       case "upload":          return <UploadSession />;
       case "practice-replay": return <PracticeReplay />;
-      case "profile-build":   return <ProfileBuilder />;
-      case "profile-compare": return <ProfileComparison />;
+      case "profile":         return <ProfileHub />;
       case "stats":           return <StatsLeaderboard />;
       case "guide":           return <Guide />;
       case "settings":        return <SettingsPage />;

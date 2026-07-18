@@ -15,7 +15,7 @@ const INITIAL: Answers = {
   confidenceThreshold: "",
 };
 
-export default function ProfileBuilder() {
+export default function ProfileBuilder({ onExit }: { onExit?: () => void }) {
   const [step, setStep] = useState<Step>(0);
   const [answers, setAnswers] = useState<Answers>(INITIAL);
   const [done, setDone] = useState(false);
@@ -51,7 +51,7 @@ export default function ProfileBuilder() {
             <button className="btn btn-gold" onClick={() => { setDone(false); setStep(0); setAnswers(INITIAL); }}>
               Redo Profile
             </button>
-            <button className="btn btn-secondary">View Profiles</button>
+            <button className="btn btn-secondary" onClick={onExit}>View Profiles</button>
           </div>
         </div>
 
