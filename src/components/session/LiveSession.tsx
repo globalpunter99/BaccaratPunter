@@ -945,13 +945,6 @@ export default function LiveSession() {
           {/* Road alignment (You profile) */}
           {(() => {
             const sig = signals.you;
-            const band = sig ? (sig.window ? "green" : "amber") : "grey";
-            const label = sig ? (sig.window ? "Window Open" : "No Window") : "Analysing";
-            const sub = sig
-              ? sig.window
-                ? `${sig.predictedSide === "banker" ? "Banker" : "Player"} read fits your profile — ${sig.confidence}% conviction`
-                : "Your profile says sit this hand out"
-              : "Record hands to open the signal";
             const roads: { name: string; cn: string; vote: RoadVote }[] = sig
               ? [
                   { name: "Big Eye Boy", cn: "大眼仔", vote: sig.roadVotes[0] },
@@ -973,15 +966,13 @@ export default function LiveSession() {
                     </span>
                   )}
                 </div>
-                <div className={`signal-band ${band}`}>
-                  <div className={`signal-dot ${band}`} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
-                    <div style={{ fontSize: 11, opacity: 0.85, marginTop: 1 }}>{sub}</div>
+                {!sig && (
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                    Record hands to open the road reads
                   </div>
-                </div>
+                )}
                 {sig && (
-                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {roads.map(r => (
                       <div key={r.name} style={{
                         display: "flex", alignItems: "center", gap: 8,
