@@ -717,7 +717,8 @@ function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
           onClick={onClearSelection}
           title="Clear highlight — return to the live shoe position"
           style={{
-            position: "absolute", left: "50%", top: 18, transform: "translate(-50%, -100%)", zIndex: 2,
+            position: "absolute", left: 0, right: 0, top: 18, transform: "translateY(-100%)", zIndex: 2,
+            boxSizing: "border-box", justifyContent: "center",
             background: "var(--bg-panel)", cursor: "pointer",
             border: "1px solid rgba(255,255,255,0.6)", borderBottom: "none",
             borderRadius: "3px 3px 0 0", padding: "3px 12px", whiteSpace: "nowrap",
