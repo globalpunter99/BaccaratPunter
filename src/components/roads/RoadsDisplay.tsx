@@ -705,22 +705,27 @@ function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
     { road: cockroachPig, style: "slash" },
   ];
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, marginTop: 18, alignSelf: "flex-start" }}>
+    // The table keeps its fixed position (CSS margin-top aligns it with the
+    // Games stat row); the highlight chip is absolutely positioned so it
+    // floats above the table without shifting it, sitting in the gap without
+    // touching the Cockroach box above.
+    <div style={{ position: "relative", display: "flex", flexDirection: "column", alignSelf: "flex-start" }}>
       {rewound && (
         <button
           className="selection-key"
           onClick={onClearSelection}
           title="Clear highlight — return to the live shoe position"
           style={{
-            background: "none", cursor: "pointer",
+            position: "absolute", left: "50%", transform: "translateX(-50%)", top: -6, zIndex: 2,
+            background: "var(--bg-panel)", cursor: "pointer",
             border: "1px solid rgba(255,255,255,0.6)",
-            borderRadius: 999, padding: "3px 12px",
+            borderRadius: 999, padding: "3px 12px", whiteSpace: "nowrap",
           }}
         >
           <span className="sel-square">×</span> Game {selectedGame + 1}
         </button>
       )}
-      <div className="predictor-table" style={{ marginTop: 0 }}>
+      <div className="predictor-table">
         <div className="predictor-header banker">
           <span className="predictor-header-cn">庄</span>
           <span className="predictor-header-en">Banker</span>
