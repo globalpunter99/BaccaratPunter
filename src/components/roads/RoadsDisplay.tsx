@@ -688,28 +688,50 @@ function PredictorCell({ mark, style }: { mark: RoadMark | null; style: MarkStyl
   );
 }
 
-function PredictorTable({ outcomes }: { outcomes: Outcome[] }) {
+function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
+  outcomes: Outcome[];
+  /** Highlighted game index. While set, the table asks the road as if the
+   *  shoe had been played only up to the white tile — the reads for the hand
+   *  right after it. Cleared (or a new hand recorded) → back to the live end
+   *  of the shoe. */
+  selectedGame?: number | null;
+  onClearSelection?: () => void;
+}) {
+  const rewound = selectedGame != null;
+  const upTo = rewound ? outcomes.slice(0, selectedGame + 1) : outcomes;
   const roads: { road: (s: BigRoadStone[]) => RoadMark[]; style: MarkStyle }[] = [
     { road: bigEyeBoy,    style: "donut" },
     { road: smallRoad,    style: "solid" },
     { road: cockroachPig, style: "slash" },
   ];
   return (
-    <div className="predictor-table">
-      <div className="predictor-header banker">
-        <span className="predictor-header-cn">庄</span>
-        <span className="predictor-header-en">Banker</span>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, marginTop: 18, alignSelf: "flex-start" }}>
+      {rewound && (
+        <button
+          className="selection-key"
+          onClick={onClearSelection}
+          title="Clear highlight — return to the live shoe position"
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+        >
+          <span className="sel-square">×</span> Game {selectedGame + 1}
+        </button>
+      )}
+      <div className="predictor-table" style={{ marginTop: 0 }}>
+        <div className="predictor-header banker">
+          <span className="predictor-header-cn">庄</span>
+          <span className="predictor-header-en">Banker</span>
+        </div>
+        <div className="predictor-header player">
+          <span className="predictor-header-cn">闲</span>
+          <span className="predictor-header-en">Player</span>
+        </div>
+        {roads.map(({ road, style }, i) => (
+          <Fragment key={i}>
+            <PredictorCell mark={nextMark(upTo, "banker", road)} style={style} />
+            <PredictorCell mark={nextMark(upTo, "player", road)} style={style} />
+          </Fragment>
+        ))}
       </div>
-      <div className="predictor-header player">
-        <span className="predictor-header-cn">闲</span>
-        <span className="predictor-header-en">Player</span>
-      </div>
-      {roads.map(({ road, style }, i) => (
-        <Fragment key={i}>
-          <PredictorCell mark={nextMark(outcomes, "banker", road)} style={style} />
-          <PredictorCell mark={nextMark(outcomes, "player", road)} style={style} />
-        </Fragment>
-      ))}
     </div>
   );
 }
@@ -857,7 +879,11 @@ export default function RoadsDisplay({
         </RoadSection>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
           <StatsPanel outcomes={outcomes} />
-          <PredictorTable outcomes={outcomes} />
+          <PredictorTable
+            outcomes={outcomes}
+            selectedGame={hasSel ? selectedGame : null}
+            onClearSelection={() => setSelectedGame(null)}
+          />
           <SideBetCounts extras={extras} />
         </div>
       </div>
