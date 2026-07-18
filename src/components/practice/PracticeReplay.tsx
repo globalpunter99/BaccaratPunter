@@ -8,6 +8,9 @@ import {
   type BetSlip, type SideBetType, type Settlement,
 } from "../../game/payouts";
 import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
+import { nextSignal } from "../../game/signals";
+import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
+import { loadYouConfig } from "../../lib/profileStore";
 
 // Practice Play: walk a real library session with the results hidden,
 // call each hand, then reveal. (The separate Replay mode was removed —
@@ -242,12 +245,17 @@ export default function PracticeReplay() {
   const isCorrect = revealed && pendingGuess !== null && pendingGuess !== "tie" && pendingGuess === actual;
   const isWrong   = revealed && pendingGuess !== null && pendingGuess !== "tie" && pendingGuess !== actual;
 
-  // Mock signal states per hand (real version computes these from the profile)
-  const sig = handIdx < 9
-    ? { playability: "grey" as const, label: "Insufficient data" }
-    : handIdx < 18
-    ? { playability: "amber" as const, label: "Pattern forming" }
-    : { playability: "green" as const, label: "Window open" };
+  // Live engine reads for the upcoming hand, from the revealed history only
+  const pracSignals = {
+    you: nextSignal(visibleOutcomes, loadYouConfig()),
+    sniper: nextSignal(visibleOutcomes, SNIPER_CONFIG),
+    grinder: nextSignal(visibleOutcomes, GRINDER_CONFIG),
+  };
+  const sig = pracSignals.you
+    ? pracSignals.you.window
+      ? { playability: "green" as const, label: "Window open" }
+      : { playability: "amber" as const, label: "No window — sit out" }
+    : { playability: "grey" as const, label: "Insufficient data" };
 
   return (
     <div className="page">
@@ -511,22 +519,27 @@ export default function PracticeReplay() {
               <span style={{ fontWeight: 700 }}>{sig.label}</span>
             </div>
             <div className="entity-strip">
-              {[
-                { name: "You",     call: handIdx >= 9 ? { side: "banker" as const, conf: 78 } : null },
-                { name: "Sniper",  call: handIdx >= 9 ? { side: "banker" as const, conf: 71 } : null },
-                { name: "Grinder", call: handIdx >= 9 ? { side: "player" as const, conf: 58 } : null },
-              ].map(({ name, call }) => (
+              {([
+                ["You", pracSignals.you],
+                ["Sniper", pracSignals.sniper],
+                ["Grinder", pracSignals.grinder],
+              ] as const).map(([name, s]) => (
                 <div key={name} className="entity-card">
                   <div className="entity-name">{name}</div>
-                  {call ? (
+                  {s === null ? (
+                    <div className="entity-call none">–</div>
+                  ) : s.window ? (
                     <>
-                      <div className={`entity-call ${call.side}`}>
-                        {call.side === "banker" ? "B" : "P"}
+                      <div className={`entity-call ${s.predictedSide}`}>
+                        {s.predictedSide === "banker" ? "B" : "P"}
                       </div>
-                      <div className="entity-conf">{call.conf}%</div>
+                      <div className="entity-conf">{s.confidence}%</div>
                     </>
                   ) : (
-                    <div className="entity-call none">–</div>
+                    <>
+                      <div className="entity-call none" style={{ fontSize: 15 }}>SIT</div>
+                      <div className="entity-conf" style={{ color: "var(--text-muted)" }}>{s.alignment}/3</div>
+                    </>
                   )}
                 </div>
               ))}

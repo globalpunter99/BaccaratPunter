@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
-import { mockSignal } from "../../mock/data";
 import {
   settle, totalStake,
   type BetSlip, type MainSide, type SideBetType, type Settlement,
 } from "../../game/payouts";
 import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
+import { nextSignal, type RoadVote } from "../../game/signals";
+import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
+import { loadYouConfig } from "../../lib/profileStore";
+import { assistantNote } from "../../game/assistant";
 
 interface HandRecord {
   id: number;
@@ -177,7 +180,23 @@ export default function LiveSession() {
   }
 
   const outcomes = hands.map(h => h.outcome);
-  const signal = mockSignal;
+
+  // Live reads for the upcoming hand, from the real engine under each
+  // profile. You drives the window band + road alignment; the assistant
+  // reads the session facts (bet streaks, shoe depth) on top of the signal.
+  const signals = useMemo(() => ({
+    you: nextSignal(outcomes, loadYouConfig()),
+    sniper: nextSignal(outcomes, SNIPER_CONFIG),
+    grinder: nextSignal(outcomes, GRINDER_CONFIG),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [hands]);
+  const assistant = assistantNote({
+    handCount: hands.length,
+    betResults: hands
+      .map(h => h.betResult)
+      .filter((r): r is "win" | "loss" => r === "win" || r === "loss"),
+    signal: signals.you,
+  });
 
   // Entry mode + advance-mode card slots
   const [entryMode, setEntryMode] = useState<EntryMode>("basic");
@@ -858,57 +877,138 @@ export default function LiveSession() {
             )}
           </div>
 
-          {/* Playability signal */}
-          <div className="panel">
-            <div className="panel-title">Window Status</div>
-            <div className={`signal-band ${signal.playability}`}>
-              <div className={`signal-dot ${signal.playability}`} />
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{signal.playabilityLabel}</div>
-                <div style={{ fontSize: 11, opacity: 0.85, marginTop: 1 }}>
-                  {signal.playability === "green"
-                    ? "Roads are aligned — favourable window"
-                    : signal.playability === "amber"
-                    ? "Pattern forming — watch closely"
-                    : "Roads unclear — sit out recommended"}
+          {/* Window status + road alignment (You profile) */}
+          {(() => {
+            const sig = signals.you;
+            const band = sig ? (sig.window ? "green" : "amber") : "grey";
+            const label = sig ? (sig.window ? "Window Open" : "No Window") : "Analysing";
+            const sub = sig
+              ? sig.window
+                ? `${sig.predictedSide === "banker" ? "Banker" : "Player"} read fits your profile — ${sig.confidence}% conviction`
+                : "Your profile says sit this hand out"
+              : "Record hands to open the signal";
+            const roads: { name: string; cn: string; vote: RoadVote }[] = sig
+              ? [
+                  { name: "Big Eye Boy", cn: "大眼仔", vote: sig.roadVotes[0] },
+                  { name: "Small Road", cn: "小路", vote: sig.roadVotes[1] },
+                  { name: "Cockroach", cn: "曱甴路", vote: sig.roadVotes[2] },
+                ]
+              : [];
+            return (
+              <div className="panel">
+                <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+                  <div className="panel-title" style={{ marginBottom: 0 }}>Window Status</div>
+                  {sig && (
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 999,
+                      color: sig.alignment >= 2 ? "var(--tie-green)" : "var(--text-secondary)",
+                      border: `1px solid ${sig.alignment >= 2 ? "var(--tie-green)" : "var(--border-panel)"}`,
+                    }}>
+                      {sig.alignment}/3 aligned
+                    </span>
+                  )}
                 </div>
+                <div className={`signal-band ${band}`}>
+                  <div className={`signal-dot ${band}`} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginTop: 1 }}>{sub}</div>
+                  </div>
+                </div>
+                {sig && (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                    {roads.map(r => (
+                      <div key={r.name} style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        fontSize: 12, padding: "4px 8px", borderRadius: "var(--radius-sm)",
+                        background: "var(--bg-dark)",
+                      }}>
+                        <span style={{
+                          fontWeight: 700, width: 14, textAlign: "center",
+                          color: r.vote === "aligned" ? "var(--tie-green)"
+                            : r.vote === "against" ? "var(--banker-red)" : "var(--text-muted)",
+                        }}>
+                          {r.vote === "aligned" ? "✓" : r.vote === "against" ? "✗" : "–"}
+                        </span>
+                        <span style={{ color: "var(--text-secondary)", flex: 1 }}>
+                          {r.name} <span style={{ color: "var(--text-muted)", fontSize: 11 }}>{r.cn}</span>
+                        </span>
+                        <span style={{
+                          fontSize: 11,
+                          color: r.vote === "aligned" ? "var(--tie-green)"
+                            : r.vote === "against" ? "var(--banker-red)" : "var(--text-muted)",
+                        }}>
+                          {r.vote === "aligned" ? "Aligned" : r.vote === "against" ? "Against" : "No read"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            );
+          })()}
+
+          {/* Comment assistant */}
+          <div className="panel">
+            <div className="panel-title">Assistant</div>
+            <div style={{
+              padding: "10px 12px", borderRadius: "var(--radius-md)", fontSize: 12,
+              background: assistant.tone === "good" ? "rgba(0,200,83,0.08)"
+                : assistant.tone === "warn" ? "rgba(245,200,66,0.07)" : "var(--bg-dark)",
+              border: `1px solid ${assistant.tone === "good" ? "var(--tie-green)"
+                : assistant.tone === "warn" ? "var(--gold)" : "var(--border-panel)"}`,
+            }}>
+              <div style={{
+                fontWeight: 700, fontSize: 13, marginBottom: 4,
+                color: assistant.tone === "good" ? "var(--tie-green)"
+                  : assistant.tone === "warn" ? "var(--gold)" : "var(--text-primary)",
+              }}>
+                {assistant.title}
+              </div>
+              <div style={{ color: "var(--text-secondary)", lineHeight: 1.5 }}>{assistant.detail}</div>
             </div>
           </div>
 
-          {/* Entity strip */}
+          {/* Entity strip — live engine reads per profile */}
           <div className="panel">
             <div className="panel-title">Next Hand Calls</div>
             <div className="entity-strip">
-              {[
-                { name: "You", call: signal.you },
-                { name: "Sniper", call: signal.sniper },
-                { name: "Grinder", call: signal.grinder },
-              ].map(({ name, call }) => (
+              {([
+                ["You", signals.you],
+                ["Sniper", signals.sniper],
+                ["Grinder", signals.grinder],
+              ] as const).map(([name, sig]) => (
                 <div key={name} className="entity-card">
                   <div className="entity-name">{name}</div>
-                  {call ? (
+                  {sig === null ? (
+                    <div className="entity-call none">–</div>
+                  ) : sig.window ? (
                     <>
-                      <div className={`entity-call ${call.side}`}>
-                        {call.side === "banker" ? "B" : "P"}
+                      <div className={`entity-call ${sig.predictedSide}`}>
+                        {sig.predictedSide === "banker" ? "B" : "P"}
                       </div>
-                      <div className="entity-conf">{call.confidence}%</div>
+                      <div className="entity-conf">{sig.confidence}%</div>
                       <div className="conf-bar">
                         <div
-                          className={`conf-fill ${call.side}`}
-                          style={{ width: `${call.confidence}%` }}
+                          className={`conf-fill ${sig.predictedSide}`}
+                          style={{ width: `${sig.confidence}%` }}
                         />
                       </div>
                     </>
                   ) : (
-                    <div className="entity-call none">–</div>
+                    <>
+                      <div className="entity-call none" style={{ fontSize: 15 }}>SIT</div>
+                      <div className="entity-conf" style={{ color: "var(--text-muted)" }}>
+                        {sig.alignment}/3
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
             </div>
-            {hands.length < 10 && (
+            {!signals.you && (
               <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
-                Enter at least 10 hands to activate signals
+                Signals activate once a few hands are recorded
               </div>
             )}
           </div>

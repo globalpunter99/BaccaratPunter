@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Outcome } from "./baccarat";
-import { predictBoard, runSignals } from "./signals";
+import { nextSignal, predictBoard, runSignals } from "./signals";
 import {
   answersToProfile,
   configForVersion,
@@ -44,6 +44,19 @@ describe("runSignals — honest walk-forward", () => {
 
   it("is deterministic — same board and config give the same reads", () => {
     expect(predictBoard(BOARD, SNIPER_CONFIG)).toEqual(predictBoard(BOARD, SNIPER_CONFIG));
+  });
+
+  it("roadVotes has one verdict per derived road and matches alignment", () => {
+    for (const s of runSignals(BOARD, GRINDER_CONFIG)) {
+      if (!s) continue;
+      expect(s.roadVotes).toHaveLength(3);
+      expect(s.roadVotes.filter(v => v === "aligned").length).toBe(s.alignment);
+    }
+  });
+
+  it("nextSignal equals the walk-forward read at that position", () => {
+    expect(nextSignal(BOARD.slice(0, 30), DEFAULT_YOU_CONFIG))
+      .toEqual(runSignals(BOARD, DEFAULT_YOU_CONFIG)[30]);
   });
 
   it("does not peek: a read depends only on earlier hands", () => {

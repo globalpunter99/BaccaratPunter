@@ -24,9 +24,14 @@ import {
   deriveRoadDetailed,
   bigRoadColumnHeights,
   type BigRoadStone,
+  type RoadMark,
   type Side,
 } from "./roads";
 import type { ProfileConfig } from "./profile";
+
+/** One derived road's verdict on the predicted side: does its next mark come
+ *  out "regular" (aligned), "odd" (against), or is there no read yet? */
+export type RoadVote = "aligned" | "against" | "none";
 
 export interface Signal {
   /** The read — the side the roads/profile point to, whether or not the window opens. */
@@ -35,6 +40,10 @@ export interface Signal {
   confidence: number;
   /** Derived roads (0-3) backing the chosen direction. */
   alignment: number;
+  /** Per-road verdict for the predicted side, in screen order:
+   *  [Big Eye Boy, Small Road, Cockroach Pig]. `alignment` is the count of
+   *  "aligned" entries. */
+  roadVotes: [RoadVote, RoadVote, RoadVote];
   /** True = the profile would call this hand; false = sit out. */
   window: boolean;
 }
@@ -52,19 +61,23 @@ const other = (s: Side): Side => (s === "banker" ? "player" : "banker");
  * (regular) and how many roads had an opinion at all (some are undefined early
  * in a shoe when there isn't enough column history to compare against).
  */
-function marksForNext(history: Outcome[], next: Side): { reds: number; avail: number } {
+function marksForNext(
+  history: Outcome[], next: Side,
+): { marks: (RoadMark | null)[]; reds: number; avail: number } {
   const stones = toBigRoad([...history, next]);
   const lastIdx = stones.length - 1;
+  const marks: (RoadMark | null)[] = [];
   let reds = 0;
   let avail = 0;
   for (const lookback of [1, 2, 3] as const) {
     const mark = deriveRoadDetailed(stones, lookback).find(d => d.stoneIndex === lastIdx);
+    marks.push(mark ? mark.mark : null);
     if (mark) {
       avail++;
       if (mark.mark === "red") reds++;
     }
   }
-  return { reds, avail };
+  return { marks, reds, avail };
 }
 
 /**
@@ -111,7 +124,11 @@ function signalAt(history: Outcome[], cfg: ProfileConfig): Signal | null {
   else predictedSide = "banker"; // dead heat → house favourite
 
   const continuing = predictedSide === currentSide;
-  const alignment = continuing ? cont.reds : flip.reds;
+  const chosen = continuing ? cont : flip;
+  const alignment = chosen.reds;
+  const roadVotes = chosen.marks.map(m =>
+    m === null ? "none" : m === "red" ? "aligned" : "against",
+  ) as [RoadVote, RoadVote, RoadVote];
 
   // 3. Confidence: conviction from vote strength, small depth/banker bonuses,
   //    capped — this is never a certainty.
@@ -126,7 +143,16 @@ function signalAt(history: Outcome[], cfg: ProfileConfig): Signal | null {
   if (cfg.sitOutOnConflict && roadsConflict) window = false;
   if (cfg.streakPref === "streak" && continuing && currentDepth < cfg.minColumnDepth) window = false;
 
-  return { predictedSide, confidence, alignment, window };
+  return { predictedSide, confidence, alignment, roadVotes, window };
+}
+
+/**
+ * The live read for the UPCOMING hand, given every hand recorded so far —
+ * what the signal box shows during a session. Null until there is enough
+ * history to read.
+ */
+export function nextSignal(outcomes: Outcome[], cfg: ProfileConfig): Signal | null {
+  return signalAt(outcomes, cfg);
 }
 
 /** Walk the whole board, returning the read (or null pre-history) per game. */
