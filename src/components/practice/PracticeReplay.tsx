@@ -245,17 +245,13 @@ export default function PracticeReplay() {
   const isCorrect = revealed && pendingGuess !== null && pendingGuess !== "tie" && pendingGuess === actual;
   const isWrong   = revealed && pendingGuess !== null && pendingGuess !== "tie" && pendingGuess !== actual;
 
-  // Live engine reads for the upcoming hand, from the revealed history only
+  // Live engine reads for the upcoming hand, from the revealed history only.
+  // No coloured band here — the SIT/call cards below already carry the state.
   const pracSignals = {
     you: nextSignal(visibleOutcomes, loadYouConfig()),
     sniper: nextSignal(visibleOutcomes, SNIPER_CONFIG),
     grinder: nextSignal(visibleOutcomes, GRINDER_CONFIG),
   };
-  const sig = pracSignals.you
-    ? pracSignals.you.window
-      ? { playability: "green" as const, label: "Window open" }
-      : { playability: "amber" as const, label: "No window — sit out" }
-    : { playability: "grey" as const, label: "Insufficient data" };
 
   return (
     <div className="page">
@@ -514,10 +510,6 @@ export default function PracticeReplay() {
           {/* Signal at this point */}
           <div className="panel">
             <div className="panel-title">Signal at Game {handIdx + 1}</div>
-            <div className={`signal-band ${sig.playability}`} style={{ marginBottom: 10 }}>
-              <div className={`signal-dot ${sig.playability}`} />
-              <span style={{ fontWeight: 700 }}>{sig.label}</span>
-            </div>
             <div className="entity-strip">
               {([
                 ["You", pracSignals.you],
