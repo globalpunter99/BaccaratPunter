@@ -711,7 +711,11 @@ function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
           className="selection-key"
           onClick={onClearSelection}
           title="Clear highlight — return to the live shoe position"
-          style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+          style={{
+            background: "none", cursor: "pointer",
+            border: "1px solid rgba(255,255,255,0.6)",
+            borderRadius: 999, padding: "3px 12px",
+          }}
         >
           <span className="sel-square">×</span> Game {selectedGame + 1}
         </button>
