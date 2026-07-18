@@ -185,7 +185,12 @@ body {
 /* Cross-road tile highlight (tap a Big Road / Bead Plate tile) */
 .road-cell.tile-selected {
   background: #ffffff;
-  box-shadow: inset 0 0 0 1px #ffffff;
+  /* Outline (not box-shadow) so the white selection ring survives on top of
+     the bet-result washes — bet-win sets its own box-shadow that would
+     otherwise clobber an inset-shadow ring. */
+  outline: 2px solid #ffffff;
+  outline-offset: -2px;
+  z-index: 1;
 }
 .road-sel-key {
   position: absolute;
