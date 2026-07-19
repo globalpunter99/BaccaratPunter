@@ -627,6 +627,21 @@ select.input { cursor: pointer; }
   color: #03210f;
 }
 
+/* Session Library — two-line filter buttons (name on top, count below) */
+.filter-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 106px;
+  padding: 5px 12px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.filter-btn-name { font-weight: 600; white-space: nowrap; }
+.filter-btn-count { font-size: 11px; font-weight: 400; opacity: 0.8; }
+
 /* Session Library — compact list card */
 .session-card {
   display: flex;
@@ -658,13 +673,13 @@ select.input { cursor: pointer; }
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
   padding: 4px;
-  color: var(--text-muted);
-  opacity: 0.7;
+  color: #e8746e;
+  opacity: 1;
 }
-.session-del:hover { color: var(--banker-red); opacity: 1; }
+.session-del:hover { color: #ff4d45; }
 
 /* Session Library card controls */
 .fav-star {

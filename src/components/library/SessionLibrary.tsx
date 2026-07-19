@@ -47,7 +47,7 @@ type Mode =
 
 export default function SessionLibrary() {
   const [mode, setMode] = useState<Mode>({ kind: "list" });
-  const [filter, setFilter] = useState<"all" | "live" | "extra" | "fav">("all");
+  const [filter, setFilter] = useState<"all" | "live" | "extra" | "practice" | "fav">("all");
   const [casinoFilter, setCasinoFilter] = useState<string>("all"); // "all" | "others" | casino name
   const [showStats, setShowStats] = useState(false); // eye toggle: B/P/T hidden by default
   const [saved, setSaved] = useState<Session[]>(() => loadSavedSessions());
@@ -174,6 +174,7 @@ export default function SessionLibrary() {
     if (filter === "fav") return favs.includes(s.id);
     if (filter === "live") return s.type === "live";
     if (filter === "extra") return s.type === "extra";
+    if (filter === "practice") return !!s.practiceOf;
     return true;
   });
 
@@ -184,20 +185,23 @@ export default function SessionLibrary() {
     all: allSessions.length,
     live: allSessions.filter(s => s.type === "live").length,
     extra: allSessions.filter(s => s.type === "extra").length,
+    practice: allSessions.filter(s => !!s.practiceOf).length,
     fav: allSessions.filter(s => favs.includes(s.id)).length,
   };
-  const filterLabel: Record<typeof filter, string> = {
-    all: `All (${counts.all})`,
-    live: `Live Only (${counts.live})`,
-    extra: `Uploaded Only (${counts.extra})`,
-    fav: `★ Favourites (${counts.fav})`,
+  // Two-line labels: name on top, count below (see .filter-btn styling).
+  const filterMeta: Record<typeof filter, { name: string; count: number }> = {
+    all: { name: "All", count: counts.all },
+    live: { name: "Live Only", count: counts.live },
+    extra: { name: "Uploaded Only", count: counts.extra },
+    practice: { name: "Practice", count: counts.practice },
+    fav: { name: "★ Favourites", count: counts.fav },
   };
 
   return (
     <div className="page">
       <div className="flex items-center justify-between mb-12">
         <div className="page-title">Session Library</div>
-        <div className="flex gap-8 items-center">
+        <div className="flex gap-8 items-center" style={{ flexWrap: "wrap", rowGap: 8, justifyContent: "flex-end" }}>
           <select
             className="input"
             style={{ padding: "5px 10px", fontSize: 12, maxWidth: 180 }}
@@ -212,21 +216,21 @@ export default function SessionLibrary() {
             {hasOthers && <option value="others">Others</option>}
           </select>
           <button
-            className={`btn ${showStats ? "btn-gold" : "btn-ghost"}`}
-            style={{ padding: "5px 12px", fontSize: 12 }}
+            className={`btn filter-btn ${showStats ? "btn-gold" : "btn-ghost"}`}
             title="Show or hide Banker / Player / Tie counts on every card"
             onClick={() => setShowStats(v => !v)}
           >
-            {showStats ? "👁 B/P/T shown" : "👁 B/P/T hidden"}
+            <span className="filter-btn-name">👁 B/P/T</span>
+            <span className="filter-btn-count">{showStats ? "shown" : "hidden"}</span>
           </button>
-          {(["all", "live", "extra", "fav"] as const).map(f => (
+          {(["all", "live", "extra", "practice", "fav"] as const).map(f => (
             <button
               key={f}
-              className={`btn ${filter === f ? "btn-gold" : "btn-ghost"}`}
-              style={{ padding: "5px 14px", fontSize: 12 }}
+              className={`btn filter-btn ${filter === f ? "btn-gold" : "btn-ghost"}`}
               onClick={() => setFilter(f)}
             >
-              {filterLabel[f]}
+              <span className="filter-btn-name">{filterMeta[f].name}</span>
+              <span className="filter-btn-count">({filterMeta[f].count})</span>
             </button>
           ))}
         </div>
