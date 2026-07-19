@@ -944,7 +944,7 @@ export default function RoadsDisplay({
             onSelectGame={editingBeads ? undefined : selectGame}
           />
         </RoadSection>
-        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
           <StatsPanel outcomes={viewOutcomes} />
           <PredictorTable
             outcomes={viewOutcomes}

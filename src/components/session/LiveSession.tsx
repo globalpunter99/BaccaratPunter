@@ -518,7 +518,7 @@ export default function LiveSession() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16 }}>
+      <div className="live-grid">
         {/* Left column — entry + signal */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
