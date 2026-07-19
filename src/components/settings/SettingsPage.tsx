@@ -187,7 +187,7 @@ function CasinoManager({
     const casino: CasinoConfig = {
       id: `c-${Date.now()}`,
       name,
-      games: [makeGameType("Commission", true, settings.defaults)],
+      games: [makeGameType("Commission", settings.defaults)],
     };
     onChange({ ...settings, casinos: [...settings.casinos, casino] });
     setNewCasino("");
@@ -211,8 +211,9 @@ function CasinoManager({
       <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
         Add each casino you play, then name the baccarat game types it offers —
         Commission, Non-Commission, Even Money and so on. Each game type carries
-        its own commission rule and odds, used automatically by Live Session and
-        the Session Library when you pick that casino and game.
+        its own odds, used automatically by Live Session and the Session Library
+        when you pick that casino and game. Whether 5% commission applies is set
+        per session in Live Session &gt; Session Details.
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14, maxWidth: 460 }}>
@@ -264,32 +265,12 @@ function CasinoManager({
                       g.id === game.id ? { ...g, name: e.target.value } : g))}
                   />
                 </label>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Commission</span>
-                  <button
-                    className={`btn ${game.commission ? "btn-secondary" : "btn-ghost"}`}
-                    style={{ padding: "4px 12px", fontSize: 12 }}
-                    onClick={() => updateGames(casino, casino.games.map(g =>
-                      g.id === game.id ? { ...g, commission: true } : g))}
-                  >Yes</button>
-                  <button
-                    className={`btn ${!game.commission ? "btn-secondary" : "btn-ghost"}`}
-                    style={{ padding: "4px 12px", fontSize: 12 }}
-                    onClick={() => updateGames(casino, casino.games.map(g =>
-                      g.id === game.id ? { ...g, commission: false } : g))}
-                  >No</button>
-                  {casino.games.length > 1 && (
-                    <button className="btn btn-ghost" style={{ fontSize: 12, marginLeft: 4 }}
-                      onClick={() => updateGames(casino, casino.games.filter(g => g.id !== game.id))}>
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
-                {game.commission
-                  ? "5% commission on winning Banker bets."
-                  : "Non-commission — a Banker win on a total of 6 pays the Banker bet at 50%."}
+                {casino.games.length > 1 && (
+                  <button className="btn btn-ghost" style={{ fontSize: 12 }}
+                    onClick={() => updateGames(casino, casino.games.filter(g => g.id !== game.id))}>
+                    ✕ Remove game
+                  </button>
+                )}
               </div>
               <PayoutEditor
                 table={game.table}
@@ -304,7 +285,7 @@ function CasinoManager({
             style={{ fontSize: 12 }}
             onClick={() => updateGames(casino, [
               ...casino.games,
-              makeGameType("Non-Commission", false, settings.defaults),
+              makeGameType("Non-Commission", settings.defaults),
             ])}
           >
             + Add game type

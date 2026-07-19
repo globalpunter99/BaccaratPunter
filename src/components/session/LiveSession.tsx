@@ -440,11 +440,7 @@ export default function LiveSession() {
                         return;
                       }
                       const c = payoutSettings.casinos.find(cc => cc.name === v);
-                      const g = c?.games[0];
-                      setDetails(d => ({
-                        ...d, casino: v, gameType: g?.name ?? "",
-                        commission: g ? g.commission : d.commission,
-                      }));
+                      setDetails(d => ({ ...d, casino: v, gameType: c?.games[0]?.name ?? "" }));
                     }}
                   >
                     <option value="" disabled>Select casino / venue</option>
@@ -472,18 +468,10 @@ export default function LiveSession() {
                   <select
                     className="input"
                     value={details.gameType || casinoCfg.games[0].name}
-                    onChange={e => {
-                      const g = casinoCfg.games.find(gg => gg.name === e.target.value);
-                      setDetails(d => ({
-                        ...d, gameType: e.target.value,
-                        commission: g ? g.commission : d.commission,
-                      }));
-                    }}
+                    onChange={e => setDetails(d => ({ ...d, gameType: e.target.value }))}
                   >
                     {casinoCfg.games.map(g => (
-                      <option key={g.id} value={g.name}>
-                        {g.name} {g.commission ? "(commission)" : "(non-comm)"}
-                      </option>
+                      <option key={g.id} value={g.name}>{g.name}</option>
                     ))}
                   </select>
                 ) : (

@@ -1,17 +1,17 @@
 // Payout settings store: a default table plus per-casino game types.
 // Each casino can carry several named baccarat game types (e.g. Commission,
-// Non-Commission, Even Money), each with its own commission mode and odds.
+// Non-Commission, Even Money), each with its own odds table.
 // Persisted to localStorage until the Supabase backend pass.
 
 import { DEFAULT_PAYOUTS, type PayoutTable } from "../game/payouts";
 
-// A named baccarat variant offered at a casino. `commission` drives settlement:
-//   true  → 5% commission on winning Banker bets
-//   false → non-commission; a Banker win on a total of 6 pays the Banker 50%.
+// A named baccarat variant offered at a casino (e.g. Commission,
+// Non-Commission, Even Money). It carries the odds table only — whether 5%
+// commission applies is chosen per session in Live Session > Session Details,
+// so the two can never disagree.
 export interface GameType {
   id: string;
   name: string;
-  commission: boolean;
   table: PayoutTable;
 }
 
@@ -35,9 +35,9 @@ function newId(): string {
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** A fresh game type with the given name, commission mode and (copied) table. */
-export function makeGameType(name: string, commission: boolean, table: PayoutTable): GameType {
-  return { id: newId(), name, commission, table: { ...table } };
+/** A fresh game type with the given name and (copied) odds table. */
+export function makeGameType(name: string, table: PayoutTable): GameType {
+  return { id: newId(), name, table: { ...table } };
 }
 
 // Old shape (pre game-types): casinos were { name, table }. Migrate each to a
@@ -49,10 +49,9 @@ function migrateCasino(c: LegacyCasino, defaults: PayoutTable): CasinoConfig {
     ? (c.games as GameType[]).map(g => ({
         id: g.id ?? newId(),
         name: g.name ?? "Standard",
-        commission: g.commission ?? true,
         table: { ...DEFAULT_PAYOUTS, ...g.table },
       }))
-    : [makeGameType("Standard", true, { ...DEFAULT_PAYOUTS, ...(c.table ?? defaults) })];
+    : [makeGameType("Standard", { ...DEFAULT_PAYOUTS, ...(c.table ?? defaults) })];
   return { id: newId(), name: c.name, games };
 }
 
@@ -95,13 +94,6 @@ export function tableForGame(
 ): PayoutTable {
   const game = findGame(findCasino(settings, casinoName), gameTypeName);
   return game ? game.table : settings.defaults;
-}
-
-/** Commission mode for a casino + game type, or undefined when not configured. */
-export function commissionForGame(
-  settings: PayoutSettings, casinoName: string, gameTypeName?: string,
-): boolean | undefined {
-  return findGame(findCasino(settings, casinoName), gameTypeName)?.commission;
 }
 
 /** Compat helper: table for a casino using its first/default game type. */
