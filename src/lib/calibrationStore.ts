@@ -9,6 +9,7 @@
 
 import type { Outcome } from "../game/baccarat";
 import type { FoundationBoard } from "../mock/foundationGames";
+import { pushUserState } from "./cloud";
 
 export type CalGuess = "banker" | "player" | "skip";
 
@@ -40,10 +41,12 @@ export function loadCalibration(): CalibrationState {
 
 export function saveCalibration(state: CalibrationState): void {
   localStorage.setItem(KEY, JSON.stringify(state));
+  pushUserState("calibration", state);
 }
 
 export function resetCalibration(): void {
   localStorage.removeItem(KEY);
+  pushUserState("calibration", { answers: [], completed: [] });
 }
 
 // ---- Trait derivation ----------------------------------------------------

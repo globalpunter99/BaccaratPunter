@@ -1,8 +1,10 @@
 // Session store: user-created sessions (saved from Practice mode) plus the
-// favourites set, persisted to localStorage until the Supabase backend pass.
+// favourites set. localStorage is the synchronous cache; every write also
+// pushes to Supabase when signed in (see lib/cloud.ts).
 // The Library merges these on top of the built-in mock sessions.
 
 import { mockSessions, type Session } from "../mock/data";
+import { pushSession, pushDeleteSession, pushUserState } from "./cloud";
 
 const SESSIONS_KEY = "bp-saved-sessions";
 const FAV_KEY = "bp-favourites";
@@ -33,8 +35,9 @@ export function addSavedSession(draft: Session): Session {
   const base = draft.practiceOf ?? draft.id ?? "session";
   let n = 1;
   while (taken.has(`${base}-P${n}`)) n++;
-  const saved: Session = { ...draft, id: `${base}-P${n}` };
+  const saved: Session = { ...draft, id: `${base}-P${n}`, savedAt: new Date().toISOString() };
   writeSavedSessions([saved, ...list]);
+  pushSession(saved);
   return saved;
 }
 
@@ -55,8 +58,13 @@ export function loadHiddenSessions(): string[] {
 
 export function deleteSession(id: string): void {
   deleteSavedSession(id);
+  pushDeleteSession(id);
   const hidden = loadHiddenSessions();
-  if (!hidden.includes(id)) localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden, id]));
+  if (!hidden.includes(id)) {
+    const next = [...hidden, id];
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(next));
+    pushUserState("hidden_sessions", next);
+  }
 }
 
 // ── Favourites (works for both mock and saved sessions, keyed by id) ──
@@ -73,5 +81,6 @@ export function toggleFavourite(id: string): string[] {
   const favs = loadFavourites();
   const next = favs.includes(id) ? favs.filter(f => f !== id) : [...favs, id];
   localStorage.setItem(FAV_KEY, JSON.stringify(next));
+  pushUserState("favourites", next);
   return next;
 }

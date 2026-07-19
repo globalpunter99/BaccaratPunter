@@ -4,6 +4,8 @@
 // passcode is a working local lock; password reset and Face-ID are UI stubs
 // until the backend and WebAuthn are wired.
 
+import { pushAccount } from "./cloud";
+
 export interface Account {
   username: string;
   email: string;
@@ -25,6 +27,11 @@ export function loadAccount(): Account {
 
 export function saveAccount(account: Account): void {
   localStorage.setItem(KEY, JSON.stringify(account));
+  pushAccount({
+    username: account.username,
+    passcode: account.passcode,
+    face_id: account.faceId,
+  });
 }
 
 export function isValidPasscode(code: string): boolean {

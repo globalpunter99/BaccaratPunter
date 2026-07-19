@@ -7,6 +7,9 @@ import ProfileHub from "./components/profile/ProfileHub";
 import StatsLeaderboard from "./components/stats/StatsLeaderboard";
 import Guide from "./components/guide/Guide";
 import SettingsPage from "./components/settings/SettingsPage";
+import UserManagement from "./components/admin/UserManagement";
+import LoginPage from "./components/auth/LoginPage";
+import { AuthProvider, useAuth } from "./lib/auth";
 
 type Tab =
   | "live"
@@ -15,7 +18,8 @@ type Tab =
   | "profile"
   | "stats"
   | "guide"
-  | "settings";
+  | "settings"
+  | "users";
 
 const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "live",            label: "Live Session",   group: "Session" },
@@ -27,8 +31,25 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "settings",        label: "Settings",        group: "Help" },
 ];
 
-export default function App() {
+function AppShell() {
+  const { loading, userId, localMode, isSuperAdmin, profile, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>("live");
+
+  // Cloud mode: wait for the session check, then gate behind sign-in.
+  if (!localMode) {
+    if (loading) {
+      return (
+        <div className="app-shell" style={{ display: "grid", placeItems: "center", minHeight: "100vh" }}>
+          <div style={{ color: "var(--text-muted)", fontSize: 14 }}>Loading…</div>
+        </div>
+      );
+    }
+    if (!userId) return <LoginPage />;
+  }
+
+  const nav: typeof NAV = isSuperAdmin
+    ? [...NAV, { id: "users", label: "Users", group: "Admin" }]
+    : NAV;
 
   function renderTab() {
     switch (tab) {
@@ -39,6 +60,7 @@ export default function App() {
       case "stats":           return <StatsLeaderboard />;
       case "guide":           return <Guide />;
       case "settings":        return <SettingsPage />;
+      case "users":           return isSuperAdmin ? <UserManagement /> : <LiveSession />;
     }
   }
 
@@ -50,7 +72,7 @@ export default function App() {
           <span>v0.1 prototype</span>
         </div>
         <nav className="nav-tabs">
-          {NAV.map(n => (
+          {nav.map(n => (
             <button
               key={n.id}
               className={`nav-tab${tab === n.id ? " active" : ""}`}
@@ -60,10 +82,29 @@ export default function App() {
             </button>
           ))}
         </nav>
+        {!localMode && userId && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto" }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              {profile?.username || profile?.email}
+              {isSuperAdmin && <span style={{ color: "var(--gold)" }}> · super admin</span>}
+            </span>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 12px" }} onClick={signOut}>
+              Sign out
+            </button>
+          </div>
+        )}
       </header>
       <main className="app-content">
         {renderTab()}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   );
 }

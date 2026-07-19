@@ -4,6 +4,7 @@
 // Persisted to localStorage until the Supabase backend pass.
 
 import { DEFAULT_PAYOUTS, type PayoutTable } from "../game/payouts";
+import { pushUserState } from "./cloud";
 
 // A named baccarat variant offered at a casino (e.g. Commission,
 // Non-Commission, Even Money). It carries the odds table only — whether 5%
@@ -70,6 +71,7 @@ export function loadPayoutSettings(): PayoutSettings {
 
 export function savePayoutSettings(settings: PayoutSettings): void {
   localStorage.setItem(KEY, JSON.stringify(settings));
+  pushUserState("payout_settings", settings);
 }
 
 function findCasino(settings: PayoutSettings, casinoName: string): CasinoConfig | undefined {

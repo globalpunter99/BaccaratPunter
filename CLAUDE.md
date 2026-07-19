@@ -51,11 +51,16 @@ src/
   game/strategy.ts    Strategy registry — each strategy declares tunable
                       `params` (ParamSpec) consumed by UI + backtester
   game/backtest.ts    Backtest engine: payouts, staking, drawdown
-  lib/supabase.ts     Supabase client (null when env not configured)
-  lib/db.ts           Boards + strategy-config persistence
-  components/         BoardsTab, BacktestTab, PredictTab, shared.tsx
-  App.tsx             Tab shell (boards | backtest | predict)
-supabase/migrations/  0001 sessions/rounds · 0002 boards/strategy_configs
+  lib/supabase.ts     Supabase client (null when env not configured → local mode)
+  lib/cloud.ts        Cloud sync: hydrate localStorage cache at login,
+                      write-through push on every store save
+  lib/auth.tsx        AuthProvider/useAuth — gates the app in cloud mode
+  components/         Feature folders (session, library, roads, profile,
+                      settings, auth, admin, …)
+  App.tsx             Tab shell + auth gate + admin Users tab
+supabase/migrations/  0003_app_schema.sql is THE schema (profiles, sessions,
+                      user_state, RLS, super-admin bootstrap, storage bucket).
+                      It drops the 0001/0002 prototype tables.
 ```
 
 ## Conventions

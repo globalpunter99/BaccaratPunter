@@ -8,6 +8,7 @@ import {
   type Answers,
   type ProfileConfig,
 } from "../game/profile";
+import { pushUserState } from "./cloud";
 
 const KEY = "bp-player-profile";
 
@@ -22,6 +23,7 @@ export function loadAnswers(): Answers | null {
 
 export function saveAnswers(answers: Answers): void {
   localStorage.setItem(KEY, JSON.stringify(answers));
+  pushUserState("profile_answers", answers);
 }
 
 /** The engine config for "You": derived from saved answers, else the default. */
