@@ -199,22 +199,22 @@ export default function SessionLibrary() {
 
   return (
     <div className="page">
-      <div className="flex items-center justify-between mb-12">
-        <div className="page-title">Session Library</div>
-        <div className="flex gap-8 items-center" style={{ flexWrap: "wrap", rowGap: 8, justifyContent: "flex-end" }}>
-          <select
-            className="input"
-            style={{ padding: "5px 10px", fontSize: 12, maxWidth: 180 }}
-            title="Filter by casino (casinos come from Settings; unlisted venues are Others)"
-            value={casinoFilter}
-            onChange={e => setCasinoFilter(e.target.value)}
-          >
-            <option value="all">All Casinos</option>
-            {knownCasinos.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-            {hasOthers && <option value="others">Others</option>}
-          </select>
+      <div className="page-title" style={{ marginBottom: 10 }}>Session Library</div>
+      <div className="library-filter-row">
+        <select
+          className="input"
+          style={{ padding: "6px 10px", fontSize: 12, width: 170, flexShrink: 0 }}
+          title="Filter by casino (casinos come from Settings; unlisted venues are Others)"
+          value={casinoFilter}
+          onChange={e => setCasinoFilter(e.target.value)}
+        >
+          <option value="all">All Casinos</option>
+          {knownCasinos.map(name => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+          {hasOthers && <option value="others">Others</option>}
+        </select>
+        <div className="library-filter-group">
           <button
             className={`btn filter-btn ${showStats ? "btn-gold" : "btn-ghost"}`}
             title="Show or hide Banker / Player / Tie counts on every card"
