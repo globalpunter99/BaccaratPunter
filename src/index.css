@@ -623,6 +623,52 @@ select.input { cursor: pointer; }
   color: #03210f;
 }
 
+/* Session Library card controls */
+.fav-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--text-muted);
+}
+.fav-star[data-on] { color: var(--gold); }
+.fav-star:hover { color: var(--gold); }
+.session-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.session-badge.live {
+  background: rgba(0, 200, 83, 0.15);
+  color: var(--signal-green);
+  border: 1px solid var(--signal-green);
+}
+.session-badge.extra {
+  background: rgba(245, 200, 66, 0.15);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+.session-badge.practice {
+  background: rgba(170, 136, 255, 0.15);
+  color: #b79bff;
+  border: 1px solid #b79bff;
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--gold);
+  font: inherit;
+  text-decoration: underline;
+}
+.link-btn:hover { opacity: 0.85; }
+
 /* Photo attach/view modal slots */
 .photo-slot {
   width: 260px;

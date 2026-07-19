@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { mockSessions } from "../../mock/data";
 import type { Session } from "../../mock/data";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
@@ -12,11 +11,12 @@ import { nextSignal } from "../../game/signals";
 import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
 
-// Practice Play: walk a real library session with the results hidden,
-// call each hand, then reveal. (The separate Replay mode was removed —
-// practice covers the walk-through need.)
+// Practice mode: play a library shoe with the results hidden — call or bet
+// each hand, then reveal. Launched from a session card in the Library (the
+// standalone Practice tab and its picker were retired). A finished or
+// in-progress practice run can be saved back to the Library as a new session.
 
-type Phase = "pick" | "active" | "done";
+type Phase = "active" | "done";
 
 interface Guess {
   guess: Outcome | null;
@@ -24,13 +24,19 @@ interface Guess {
   revealed: boolean;
 }
 
-export default function PracticeReplay() {
-  const [phase, setPhase] = useState<Phase>("pick");
-  const [session, setSession] = useState<Session | null>(null);
+export default function PracticePlayer({ session, onBack, onSave }: {
+  session: Session;
+  onBack: () => void;
+  onSave: (draft: Session) => void;
+}) {
+  const [phase, setPhase] = useState<Phase>("active");
   const [handIdx, setHandIdx] = useState(0);
-  const [guesses, setGuesses] = useState<Guess[]>([]);
+  const [guesses, setGuesses] = useState<Guess[]>(
+    () => session.hands.map(h => ({ guess: null, actual: h.outcome, revealed: false })),
+  );
   const [pendingGuess, setPendingGuess] = useState<Outcome | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
 
   // ── My Bets (same engine as Live Session, practice money) ──
   // "bets" = full staking mode · "calls" = zero-bet mode, one-tap
@@ -67,7 +73,7 @@ export default function PracticeReplay() {
 
   // Place the bet: settles against the hidden result and reveals it
   function placeBet() {
-    if (!session || !hasPendingBet) return;
+    if (!hasPendingBet) return;
     const h = session.hands[handIdx];
     const table = tableForCasino(loadPayoutSettings(), session.venue);
     const result = settle(pendingSlip, {
@@ -84,12 +90,16 @@ export default function PracticeReplay() {
     clearPendingBet();
   }
 
-  function start(s: Session) {
-    setSession(s);
+  function restart() {
     setHandIdx(0);
-    setGuesses(s.hands.map(h => ({ guess: null, actual: h.outcome, revealed: false })));
+    setGuesses(session.hands.map(h => ({ guess: null, actual: h.outcome, revealed: false })));
     setPendingGuess(null);
     setRevealed(false);
+    setLedger({ staked: 0, returned: 0 });
+    setLastSlip(null);
+    setLastSettlement(null);
+    setSettledGame(null);
+    clearPendingBet();
     setPhase("active");
   }
 
@@ -112,7 +122,6 @@ export default function PracticeReplay() {
   }
 
   function nextHand() {
-    if (!session) return;
     if (handIdx + 1 >= session.hands.length) {
       setPhase("done");
       return;
@@ -122,11 +131,52 @@ export default function PracticeReplay() {
     setRevealed(false);
   }
 
+  // Build the draft session a save would create: a copy of the shoe, tagged
+  // as a practice save of the original, with this run's result in the notes.
+  function buildDraft(): Session {
+    const decided = winCount + loseCount;
+    const pct = decided > 0 ? Math.round((winCount / decided) * 100) : 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const result = betHands.length > 0
+      ? ` Result ${winCount}W / ${loseCount}L / ${tieCount}T${decided ? ` (${pct}%)` : ""}.`
+      : " No calls placed.";
+    return {
+      id: session.id, // store reassigns to `<id>-P<n>`
+      date: today,
+      venue: session.venue,
+      tableNumber: session.tableNumber,
+      type: session.type,
+      hands: session.hands.map(h => ({ ...h })),
+      practiceOf: session.id,
+      savedAt: today,
+      notes: `Saved practice session of ${session.venue}.${result}`,
+    };
+  }
+
+  const saveModal = saveOpen ? (
+    <div className="info-overlay" onClick={() => setSaveOpen(false)}>
+      <div className="info-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Save this practice session?</div>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
+          It will be saved as a <b style={{ color: "var(--text-primary)" }}>new, separate session</b> in
+          your library — its id echoes the original ({session.id}) so the two sit together for
+          comparison, and it stays linked to the original shoe. Your result so far
+          ({winCount}W / {loseCount}L / {tieCount}T) is recorded in its notes.
+        </div>
+        <div className="flex gap-8" style={{ justifyContent: "flex-end" }}>
+          <button className="btn btn-ghost" onClick={() => setSaveOpen(false)}>Cancel</button>
+          <button className="btn btn-gold" onClick={() => { onSave(buildDraft()); setSaveOpen(false); }}>
+            Save to Library
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // On-demand position jump. Moving forward auto-reveals every game passed
   // over (recorded as no-bet skips) so the roads stay a contiguous sequence;
   // moving back just reviews already-revealed games.
   function goToGame(target: number) {
-    if (!session) return;
     const idx = Math.max(0, Math.min(target, session.hands.length - 1));
     if (idx > handIdx) {
       setGuesses(prev => {
@@ -140,45 +190,6 @@ export default function PracticeReplay() {
     setHandIdx(idx);
     setPendingGuess(null);
     setRevealed(guesses[idx]?.revealed ?? false);
-  }
-
-  // ── Pick phase ──
-  if (phase === "pick" || !session) {
-    return (
-      <div className="page" style={{ maxWidth: 700 }}>
-        <div className="page-title">Practice Play</div>
-        <div style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 20 }}>
-          Select a session from your library. The results will be hidden — play through it game
-          by game as if you're at the table. After placing your call, reveal the actual result.
-          Because these are real recorded shoes, you'll never quite remember every hand.
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {mockSessions.map(s => (
-            <div
-              key={s.id}
-              className="panel"
-              style={{ cursor: "pointer" }}
-              onClick={() => start(s)}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--border-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border-panel)")}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div style={{ fontWeight: 600 }}>{s.venue}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                    {s.tableNumber} · {s.date} · {s.hands.length} games
-                  </div>
-                </div>
-                <button className="btn btn-gold" style={{ fontSize: 12, padding: "6px 14px" }}>
-                  🎯 Practice
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
   }
 
   // ── Done phase ──
@@ -211,11 +222,13 @@ export default function PracticeReplay() {
               <div className="stat-label">Losses</div>
             </div>
           </div>
-          <div className="flex gap-8" style={{ justifyContent: "center" }}>
-            <button className="btn btn-gold" onClick={() => setPhase("pick")}>Pick Another</button>
-            <button className="btn btn-secondary" onClick={() => start(session)}>Practice Again</button>
+          <div className="flex gap-8" style={{ justifyContent: "center", flexWrap: "wrap" }}>
+            <button className="btn btn-gold" onClick={() => setSaveOpen(true)}>💾 Save Session</button>
+            <button className="btn btn-secondary" onClick={restart}>Practice Again</button>
+            <button className="btn btn-ghost" onClick={onBack}>← Back to Library</button>
           </div>
         </div>
+        {saveModal}
       </div>
     );
   }
@@ -257,15 +270,19 @@ export default function PracticeReplay() {
     <div className="page">
       <div className="flex items-center justify-between mb-12">
         <div>
-          <div className="page-title">Practice Play</div>
+          <div className="page-title">Practice — {session.venue}</div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-            {session.venue} · {session.tableNumber} · Game {handIdx + 1} of {session.hands.length}
+            {session.tableNumber} · Game {handIdx + 1} of {session.hands.length} · results hidden until you call
           </div>
         </div>
         <div className="flex gap-8 items-center">
-          <button className="btn btn-ghost" onClick={() => setPhase("pick")}>← End</button>
+          <button className="btn btn-gold" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => setSaveOpen(true)}>
+            💾 Save Session
+          </button>
+          <button className="btn btn-ghost" onClick={onBack}>← Back to Library</button>
         </div>
       </div>
+      {saveModal}
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16 }}>
         {/* Left controls */}

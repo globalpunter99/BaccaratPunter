@@ -3,7 +3,6 @@ import "./index.css";
 import LiveSession from "./components/session/LiveSession";
 import SessionLibrary from "./components/library/SessionLibrary";
 import UploadSession from "./components/library/UploadSession";
-import PracticeReplay from "./components/practice/PracticeReplay";
 import ProfileHub from "./components/profile/ProfileHub";
 import StatsLeaderboard from "./components/stats/StatsLeaderboard";
 import Guide from "./components/guide/Guide";
@@ -13,7 +12,6 @@ type Tab =
   | "live"
   | "library"
   | "upload"
-  | "practice-replay"
   | "profile"
   | "stats"
   | "guide"
@@ -23,7 +21,6 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "live",            label: "Live Session",   group: "Session" },
   { id: "library",         label: "Library",         group: "Data" },
   { id: "upload",          label: "Upload Session",  group: "Data" },
-  { id: "practice-replay", label: "Practice Play", group: "Data" },
   { id: "profile",         label: "Profile",         group: "Profile" },
   { id: "stats",           label: "Stats",           group: "Profile" },
   { id: "guide",           label: "Guide",           group: "Help" },
@@ -38,7 +35,6 @@ export default function App() {
       case "live":            return <LiveSession />;
       case "library":         return <SessionLibrary />;
       case "upload":          return <UploadSession />;
-      case "practice-replay": return <PracticeReplay />;
       case "profile":         return <ProfileHub />;
       case "stats":           return <StatsLeaderboard />;
       case "guide":           return <Guide />;

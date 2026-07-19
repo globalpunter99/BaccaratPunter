@@ -16,6 +16,11 @@ export interface Session {
   type: "live" | "extra";
   hands: Hand[];
   notes?: string;
+  // Set when this session was saved from Practice mode: the id of the original
+  // shoe it was practised from. Drives the "practice save" badge and the
+  // one-click link back to the original.
+  practiceOf?: string;
+  savedAt?: string;
 }
 
 export interface ModelCall {
