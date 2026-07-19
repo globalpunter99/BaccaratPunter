@@ -6,6 +6,7 @@ import { mockSessions, type Session } from "../mock/data";
 
 const SESSIONS_KEY = "bp-saved-sessions";
 const FAV_KEY = "bp-favourites";
+const HIDDEN_KEY = "bp-hidden-sessions";
 
 export function loadSavedSessions(): Session[] {
   try {
@@ -39,6 +40,23 @@ export function addSavedSession(draft: Session): Session {
 
 export function deleteSavedSession(id: string): void {
   writeSavedSessions(loadSavedSessions().filter(s => s.id !== id));
+}
+
+// Sessions the user has deleted from the Library. Built-in mock sessions can't
+// be removed from code, so hiding them here is how a delete persists; saved
+// sessions are also removed from their store. Deletion is permanent.
+export function loadHiddenSessions(): string[] {
+  try {
+    const raw = localStorage.getItem(HIDDEN_KEY);
+    if (raw) return JSON.parse(raw) as string[];
+  } catch { /* fall through */ }
+  return [];
+}
+
+export function deleteSession(id: string): void {
+  deleteSavedSession(id);
+  const hidden = loadHiddenSessions();
+  if (!hidden.includes(id)) localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden, id]));
 }
 
 // ── Favourites (works for both mock and saved sessions, keyed by id) ──

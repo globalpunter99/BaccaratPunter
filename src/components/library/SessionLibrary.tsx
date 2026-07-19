@@ -5,7 +5,8 @@ import PredictionAnalysis from "./PredictionAnalysis";
 import PracticePlayer from "../practice/PracticeReplay";
 import ScreenPhotos from "../roads/ScreenPhotos";
 import {
-  addSavedSession, loadFavourites, loadSavedSessions, toggleFavourite,
+  addSavedSession, deleteSession, loadFavourites, loadHiddenSessions,
+  loadSavedSessions, toggleFavourite,
 } from "../../lib/sessionStore";
 import { predictBoard } from "../../game/signals";
 import { configForVersion, type ProfileConfig } from "../../game/profile";
@@ -49,9 +50,13 @@ export default function SessionLibrary() {
   const [showStats, setShowStats] = useState(false); // eye toggle: B/P/T hidden by default
   const [saved, setSaved] = useState<Session[]>(() => loadSavedSessions());
   const [favs, setFavs] = useState<string[]>(() => loadFavourites());
+  const [hidden, setHidden] = useState<string[]>(() => loadHiddenSessions());
+  const [deleteTarget, setDeleteTarget] = useState<Session | null>(null);
 
-  const allSessions = [...saved, ...mockSessions];
-  const findSession = (id?: string) => allSessions.find(s => s.id === id);
+  // findSession searches every session (even hidden) so links still resolve;
+  // the visible list below excludes hidden ones.
+  const findSession = (id?: string) => [...saved, ...mockSessions].find(s => s.id === id);
+  const allSessions = [...saved, ...mockSessions].filter(s => !hidden.includes(s.id));
 
   const bankerCount = (s: Session) => s.hands.filter(h => h.outcome === "banker").length;
   const playerCount = (s: Session) => s.hands.filter(h => h.outcome === "player").length;
@@ -71,7 +76,7 @@ export default function SessionLibrary() {
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saved, youConfig]);
+  }, [saved, hidden, youConfig]);
 
   function backToList() {
     setSaved(loadSavedSessions());
@@ -89,6 +94,14 @@ export default function SessionLibrary() {
 
   function toggleFav(id: string) {
     setFavs(toggleFavourite(id));
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    deleteSession(deleteTarget.id);
+    setHidden(loadHiddenSessions());
+    setSaved(loadSavedSessions());
+    setDeleteTarget(null);
   }
 
   // ── Practice mode ──
@@ -200,92 +213,103 @@ export default function SessionLibrary() {
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.map(s => {
           const original = s.practiceOf ? findSession(s.practiceOf) : undefined;
           const isFav = favs.includes(s.id);
+          const bw = bestMap.get(s.id);
           return (
-            <div key={s.id} className="panel">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-12 items-center">
-                  <button
-                    className="fav-star"
-                    data-on={isFav || undefined}
-                    title={isFav ? "Remove from favourites" : "Add to favourites"}
-                    onClick={() => toggleFav(s.id)}
-                  >
-                    {isFav ? "★" : "☆"}
-                  </button>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{s.venue}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                      {s.tableNumber} · {s.date}
-                    </div>
-                    {s.practiceOf && (
-                      <div style={{ fontSize: 11, marginTop: 3 }}>
-                        {original
-                          ? <button className="link-btn" onClick={() => setMode({ kind: "analyse", session: original })}>↳ practice of {original.venue} ({original.id})</button>
-                          : <span style={{ color: "var(--text-muted)" }}>↳ practice of {s.practiceOf}</span>}
-                      </div>
-                    )}
-                  </div>
+            <div key={s.id} className="panel session-card">
+              {/* Left — favourite + title + meta */}
+              <button
+                className="fav-star"
+                data-on={isFav || undefined}
+                title={isFav ? "Remove from favourites" : "Add to favourites"}
+                onClick={() => toggleFav(s.id)}
+              >
+                {isFav ? "★" : "☆"}
+              </button>
+              <div className="session-title">
+                <div className="session-title-line">
+                  <span className="session-venue">{s.venue}</span>
                   <span className={`session-badge ${s.practiceOf ? "practice" : s.type}`}>
                     {s.practiceOf ? "Practice" : s.type === "live" ? "Live" : "Uploaded"}
                   </span>
                 </div>
-
-                <div className="flex gap-12 items-center">
-                  <div style={{ fontSize: 13, textAlign: "right" }}>
-                    <span style={{ color: "var(--text-secondary)" }}>{s.hands.length} hands</span>
-                    {showStats && (
-                      <span>
-                        {"  "}<span className="text-red">B:{bankerCount(s)}</span>{" "}
-                        <span className="text-blue">P:{playerCount(s)}</span>{" "}
-                        <span className="text-green">T:{tieCount(s)}</span>
-                      </span>
-                    )}
-                  </div>
-                  <ScreenPhotos screenId={`session-${s.id}`} canDelete />
-                  <button className="btn btn-secondary" style={{ fontSize: 12, padding: "6px 12px" }}
-                    onClick={() => setMode({ kind: "practice", session: s })}>
-                    ▶ Practice
-                  </button>
-                  <button className="btn btn-gold" style={{ fontSize: 12, padding: "6px 12px" }}
-                    onClick={() => setMode({ kind: "analyse", session: s })}>
-                    Analyse
-                  </button>
+                <div className="session-meta">
+                  {s.tableNumber} · {s.date}
+                  {s.practiceOf && (original
+                    ? <> · <button className="link-btn" onClick={() => setMode({ kind: "analyse", session: original })}>↳ practice of {original.id}</button></>
+                    : <> · ↳ practice of {s.practiceOf}</>)}
                 </div>
               </div>
 
-              {/* Best win predictions per profile (best version for this shoe) */}
-              {(() => {
-                const bw = bestMap.get(s.id);
-                if (!bw) return null;
-                return (
-                  <div style={{ marginTop: 8, fontSize: 12, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{ color: "var(--text-muted)" }}>Best win predictions:</span>
+              {/* Middle — best win predictions + notes (fills the empty space) */}
+              <div className="session-mid">
+                {bw && (
+                  <div className="best-wins">
+                    <span className="best-label">Best:</span>
                     {ENTITIES.map(e => (
-                      <span key={e} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+                      <span key={e} className="best-chip"
                         title={`${ENTITY_LABELS[e]} best version: ${bw[e].wins} correct of ${bw[e].calls} calls`}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: ENTITY_COLOURS[e].correct }} />
+                        <span className="best-dot" style={{ background: ENTITY_COLOURS[e].correct }} />
                         <span style={{ color: "var(--text-secondary)" }}>{ENTITY_LABELS[e]}</span>
                         <b style={{ color: ENTITY_COLOURS[e].correct }}>{bw[e].wins}</b>
-                        <span style={{ color: "var(--text-muted)" }}>/ {bw[e].calls}</span>
+                        <span style={{ color: "var(--text-muted)" }}>/{bw[e].calls}</span>
                       </span>
                     ))}
                   </div>
-                );
-              })()}
+                )}
+                {s.notes && <div className="session-note" title={s.notes}>{s.notes}</div>}
+              </div>
 
-              {s.notes && (
-                <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>
-                  {s.notes}
+              {/* Right — hands + controls */}
+              <div className="session-actions">
+                <div className="session-hands">
+                  {s.hands.length} hands
+                  {showStats && (
+                    <span className="session-bpt">
+                      <span className="text-red">B:{bankerCount(s)}</span>{" "}
+                      <span className="text-blue">P:{playerCount(s)}</span>{" "}
+                      <span className="text-green">T:{tieCount(s)}</span>
+                    </span>
+                  )}
                 </div>
-              )}
+                <ScreenPhotos screenId={`session-${s.id}`} canDelete />
+                <button className="btn btn-secondary" style={{ fontSize: 12, padding: "5px 10px" }}
+                  onClick={() => setMode({ kind: "practice", session: s })}>
+                  ▶ Practice
+                </button>
+                <button className="btn btn-gold" style={{ fontSize: 12, padding: "5px 10px" }}
+                  onClick={() => setMode({ kind: "analyse", session: s })}>
+                  Analyse
+                </button>
+                <button className="session-del" title="Delete session" onClick={() => setDeleteTarget(s)}>🗑</button>
+              </div>
             </div>
           );
         })}
       </div>
+
+      {deleteTarget && (
+        <div className="info-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="info-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Delete this session?</div>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
+              <b style={{ color: "var(--text-primary)" }}>{deleteTarget.venue}</b> · {deleteTarget.tableNumber} · {deleteTarget.date} will
+              be permanently removed from your library. <b style={{ color: "var(--banker-red)" }}>This cannot be undone —
+              a deleted session can't be restored.</b> It may also affect your player profile, which calibrates
+              from your recorded sessions.
+            </div>
+            <div className="flex gap-8" style={{ justifyContent: "flex-end" }}>
+              <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn" style={{ background: "var(--banker-red)", color: "#fff" }} onClick={confirmDelete}>
+                Delete permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
