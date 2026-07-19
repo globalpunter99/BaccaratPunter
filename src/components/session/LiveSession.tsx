@@ -181,6 +181,11 @@ export default function LiveSession() {
 
   const outcomes = hands.map(h => h.outcome);
 
+  // Photo bucket for this live screen. Ephemeral per session (like the hands
+  // themselves) until the backend links a saved session; deleting is offered
+  // only in the Library, so no delete here.
+  const [liveScreenId] = useState(() => `live-${Date.now()}`);
+
   // Live reads for the upcoming hand, from the real engine under each
   // profile. You drives the window band + road alignment; the assistant
   // reads the session facts (bet streaks, shoe depth) on top of the signal.
@@ -1018,6 +1023,7 @@ export default function LiveSession() {
               tieTotal: h.tieTotal,
               betResult: h.betResult,
             }))}
+            screenId={liveScreenId}
           />
         </div>
       </div>

@@ -583,8 +583,81 @@ select.input { cursor: pointer; }
 .header-extra {
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 .header-stats { display: flex; align-items: center; gap: 14px; }
+
+/* Screen-photo camera control (Big Road header, far right) */
+.screen-photo-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  line-height: 0;
+}
+.screen-photo-btn:hover { opacity: 0.85; }
+.screen-photo-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  background: var(--border-panel);
+  color: var(--text-secondary);
+}
+/* Stored-photo state: gold camera + green count badge, clearly distinct
+   from the muted grey "attach" state. */
+.screen-photo-btn[data-has] .screen-photo-badge {
+  background: var(--tie-green);
+  color: #03210f;
+}
+
+/* Photo attach/view modal slots */
+.photo-slot {
+  width: 260px;
+  max-width: 100%;
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+.photo-slot > img {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+  cursor: zoom-in;
+}
+.photo-slot-actions {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-top: 1px solid var(--border-panel);
+}
+.photo-slot-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 208px;
+  border-style: dashed;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.photo-slot-add:hover { border-color: var(--border-accent); color: var(--text-primary); }
+.photo-slot-add:disabled { cursor: default; opacity: 0.6; }
 .header-stat { display: flex; align-items: center; gap: 5px; font-size: 12px; }
 .header-stat-label { color: var(--text-secondary); }
 .eye-toggle {

@@ -286,6 +286,8 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
         analysisOverlay={activeArr.length > 0
           ? { entities: activeArr, predictions, filter }
           : undefined}
+        screenId={`session-${session.id}`}
+        canDeletePhotos
       />
     </div>
   );

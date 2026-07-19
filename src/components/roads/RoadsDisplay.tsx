@@ -6,6 +6,7 @@ import {
   placeBigRoad, placeMarks, deriveRoadDetailed,
   type RoadMark, type PlacedCell, type BigRoadStone,
 } from "../../game/roads";
+import ScreenPhotos from "./ScreenPhotos";
 
 // Extra elements of a hand beyond the outcome, displayed as markers on
 // the Big Road and Bead Plate. Indexed in step with `outcomes`.
@@ -52,6 +53,11 @@ interface Props {
     // Per-entity line-type visibility; absent = all shown
     filter?: Record<EntityId, { correct: boolean; wrong: boolean; nocall: boolean }>;
   };
+  // When set, a camera control appears at the far right of the Big Road
+  // header to attach / view (and, where allowed, delete) real photos of this
+  // screen. `canDeletePhotos` is granted only in the Library.
+  screenId?: string;
+  canDeletePhotos?: boolean;
 }
 
 // ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
@@ -750,6 +756,7 @@ function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
 // ── Main export — casino screen layout ───────────────────────────────────────
 export default function RoadsDisplay({
   outcomes, extras, compact = false, betsToggle = true, betsToggleLabel = "Bets", onCycleOutcome, analysisOverlay,
+  screenId, canDeletePhotos,
 }: Props) {
   // View mode for Big Road + Bead Plate markers:
   // basic = outcomes, ties and naturals only · detailed = + pairs and exotics
@@ -839,9 +846,16 @@ export default function RoadsDisplay({
               </span>
             )}
             <LegendKey />
+            {/* Far-right group: the Game N highlight key (when active) sits
+                just left of the camera control so the two never overlap. */}
+            {(screenId || bigRoadHasSel) && (
+              <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+                {selKey(bigRoadHasSel)}
+                {screenId && <ScreenPhotos screenId={screenId} canDelete={canDeletePhotos} />}
+              </span>
+            )}
           </>
-        }
-        selectionKey={selKey(bigRoadHasSel)}>
+        }>
         <BigRoad outcomes={outcomes} extras={shownExtras} cellSize={bigCell} analysisOverlay={analysisOverlay}
           selectedGame={selectedGame} onSelectGame={selectGame} />
       </RoadSection>
