@@ -5,7 +5,7 @@ import {
   settle, totalStake,
   type BetSlip, type MainSide, type SideBetType, type Settlement,
 } from "../../game/payouts";
-import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
+import { loadPayoutSettings, tableForGame } from "../../lib/payoutSettings";
 import { nextSignal, type RoadVote } from "../../game/signals";
 import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
@@ -49,6 +49,7 @@ function handTotal(cards: CardSlot[]): number {
 
 interface SessionDetails {
   casino: string;
+  gameType: string;
   tableNumber: string;
   shoeNumber: string;
   minBet: string;
@@ -68,10 +69,15 @@ export default function LiveSession() {
 
   // Session details — date/time recorded automatically at session start
   const [sessionStart] = useState(() => new Date());
+  // Casinos + game types configured in Settings, loaded once on mount.
+  const [payoutSettings] = useState(() => loadPayoutSettings());
   const [details, setDetails] = useState<SessionDetails>({
-    casino: "", tableNumber: "", shoeNumber: "", minBet: "", maxBet: "", notes: "",
-    commission: true, tiger: false, dragon: false,
+    casino: "", gameType: "", tableNumber: "", shoeNumber: "", minBet: "", maxBet: "", notes: "",
+    // Non-commission by default: a Banker win on a total of 6 pays the Banker
+    // bet at 50%. Selecting a configured game type overrides this.
+    commission: false, tiger: false, dragon: false,
   });
+  const [manualCasino, setManualCasino] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showFix, setShowFix] = useState(false);
   const [showRecordInfo, setShowRecordInfo] = useState(false);
@@ -117,7 +123,7 @@ export default function LiveSession() {
 
     // Money bet: settle against the pay engine and update the ledger
     if (hasPendingBet) {
-      const table = tableForCasino(loadPayoutSettings(), details.casino);
+      const table = tableForGame(payoutSettings, details.casino, details.gameType);
       const result = settle(pendingSlip, {
         outcome: hand.outcome,
         natural: hand.natural,
@@ -386,6 +392,8 @@ export default function LiveSession() {
           <div className="page-title">Live Session</div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
             {(details.casino || "Casino not set")}
+            {details.gameType ? ` · ${details.gameType}` : ""}
+            {` · ${details.commission ? "Commission" : "Non-comm"}`}
             {details.tableNumber ? ` — Table ${details.tableNumber}` : ""}
             {details.shoeNumber ? ` — Shoe ${details.shoeNumber}` : ""}
             {" · "}
@@ -413,11 +421,76 @@ export default function LiveSession() {
             >
               {showDetails ? "▲" : "▼"} Session Details
             </button>
-            {showDetails && (
+            {showDetails && (() => {
+              const casinoCfg = payoutSettings.casinos.find(
+                c => c.name.trim().toLowerCase() === details.casino.trim().toLowerCase());
+              const usePicker = payoutSettings.casinos.length > 0 && !manualCasino;
+              return (
               <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-                <input className="input" placeholder="Casino / venue"
-                  value={details.casino}
-                  onChange={e => setDetails(d => ({ ...d, casino: e.target.value }))} />
+                {/* Casino / venue — pick from Settings, or type manually */}
+                {usePicker ? (
+                  <select
+                    className="input"
+                    value={casinoCfg ? casinoCfg.name : ""}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v === "__other__") {
+                        setManualCasino(true);
+                        setDetails(d => ({ ...d, casino: "", gameType: "" }));
+                        return;
+                      }
+                      const c = payoutSettings.casinos.find(cc => cc.name === v);
+                      const g = c?.games[0];
+                      setDetails(d => ({
+                        ...d, casino: v, gameType: g?.name ?? "",
+                        commission: g ? g.commission : d.commission,
+                      }));
+                    }}
+                  >
+                    <option value="" disabled>Select casino / venue</option>
+                    {payoutSettings.casinos.map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                    <option value="__other__">Other (type manually)…</option>
+                  </select>
+                ) : (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input className="input" placeholder="Casino / venue" style={{ flex: 1 }}
+                      value={details.casino}
+                      onChange={e => setDetails(d => ({ ...d, casino: e.target.value }))} />
+                    {payoutSettings.casinos.length > 0 && (
+                      <button className="btn btn-ghost" style={{ fontSize: 12 }}
+                        onClick={() => { setManualCasino(false); setDetails(d => ({ ...d, casino: "", gameType: "" })); }}>
+                        ▤ List
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Game type — from the casino's configured games, or manual */}
+                {casinoCfg && casinoCfg.games.length > 0 && !manualCasino ? (
+                  <select
+                    className="input"
+                    value={details.gameType || casinoCfg.games[0].name}
+                    onChange={e => {
+                      const g = casinoCfg.games.find(gg => gg.name === e.target.value);
+                      setDetails(d => ({
+                        ...d, gameType: e.target.value,
+                        commission: g ? g.commission : d.commission,
+                      }));
+                    }}
+                  >
+                    {casinoCfg.games.map(g => (
+                      <option key={g.id} value={g.name}>
+                        {g.name} {g.commission ? "(commission)" : "(non-comm)"}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input className="input" placeholder="Game type (e.g. Non-Commission)"
+                    value={details.gameType}
+                    onChange={e => setDetails(d => ({ ...d, gameType: e.target.value }))} />
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <input className="input" placeholder="Table no."
                     value={details.tableNumber}
@@ -465,7 +538,8 @@ export default function LiveSession() {
                   Date &amp; start time recorded automatically
                 </div>
               </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* My Bet — pay engine */}

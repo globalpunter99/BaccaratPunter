@@ -1,27 +1,69 @@
-// Payout settings store: a default table plus per-casino overrides.
+// Payout settings store: a default table plus per-casino game types.
+// Each casino can carry several named baccarat game types (e.g. Commission,
+// Non-Commission, Even Money), each with its own commission mode and odds.
 // Persisted to localStorage until the Supabase backend pass.
 
 import { DEFAULT_PAYOUTS, type PayoutTable } from "../game/payouts";
 
+// A named baccarat variant offered at a casino. `commission` drives settlement:
+//   true  → 5% commission on winning Banker bets
+//   false → non-commission; a Banker win on a total of 6 pays the Banker 50%.
+export interface GameType {
+  id: string;
+  name: string;
+  commission: boolean;
+  table: PayoutTable;
+}
+
+export interface CasinoConfig {
+  id: string;
+  name: string;
+  games: GameType[];
+}
+
 export interface PayoutSettings {
   defaults: PayoutTable;
-  casinos: { name: string; table: PayoutTable }[];
+  casinos: CasinoConfig[];
 }
 
 const KEY = "bp-payout-settings";
+
+function newId(): string {
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  } catch { /* fall through */ }
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** A fresh game type with the given name, commission mode and (copied) table. */
+export function makeGameType(name: string, commission: boolean, table: PayoutTable): GameType {
+  return { id: newId(), name, commission, table: { ...table } };
+}
+
+// Old shape (pre game-types): casinos were { name, table }. Migrate each to a
+// single "Standard" game type carrying that table.
+type LegacyCasino = { name: string; table?: PayoutTable; games?: unknown };
+
+function migrateCasino(c: LegacyCasino, defaults: PayoutTable): CasinoConfig {
+  const games: GameType[] = Array.isArray(c.games)
+    ? (c.games as GameType[]).map(g => ({
+        id: g.id ?? newId(),
+        name: g.name ?? "Standard",
+        commission: g.commission ?? true,
+        table: { ...DEFAULT_PAYOUTS, ...g.table },
+      }))
+    : [makeGameType("Standard", true, { ...DEFAULT_PAYOUTS, ...(c.table ?? defaults) })];
+  return { id: newId(), name: c.name, games };
+}
 
 export function loadPayoutSettings(): PayoutSettings {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as PayoutSettings;
-      // Backfill any fields added since the save
-      parsed.defaults = { ...DEFAULT_PAYOUTS, ...parsed.defaults };
-      parsed.casinos = (parsed.casinos ?? []).map(c => ({
-        name: c.name,
-        table: { ...DEFAULT_PAYOUTS, ...c.table },
-      }));
-      return parsed;
+      const parsed = JSON.parse(raw) as { defaults?: PayoutTable; casinos?: LegacyCasino[] };
+      const defaults = { ...DEFAULT_PAYOUTS, ...parsed.defaults };
+      const casinos = (parsed.casinos ?? []).map(c => migrateCasino(c, defaults));
+      return { defaults, casinos };
     }
   } catch { /* fall through to defaults */ }
   return { defaults: { ...DEFAULT_PAYOUTS }, casinos: [] };
@@ -31,10 +73,38 @@ export function savePayoutSettings(settings: PayoutSettings): void {
   localStorage.setItem(KEY, JSON.stringify(settings));
 }
 
-/** Table for a session: the casino's own odds if saved, else the defaults. */
+function findCasino(settings: PayoutSettings, casinoName: string): CasinoConfig | undefined {
+  const key = casinoName.trim().toLowerCase();
+  if (!key) return undefined;
+  return settings.casinos.find(c => c.name.trim().toLowerCase() === key);
+}
+
+function findGame(casino: CasinoConfig | undefined, gameTypeName?: string): GameType | undefined {
+  if (!casino) return undefined;
+  if (gameTypeName) {
+    const key = gameTypeName.trim().toLowerCase();
+    const match = casino.games.find(g => g.name.trim().toLowerCase() === key);
+    if (match) return match;
+  }
+  return casino.games[0]; // fall back to the casino's first game type
+}
+
+/** Odds for a specific casino + game type, else the casino's first game, else defaults. */
+export function tableForGame(
+  settings: PayoutSettings, casinoName: string, gameTypeName?: string,
+): PayoutTable {
+  const game = findGame(findCasino(settings, casinoName), gameTypeName);
+  return game ? game.table : settings.defaults;
+}
+
+/** Commission mode for a casino + game type, or undefined when not configured. */
+export function commissionForGame(
+  settings: PayoutSettings, casinoName: string, gameTypeName?: string,
+): boolean | undefined {
+  return findGame(findCasino(settings, casinoName), gameTypeName)?.commission;
+}
+
+/** Compat helper: table for a casino using its first/default game type. */
 export function tableForCasino(settings: PayoutSettings, casinoName: string): PayoutTable {
-  const match = settings.casinos.find(
-    c => c.name.trim().toLowerCase() === casinoName.trim().toLowerCase(),
-  );
-  return match ? match.table : settings.defaults;
+  return tableForGame(settings, casinoName);
 }

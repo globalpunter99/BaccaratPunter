@@ -11,6 +11,7 @@ import {
 import { predictBoard } from "../../game/signals";
 import { configForVersion, type ProfileConfig } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
+import { loadPayoutSettings } from "../../lib/payoutSettings";
 import { ENTITY_COLOURS, ENTITY_LABELS, type EntityId } from "../../lib/entities";
 
 const ENTITIES: EntityId[] = ["you", "sniper", "grinder"];
@@ -47,6 +48,7 @@ type Mode =
 export default function SessionLibrary() {
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [filter, setFilter] = useState<"all" | "live" | "extra" | "fav">("all");
+  const [casinoFilter, setCasinoFilter] = useState<string>("all"); // "all" | "others" | casino name
   const [showStats, setShowStats] = useState(false); // eye toggle: B/P/T hidden by default
   const [saved, setSaved] = useState<Session[]>(() => loadSavedSessions());
   const [favs, setFavs] = useState<string[]>(() => loadFavourites());
@@ -57,6 +59,13 @@ export default function SessionLibrary() {
   // the visible list below excludes hidden ones.
   const findSession = (id?: string) => [...saved, ...mockSessions].find(s => s.id === id);
   const allSessions = [...saved, ...mockSessions].filter(s => !hidden.includes(s.id));
+
+  // Casinos configured in Settings form the "database" the casino filter draws
+  // on; any session whose venue isn't one of them falls under "Others".
+  const knownCasinos = useMemo(() => loadPayoutSettings().casinos.map(c => c.name), []);
+  const knownLower = useMemo(
+    () => new Set(knownCasinos.map(n => n.trim().toLowerCase())), [knownCasinos]);
+  const isKnownCasino = (venue: string) => knownLower.has(venue.trim().toLowerCase());
 
   const bankerCount = (s: Session) => s.hands.filter(h => h.outcome === "banker").length;
   const playerCount = (s: Session) => s.hands.filter(h => h.outcome === "player").length;
@@ -155,12 +164,21 @@ export default function SessionLibrary() {
   }
 
   // ── List mode ──
+  const matchesCasino = (s: Session) => {
+    if (casinoFilter === "all") return true;
+    if (casinoFilter === "others") return !isKnownCasino(s.venue);
+    return s.venue.trim().toLowerCase() === casinoFilter.trim().toLowerCase();
+  };
   const filtered = allSessions.filter(s => {
+    if (!matchesCasino(s)) return false;
     if (filter === "fav") return favs.includes(s.id);
     if (filter === "live") return s.type === "live";
     if (filter === "extra") return s.type === "extra";
     return true;
   });
+
+  // Only offer "Others" when some session venue isn't a configured casino.
+  const hasOthers = allSessions.some(s => !isKnownCasino(s.venue));
 
   const counts = {
     all: allSessions.length,
@@ -180,6 +198,19 @@ export default function SessionLibrary() {
       <div className="flex items-center justify-between mb-12">
         <div className="page-title">Session Library</div>
         <div className="flex gap-8 items-center">
+          <select
+            className="input"
+            style={{ padding: "5px 10px", fontSize: 12, maxWidth: 180 }}
+            title="Filter by casino (casinos come from Settings; unlisted venues are Others)"
+            value={casinoFilter}
+            onChange={e => setCasinoFilter(e.target.value)}
+          >
+            <option value="all">All Casinos</option>
+            {knownCasinos.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+            {hasOthers && <option value="others">Others</option>}
+          </select>
           <button
             className={`btn ${showStats ? "btn-gold" : "btn-ghost"}`}
             style={{ padding: "5px 12px", fontSize: 12 }}
