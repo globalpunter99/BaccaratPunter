@@ -66,7 +66,7 @@ function AccountCard() {
       </div>
 
       {/* Username + email */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, maxWidth: 560, marginBottom: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, maxWidth: 560, marginBottom: 14 }}>
         <label className="field-col">
           <span className="field-label">Username</span>
           <input className="input" placeholder="Your username"

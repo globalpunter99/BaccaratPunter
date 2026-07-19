@@ -1601,3 +1601,73 @@ select.input { cursor: pointer; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.grid-2 > *, .grid-3 > *, .grid-4 > * { min-width: 0; }
+@media (max-width: 900px) {
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 620px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ── Responsive pass: mobile / tablet ─────────────────────────────────────
+   Principles: columns stack on narrow screens, wide grids scroll inside
+   their own panel, and nothing is ever clipped out of reach. */
+
+/* App header: nav scrolls horizontally on small screens (no scrollbar) */
+@media (max-width: 900px) {
+  .app-header { padding: 0 10px; gap: 12px; }
+  .app-logo { font-size: 15px; }
+  .app-logo span { display: none; } /* hide the version tag */
+  .nav-tabs { overflow-x: auto; scrollbar-width: none; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab { padding: 6px 10px; font-size: 12px; }
+  .header-user-name { display: none; } /* keep Sign out, drop the name */
+  .library-filter-row { flex-wrap: wrap; }
+  .library-filter-group { flex-wrap: wrap; }
+  .filter-btn { flex: 1 1 30%; }
+}
+
+@media (max-width: 760px) {
+  .page { padding: 12px 10px; }
+  /* Session cards: title + actions share the first row, stats drop below */
+  .session-card { flex-wrap: wrap; row-gap: 6px; }
+  .session-title { width: auto; flex: 1 1 auto; }
+  .session-mid { flex: 1 1 100%; order: 3; }
+  .session-actions { margin-left: auto; }
+  /* Road headers (stats, toggles, key, camera) wrap instead of clipping;
+     the extras drop to their own full-width row under the title */
+  .road-section-header, .header-extra { flex-wrap: wrap; row-gap: 4px; }
+  .header-extra { flex: 1 1 100%; }
+}
+
+/* Scoreboard: entities may shrink below content width, dropdowns shrink to
+   their row, and the legend buttons wrap on narrow screens */
+.scoreboard-strip > * { min-width: 0; }
+.scoreboard-entity select { min-width: 0; max-width: 100%; }
+.entity-legend { flex-wrap: wrap; }
+
+/* 300px side column + fluid content (Practice Play, Profile Calibration) */
+.grid-300-fluid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+}
+.grid-300-fluid > * { min-width: 0; }
+@media (max-width: 1100px) {
+  .grid-300-fluid { grid-template-columns: 1fr; }
+}
+
+/* Upload extraction review: photo column + editable grid */
+.upload-grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 14px;
+}
+.upload-grid > * { min-width: 0; }
+@media (max-width: 640px) {
+  .upload-grid { grid-template-columns: 1fr; }
+}
+
+/* Wide tables (user management) scroll rather than clip */
+.table-scroll { overflow-x: auto; }

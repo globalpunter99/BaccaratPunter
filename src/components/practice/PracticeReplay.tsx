@@ -284,7 +284,7 @@ export default function PracticePlayer({ session, onBack, onSave }: {
       </div>
       {saveModal}
 
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16 }}>
+      <div className="grid-300-fluid">
         {/* Left controls */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Game position — compact, usable on demand. Moving forward

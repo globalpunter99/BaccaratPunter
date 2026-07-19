@@ -124,14 +124,14 @@ export default function SessionLibrary() {
     const original = s.practiceOf ? findSession(s.practiceOf) : undefined;
     return (
       <div className="page">
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-between mb-12" style={{ flexWrap: "wrap", gap: 8 }}>
           <div>
             <div className="page-title">Analyse — {s.venue}</div>
             <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
               {s.tableNumber} · {s.date} · study only, no betting or calling
             </div>
           </div>
-          <div className="flex gap-8 items-center">
+          <div className="flex gap-8 items-center" style={{ flexWrap: "wrap" }}>
             <button className="btn btn-secondary" style={{ fontSize: 12, padding: "6px 14px" }}
               onClick={() => setMode({ kind: "practice", session: s })}>
               ▶ Practice this shoe

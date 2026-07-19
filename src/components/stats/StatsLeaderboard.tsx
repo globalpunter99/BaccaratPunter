@@ -35,6 +35,7 @@ export default function StatsLeaderboard() {
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
             Ranked by hit rate. Only hands where a call was made (not all hands played).
           </div>
+          <div className="table-scroll">
           <table className="data-table">
             <thead>
               <tr>
@@ -77,6 +78,7 @@ export default function StatsLeaderboard() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Per-model breakdown */}

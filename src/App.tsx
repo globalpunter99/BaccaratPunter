@@ -83,8 +83,8 @@ function AppShell() {
           ))}
         </nav>
         {!localMode && userId && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto" }}>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", flexShrink: 0 }}>
+            <span className="header-user-name" style={{ fontSize: 12, color: "var(--text-muted)" }}>
               {profile?.username || profile?.email}
               {isSuperAdmin && <span style={{ color: "var(--gold)" }}> · super admin</span>}
             </span>

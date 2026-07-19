@@ -66,8 +66,8 @@ export default function UserManagement() {
       {loading ? (
         <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading users…</div>
       ) : (
-        <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <div className="panel table-scroll" style={{ padding: 0 }}>
+          <table style={{ width: "100%", minWidth: 620, borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "var(--bg-dark)", textAlign: "left" }}>
                 {["Username", "Email", "Role", "Status", "Joined", "Actions"].map(h => (

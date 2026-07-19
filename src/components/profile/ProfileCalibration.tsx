@@ -146,7 +146,7 @@ export default function ProfileCalibration() {
         Placeholder boards — the real foundation set (recorded live games) loads with the backend pass.
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16 }}>
+      <div className="grid-300-fluid">
         {/* Left: progress + the call */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="panel" style={{ padding: "10px 14px" }}>

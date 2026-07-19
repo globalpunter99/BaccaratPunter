@@ -75,7 +75,7 @@ function ExtractedBeadPlate({
           </button>
         </div>
         <div style={{ display: "flex", alignItems: "stretch" }}>
-          <div style={{ overflowX: "auto", flexShrink: 0 }}>
+          <div style={{ overflowX: "auto", flexShrink: 1, minWidth: 0 }}>
             <div
               className="road-grid"
               style={{
@@ -270,7 +270,7 @@ export default function UploadSession() {
           <button className="btn btn-ghost" onClick={() => setStep("upload")}>← Back</button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 14 }}>
+        <div className="upload-grid">
           {/* Left column — session details, like Live Session */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div className="panel">

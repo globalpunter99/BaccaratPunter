@@ -122,7 +122,7 @@ export default function ProfileHub() {
       </div>
 
       {/* Phase stepper */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 6, marginBottom: 16 }}>
         {PHASES.map(p => {
           const st = statusFor(entity, p.id);
           const on = phase === p.id;
