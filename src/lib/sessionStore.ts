@@ -2,7 +2,7 @@
 // favourites set, persisted to localStorage until the Supabase backend pass.
 // The Library merges these on top of the built-in mock sessions.
 
-import type { Session } from "../mock/data";
+import { mockSessions, type Session } from "../mock/data";
 
 const SESSIONS_KEY = "bp-saved-sessions";
 const FAV_KEY = "bp-favourites";
@@ -26,8 +26,12 @@ function writeSavedSessions(list: Session[]): void {
  */
 export function addSavedSession(draft: Session): Session {
   const list = loadSavedSessions();
+  // Echo the original id as `<id>-P<n>`, bumping n past any existing id
+  // (saved OR built-in mock) so ids never collide.
+  const taken = new Set<string>([...list, ...mockSessions].map(s => s.id));
   const base = draft.practiceOf ?? draft.id ?? "session";
-  const n = list.filter(s => s.practiceOf === draft.practiceOf).length + 1;
+  let n = 1;
+  while (taken.has(`${base}-P${n}`)) n++;
   const saved: Session = { ...draft, id: `${base}-P${n}` };
   writeSavedSessions([saved, ...list]);
   return saved;

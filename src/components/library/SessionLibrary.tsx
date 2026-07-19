@@ -1,11 +1,37 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { mockSessions, type Session } from "../../mock/data";
+import type { Outcome } from "../../game/baccarat";
 import PredictionAnalysis from "./PredictionAnalysis";
 import PracticePlayer from "../practice/PracticeReplay";
 import ScreenPhotos from "../roads/ScreenPhotos";
 import {
   addSavedSession, loadFavourites, loadSavedSessions, toggleFavourite,
 } from "../../lib/sessionStore";
+import { predictBoard } from "../../game/signals";
+import { configForVersion, type ProfileConfig } from "../../game/profile";
+import { loadYouConfig } from "../../lib/profileStore";
+import { ENTITY_COLOURS, ENTITY_LABELS, type EntityId } from "../../lib/entities";
+
+const ENTITIES: EntityId[] = ["you", "sniper", "grinder"];
+// Distinct profile versions per entity (see configForVersion).
+const VERSION_COUNT: Record<EntityId, number> = { you: 2, sniper: 3, grinder: 2 };
+
+// The best a profile could have done on this shoe: across its version variants,
+// the one yielding the most correct calls (highest win predictions).
+function bestWins(outcomes: Outcome[], entity: EntityId, youConfig: ProfileConfig) {
+  let best = { wins: 0, calls: 0 };
+  for (let v = 0; v < VERSION_COUNT[entity]; v++) {
+    const calls = predictBoard(outcomes, configForVersion(entity, v, youConfig));
+    let wins = 0, decided = 0;
+    calls.forEach((call, i) => {
+      if (!call || outcomes[i] === "tie") return;
+      decided++;
+      if (call === outcomes[i]) wins++;
+    });
+    if (v === 0 || wins > best.wins) best = { wins, calls: decided };
+  }
+  return best;
+}
 
 // The Session Library is the single home for recorded shoes. Each card offers
 // two ways in: Analyse (study only — no betting or calling) and Practice (play
@@ -30,6 +56,22 @@ export default function SessionLibrary() {
   const bankerCount = (s: Session) => s.hands.filter(h => h.outcome === "banker").length;
   const playerCount = (s: Session) => s.hands.filter(h => h.outcome === "player").length;
   const tieCount    = (s: Session) => s.hands.filter(h => h.outcome === "tie").length;
+
+  // Best-version win counts per profile, per session (see bestWins).
+  const youConfig = useMemo(() => loadYouConfig(), []);
+  const bestMap = useMemo(() => {
+    const m = new Map<string, Record<EntityId, { wins: number; calls: number }>>();
+    for (const s of allSessions) {
+      const o = s.hands.map(h => h.outcome);
+      m.set(s.id, {
+        you: bestWins(o, "you", youConfig),
+        sniper: bestWins(o, "sniper", youConfig),
+        grinder: bestWins(o, "grinder", youConfig),
+      });
+    }
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved, youConfig]);
 
   function backToList() {
     setSaved(loadSavedSessions());
@@ -107,6 +149,19 @@ export default function SessionLibrary() {
     return true;
   });
 
+  const counts = {
+    all: allSessions.length,
+    live: allSessions.filter(s => s.type === "live").length,
+    extra: allSessions.filter(s => s.type === "extra").length,
+    fav: allSessions.filter(s => favs.includes(s.id)).length,
+  };
+  const filterLabel: Record<typeof filter, string> = {
+    all: `All (${counts.all})`,
+    live: `Live Only (${counts.live})`,
+    extra: `Uploaded Only (${counts.extra})`,
+    fav: `★ Favourites (${counts.fav})`,
+  };
+
   return (
     <div className="page">
       <div className="flex items-center justify-between mb-12">
@@ -127,7 +182,7 @@ export default function SessionLibrary() {
               style={{ padding: "5px 14px", fontSize: 12 }}
               onClick={() => setFilter(f)}
             >
-              {f === "all" ? "All" : f === "live" ? "Live Only" : f === "extra" ? "Uploaded Only" : "★ Favourites"}
+              {filterLabel[f]}
             </button>
           ))}
         </div>
@@ -201,6 +256,26 @@ export default function SessionLibrary() {
                   </button>
                 </div>
               </div>
+
+              {/* Best win predictions per profile (best version for this shoe) */}
+              {(() => {
+                const bw = bestMap.get(s.id);
+                if (!bw) return null;
+                return (
+                  <div style={{ marginTop: 8, fontSize: 12, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Best win predictions:</span>
+                    {ENTITIES.map(e => (
+                      <span key={e} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+                        title={`${ENTITY_LABELS[e]} best version: ${bw[e].wins} correct of ${bw[e].calls} calls`}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: ENTITY_COLOURS[e].correct }} />
+                        <span style={{ color: "var(--text-secondary)" }}>{ENTITY_LABELS[e]}</span>
+                        <b style={{ color: ENTITY_COLOURS[e].correct }}>{bw[e].wins}</b>
+                        <span style={{ color: "var(--text-muted)" }}>/ {bw[e].calls}</span>
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
 
               {s.notes && (
                 <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>

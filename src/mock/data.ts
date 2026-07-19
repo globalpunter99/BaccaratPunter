@@ -81,6 +81,25 @@ export const mockSessions: Session[] = [
     notes: "Strong streak patterns mid-shoe",
   },
   {
+    // A saved practice session (demo) — same shoe as s1, played in Practice
+    // mode and saved back. Shows the "Practice" badge and links to s1.
+    id: "s1-P1",
+    date: "2026-07-10",
+    venue: "Crown Melbourne",
+    tableNumber: "VIP Table 3",
+    type: "live",
+    hands: shoe1Outcomes.map((outcome, i) => ({
+      id: i + 1,
+      outcome,
+      bankerPair: i === 7 || i === 42,
+      playerPair: i === 19 || i === 55,
+      natural: i === 3 || i === 28,
+    })),
+    practiceOf: "s1",
+    savedAt: "2026-07-10",
+    notes: "Saved practice session of Crown Melbourne. Result 22W / 14L / 2T (61%).",
+  },
+  {
     id: "s2",
     date: "2026-07-03",
     venue: "Crown Melbourne",

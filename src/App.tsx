@@ -19,7 +19,7 @@ type Tab =
 
 const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "live",            label: "Live Session",   group: "Session" },
-  { id: "library",         label: "Library",         group: "Data" },
+  { id: "library",         label: "Session Library", group: "Data" },
   { id: "upload",          label: "Upload Session",  group: "Data" },
   { id: "profile",         label: "Profile",         group: "Profile" },
   { id: "stats",           label: "Stats",           group: "Profile" },
