@@ -13,6 +13,11 @@ export function setCloudUser(userId: string | null): void {
   currentUserId = userId;
 }
 
+/** Signed-in user id when cloud sync is active, else null. */
+export function getCloudUserId(): string | null {
+  return supabase ? currentUserId : null;
+}
+
 function ready(): boolean {
   return supabase !== null && currentUserId !== null;
 }
@@ -33,9 +38,13 @@ export function pushSession(s: Session): void {
     venue: s.venue,
     table_number: s.tableNumber,
     session_type: s.type,
+    game_type: s.gameType ?? "",
+    commission: s.commission ?? false,
     notes: s.notes ?? null,
     practice_of: s.practiceOf ?? null,
     hands: s.hands,
+    bets: s.bets ?? [],
+    details: s.details ?? null,
     saved_at: s.savedAt ?? new Date().toISOString(),
   }).then(({ error }) => { if (error) logPushError(`session ${s.id}`, error); });
 }
@@ -96,7 +105,7 @@ export async function hydrateFromCloud(userId: string): Promise<void> {
   }
 
   const rows = sessionsRes.data;
-  if (rows && rows.length > 0) {
+  if (rows) {
     const sessions: Session[] = rows.map(r => ({
       id: r.id,
       date: r.date,
@@ -107,9 +116,28 @@ export async function hydrateFromCloud(userId: string): Promise<void> {
       notes: r.notes ?? undefined,
       practiceOf: r.practice_of ?? undefined,
       savedAt: r.saved_at ?? undefined,
+      gameType: r.game_type || undefined,
+      commission: r.commission ?? undefined,
+      bets: Array.isArray(r.bets) && r.bets.length > 0 ? r.bets : undefined,
+      details: r.details ?? undefined,
     }));
-    sessions.sort((a, b) => (b.savedAt ?? "").localeCompare(a.savedAt ?? ""));
-    localStorage.setItem("bp-saved-sessions", JSON.stringify(sessions));
+
+    // Reconcile: any locally saved session the cloud doesn't have (saved
+    // offline, or its push failed) gets pushed up now, and stays in the
+    // merged cache rather than being clobbered.
+    let localSessions: Session[] = [];
+    try {
+      localSessions = JSON.parse(localStorage.getItem("bp-saved-sessions") ?? "[]");
+    } catch { /* ignore a corrupt cache */ }
+    const cloudIds = new Set(sessions.map(s => s.id));
+    const missing = localSessions.filter(s => !cloudIds.has(s.id));
+    missing.forEach(pushSession);
+
+    const merged = [...sessions, ...missing]
+      .sort((a, b) => (b.savedAt ?? "").localeCompare(a.savedAt ?? ""));
+    if (merged.length > 0) {
+      localStorage.setItem("bp-saved-sessions", JSON.stringify(merged));
+    }
   }
 
   const p = profileRes.data;

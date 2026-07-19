@@ -1,4 +1,5 @@
 import type { Outcome } from "../game/baccarat";
+import type { BetSlip } from "../game/payouts";
 
 export interface Hand {
   id: number;
@@ -6,6 +7,23 @@ export interface Hand {
   bankerPair: boolean;
   playerPair: boolean;
   natural: boolean;
+  // Extras recorded in Live Session's Advance mode:
+  // sml-tiger | lge-tiger | sml-dragon | big-dragon | dragontiger-4/5/6
+  variant?: string;
+  tieTotal?: number;
+  // The player's main-call result on this hand (win/loss tile wash)
+  betResult?: "win" | "loss";
+}
+
+// One recorded play from a live session: every hand where the player made a
+// main call, with or without money down. Call-only plays carry stake 0.
+// The slip keeps the full picture (side bets included) for later review.
+export interface SessionBet {
+  handId: number;
+  slip: BetSlip;
+  staked: number;
+  returned: number;
+  profit: number;
 }
 
 export interface Session {
@@ -21,6 +39,18 @@ export interface Session {
   // one-click link back to the original.
   practiceOf?: string;
   savedAt?: string;
+  // Live-session context (recorded sessions only)
+  gameType?: string;
+  commission?: boolean;
+  // Recorded plays — drives the "You — as recorded" lens + real money P/L
+  bets?: SessionBet[];
+  details?: {
+    shoeNumber?: string;
+    minBet?: string;
+    maxBet?: string;
+    tiger?: boolean;
+    dragon?: boolean;
+  };
 }
 
 export interface ModelCall {

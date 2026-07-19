@@ -10,6 +10,9 @@ import { nextSignal, type RoadVote } from "../../game/signals";
 import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
 import { assistantNote } from "../../game/assistant";
+import { addLiveSession } from "../../lib/sessionStore";
+import { movePhotos } from "../../lib/photoStore";
+import type { Session, SessionBet } from "../../mock/data";
 
 interface HandRecord {
   id: number;
@@ -92,7 +95,21 @@ export default function LiveSession() {
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
   const [lastCall, setLastCall] = useState<{ side: "banker" | "player"; result: "win" | "loss" | "push" } | null>(null);
   const [lastGame, setLastGame] = useState<number | null>(null);
-  const [ledger, setLedger] = useState({ staked: 0, returned: 0, betHands: 0, wonHands: 0 });
+  // Every play this session: hands where the user made a main call, with or
+  // without money (stake 0 = call-only). Single source of truth for the
+  // ledger, the End Session save, and the Library's "as recorded" lens.
+  const [sessionBets, setSessionBets] = useState<SessionBet[]>([]);
+  const ledger = useMemo(() => {
+    let staked = 0, returned = 0, betHands = 0, wonHands = 0;
+    for (const b of sessionBets) {
+      if (b.staked <= 0) continue; // call-only: no money in the ledger
+      staked += b.staked;
+      returned += b.returned;
+      betHands++;
+      if (b.profit > 0) wonHands++;
+    }
+    return { staked, returned, betHands, wonHands };
+  }, [sessionBets]);
   const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
 
   const pendingSlip: BetSlip = {
@@ -132,12 +149,13 @@ export default function LiveSession() {
         variant: hand.variant,
         tieTotal: hand.tieTotal,
       }, details.commission, table);
-      setLedger(l => ({
-        staked: l.staked + result.staked,
-        returned: l.returned + result.returned,
-        betHands: l.betHands + 1,
-        wonHands: l.wonHands + (result.profit > 0 ? 1 : 0),
-      }));
+      setSessionBets(prev => [...prev, {
+        handId: hand.id,
+        slip: pendingSlip,
+        staked: result.staked,
+        returned: result.returned,
+        profit: result.profit,
+      }]);
       setLastSettlement(result);
       setLastSlip(pendingSlip);
       setLastCall(null);
@@ -152,7 +170,13 @@ export default function LiveSession() {
         setHands(prev => prev.map(h => (h.id === hand.id ? { ...h, betResult } : h)));
       }
       if (!hasPendingBet) {
-        // Call-only: no money, just show the call result
+        // Call-only: no money — recorded as a stake-0 play so the
+        // "as recorded" lens still sees the side that was called
+        setSessionBets(prev => [...prev, {
+          handId: hand.id,
+          slip: { main: { side, stake: 0 }, side: {} },
+          staked: 0, returned: 0, profit: 0,
+        }]);
         setLastCall({ side, result: hand.outcome === "tie" ? "push" : side === hand.outcome ? "win" : "loss" });
         setLastSettlement(null);
       }
@@ -178,19 +202,101 @@ export default function LiveSession() {
         const inserted: HandRecord = { id: 0, outcome: fixOutcome, bankerPair: false, playerPair: false, natural: false };
         next = [...prev.slice(0, idx), inserted, ...prev.slice(idx)];
       } else {
-        next = prev.map((h, i) => (i === idx ? { ...h, outcome: fixOutcome } : h));
+        next = prev.map((h, i) => {
+          if (i !== idx) return h;
+          // Outcome change: the recorded call's win/loss follows the new result
+          const side = sessionBets.find(b => b.handId === h.id)?.slip.main?.side;
+          const betResult = side && side !== "tie" && fixOutcome !== "tie"
+            ? (side === fixOutcome ? "win" as const : "loss" as const)
+            : undefined;
+          return { ...h, outcome: fixOutcome, betResult };
+        });
       }
       return next.map((h, i) => ({ ...h, id: i + 1 })); // renumber
+    });
+    // Keep recorded plays aligned with the renumbered hands
+    setSessionBets(prev => {
+      if (fixAction === "delete") {
+        return prev.filter(b => b.handId !== n)
+          .map(b => (b.handId > n ? { ...b, handId: b.handId - 1 } : b));
+      }
+      if (fixAction === "insert") {
+        return prev.map(b => (b.handId >= n ? { ...b, handId: b.handId + 1 } : b));
+      }
+      // change: re-settle the play against the corrected outcome
+      return prev.map(b => {
+        if (b.handId !== n) return b;
+        const h = hands[idx];
+        const table = tableForGame(payoutSettings, details.casino, details.gameType);
+        const r = settle(b.slip, {
+          outcome: fixOutcome,
+          natural: h.natural,
+          bankerPair: h.bankerPair,
+          playerPair: h.playerPair,
+          variant: h.variant,
+          tieTotal: h.tieTotal,
+        }, details.commission, table);
+        return { ...b, staked: r.staked, returned: r.returned, profit: r.profit };
+      });
     });
     setFixGameNo("");
   }
 
   const outcomes = hands.map(h => h.outcome);
 
-  // Photo bucket for this live screen. Ephemeral per session (like the hands
-  // themselves) until the backend links a saved session; deleting is offered
-  // only in the Library, so no delete here.
-  const [liveScreenId] = useState(() => `live-${Date.now()}`);
+  // Photo bucket for this live screen. On Save & End the photos move to the
+  // saved session's id so they follow it into the Library; deleting is
+  // offered only in the Library, so no delete here.
+  const [liveScreenId, setLiveScreenId] = useState(() => `live-${Date.now()}`);
+
+  // ── End Session ────────────────────────────────────────────────────────
+  const [endOpen, setEndOpen] = useState(false);
+  const [savedAs, setSavedAs] = useState<string | null>(null);
+
+  function resetSession() {
+    setHands([]);
+    setSessionBets([]);
+    setLastSlip(null);
+    setLastSettlement(null);
+    setLastCall(null);
+    setLastGame(null);
+    clearPendingBet();
+    setLiveScreenId(`live-${Date.now()}`);
+  }
+
+  function saveAndEnd() {
+    const draft: Omit<Session, "id"> = {
+      date: sessionStart.toISOString().slice(0, 10),
+      venue: details.casino || "Casino not set",
+      tableNumber: details.tableNumber || "—",
+      type: "live",
+      hands: hands.map(h => ({
+        id: h.id,
+        outcome: h.outcome,
+        bankerPair: h.bankerPair,
+        playerPair: h.playerPair,
+        natural: h.natural,
+        variant: h.variant,
+        tieTotal: h.tieTotal,
+        betResult: h.betResult,
+      })),
+      notes: details.notes || undefined,
+      gameType: details.gameType || undefined,
+      commission: details.commission,
+      bets: sessionBets.length > 0 ? sessionBets : undefined,
+      details: {
+        shoeNumber: details.shoeNumber || undefined,
+        minBet: details.minBet || undefined,
+        maxBet: details.maxBet || undefined,
+        tiger: details.tiger,
+        dragon: details.dragon,
+      },
+    };
+    const saved = addLiveSession(draft);
+    movePhotos(liveScreenId, `session-${saved.id}`);
+    setSavedAs(saved.id);
+    resetSession();
+  }
 
   // Live reads for the upcoming hand, from the real engine under each
   // profile. You drives the window band + road alignment; the assistant
@@ -381,7 +487,9 @@ export default function LiveSession() {
   }
 
   function undoLast() {
+    const lastId = hands.length;
     setHands(prev => prev.slice(0, -1));
+    setSessionBets(prev => prev.filter(b => b.handId !== lastId));
   }
 
   return (
@@ -404,7 +512,9 @@ export default function LiveSession() {
         </div>
         <div className="flex gap-8">
           <button className="btn btn-ghost" onClick={undoLast} disabled={hands.length === 0}>↩ Undo</button>
-          <button className="btn btn-secondary">End Session</button>
+          <button className="btn btn-secondary" onClick={() => setEndOpen(true)} disabled={hands.length === 0 && !savedAs}>
+            End Session
+          </button>
         </div>
       </div>
 
@@ -1089,6 +1199,60 @@ export default function LiveSession() {
           />
         </div>
       </div>
+
+      {/* End Session confirm / saved modal */}
+      {endOpen && (
+        <div className="info-overlay" onClick={() => { setEndOpen(false); setSavedAs(null); }}>
+          <div className="info-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            {savedAs ? (
+              <>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>✅ Session saved</div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
+                  Saved as <b style={{ color: "var(--gold)" }}>{savedAs}</b> — find it in the
+                  Session Library to analyse or practice the shoe. A new live session has started.
+                </div>
+                <div className="flex" style={{ justifyContent: "flex-end" }}>
+                  <button className="btn btn-gold" onClick={() => { setEndOpen(false); setSavedAs(null); }}>OK</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>End this session?</div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: 16 }}>
+                  <b style={{ color: "var(--text-primary)" }}>{details.casino || "Casino not set"}</b>
+                  {details.tableNumber ? ` · Table ${details.tableNumber}` : ""} · {hands.length} hands
+                  {" "}(<span className="text-red">B {hands.filter(h => h.outcome === "banker").length}</span>
+                  {" / "}<span className="text-blue">P {hands.filter(h => h.outcome === "player").length}</span>
+                  {" / "}<span className="text-green">T {hands.filter(h => h.outcome === "tie").length}</span>)
+                  <br />
+                  {ledger.betHands > 0 ? (
+                    <>Money result: <b className={ledger.returned - ledger.staked >= 0 ? "text-green" : "text-red"}>
+                      {ledger.returned - ledger.staked >= 0
+                        ? `+${ledger.returned - ledger.staked}`
+                        : `(${Math.abs(ledger.returned - ledger.staked)})`}
+                    </b> over {ledger.betHands} bets · {sessionBets.length} recorded plays</>
+                  ) : sessionBets.length > 0 ? (
+                    <>{sessionBets.length} calls recorded (no money bets)</>
+                  ) : (
+                    <>No bets or calls recorded</>
+                  )}
+                  <br />
+                  Saving stores the shoe — hands, bets and calls — in your Session Library
+                  for analysis and practice.
+                </div>
+                <div className="flex gap-8" style={{ justifyContent: "flex-end" }}>
+                  <button className="btn btn-ghost" onClick={() => setEndOpen(false)}>Cancel</button>
+                  <button className="btn btn-ghost" style={{ color: "var(--banker-red)" }}
+                    onClick={() => { resetSession(); setEndOpen(false); }}>
+                    Discard session
+                  </button>
+                  <button className="btn btn-gold" onClick={saveAndEnd}>💾 Save &amp; End</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

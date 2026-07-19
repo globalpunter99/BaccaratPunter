@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fileToDataUrl, loadPhotos, savePhotos, MAX_PHOTOS } from "../../lib/photoStore";
+import { addPhoto, listPhotos, removePhoto, MAX_PHOTOS, type ScreenPhoto } from "../../lib/photoStore";
 
 // Screen photos: the camera control in the Big Road header plus its attach /
 // view / delete modal. The icon colour tells the user the state at a glance —
@@ -22,19 +22,27 @@ export default function ScreenPhotos({ screenId, canDelete }: {
   screenId: string;
   canDelete?: boolean;
 }) {
-  const [photos, setPhotos] = useState<string[]>(() => loadPhotos(screenId));
+  const [photos, setPhotos] = useState<ScreenPhoto[]>([]);
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Re-read when the screen changes (e.g. a different library session).
+  // Load (and re-load when the screen changes, e.g. a different library
+  // session). Async: cloud mode lists + downloads from Supabase Storage.
   useEffect(() => {
-    setPhotos(loadPhotos(screenId));
+    let cancelled = false;
+    setPhotos([]);
     setOpen(false);
     setViewing(null);
     setError(null);
+    listPhotos(screenId).then(p => { if (!cancelled) setPhotos(p); });
+    return () => { cancelled = true; };
   }, [screenId]);
+
+  async function reload() {
+    setPhotos(await listPhotos(screenId));
+  }
 
   const has = photos.length > 0;
   const full = photos.length >= MAX_PHOTOS;
@@ -69,11 +77,9 @@ export default function ScreenPhotos({ screenId, canDelete }: {
     setBusy(true);
     setError(null);
     try {
-      const url = await fileToDataUrl(file);
-      const next = [...photos, url].slice(0, MAX_PHOTOS);
-      const res = savePhotos(screenId, next);
+      const res = await addPhoto(screenId, file);
       if (!res.ok) { setError(res.error ?? "Couldn't save the photo."); return; }
-      setPhotos(next);
+      await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't add that photo.");
     } finally {
@@ -81,13 +87,14 @@ export default function ScreenPhotos({ screenId, canDelete }: {
     }
   }
 
-  function remove(i: number) {
-    const next = photos.filter((_, j) => j !== i);
-    savePhotos(screenId, next);
-    setPhotos(next);
+  async function remove(i: number) {
+    const target = photos[i];
+    if (!target) return;
     setError(null);
     if (viewing === i) setViewing(null);
     else if (viewing != null && viewing > i) setViewing(viewing - 1);
+    await removePhoto(screenId, target);
+    await reload();
   }
 
   function close() { setOpen(false); setViewing(null); setError(null); }
@@ -144,7 +151,7 @@ export default function ScreenPhotos({ screenId, canDelete }: {
                   style={{ height: 420, border: "1px solid var(--border-panel)", borderRadius: "var(--radius-sm)" }}
                   onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerLeave={panEnd}
                 >
-                  <img src={photos[viewing]} alt="Screen photo" draggable={false}
+                  <img src={photos[viewing].url} alt="Screen photo" draggable={false}
                     style={{ width: `${zoom * 100}%`, display: "block", transform: `rotate(${rotation}deg)`, transformOrigin: "center center" }} />
                 </div>
               </div>
@@ -153,8 +160,8 @@ export default function ScreenPhotos({ screenId, canDelete }: {
               <>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {photos.map((p, i) => (
-                    <div key={i} className="photo-slot">
-                      <img src={p} alt={`Screen photo ${i + 1}`} onClick={() => openViewer(i)} />
+                    <div key={p.name} className="photo-slot">
+                      <img src={p.url} alt={`Screen photo ${i + 1}`} onClick={() => openViewer(i)} />
                       <div className="photo-slot-actions">
                         <button className="btn btn-ghost" style={{ flex: 1, fontSize: 12, padding: "4px 0" }} onClick={() => openViewer(i)}>View</button>
                         {canDelete && (

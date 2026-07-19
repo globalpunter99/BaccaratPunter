@@ -8,12 +8,13 @@ import { configForVersion } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
 
 // Prediction analysis for a library session: how You / Sniper / Grinder
-// would have called each game. Calls now come from the real signal engine
+// would have called each game. Calls come from the real signal engine
 // (game/signals.ts) reading the roads under each entity's profile — a
 // description of what that ruleset would have called on this recorded board,
 // not a claim about independent rounds. The version dropdown selects the
-// profile variant fed to the engine. Money P/L stays mocked until live-session
-// bets are persisted (that needs the backend pass).
+// profile variant fed to the engine. The You "as recorded" lens and the
+// money P/L read the session's REAL recorded plays (session.bets, saved by
+// Live Session) — sessions without recorded plays honestly show none.
 
 const ENTITIES: EntityId[] = ["you", "sniper", "grinder"];
 
@@ -27,35 +28,6 @@ const PROFILE_VERSIONS: Record<EntityId, string[]> = {
   sniper:  ["v1 — as recorded", "v2 — retuned", "v3 — current"],
   grinder: ["v1 — as recorded", "v2 — current"],
 };
-
-// Deterministic pseudo-random from a string seed
-function seededRand(seed: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return () => {
-    h = Math.imul(h ^ (h >>> 15), 2246822519);
-    h = Math.imul(h ^ (h >>> 13), 3266489917);
-    return ((h ^= h >>> 16) >>> 0) / 4294967296;
-  };
-}
-
-// Mock money ledger for the player's actual bets: only a subset of calls
-// carried a stake (the rest were calls with no money down).
-function mockMoney(sessionId: string, preds: (Outcome | null)[], outcomes: Outcome[]) {
-  const rand = seededRand(`${sessionId}|money`);
-  let betWins = 0, betLosses = 0, pl = 0;
-  preds.forEach((p, i) => {
-    if (!p || outcomes[i] === "tie") return;
-    if (rand() > 0.42) return; // money down on ~42% of calls
-    const stake = [50, 100, 200, 500][Math.floor(rand() * 4)];
-    if (p === outcomes[i]) { betWins++; pl += Math.round(stake * (p === "banker" ? 0.95 : 1)); }
-    else { betLosses++; pl -= stake; }
-  });
-  return { betWins, betLosses, betHands: betWins + betLosses, pl };
-}
 
 function statsFor(preds: (Outcome | null)[], outcomes: Outcome[]) {
   let wins = 0, losses = 0, ties = 0, calls = 0;
@@ -158,12 +130,41 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
   // The player's saved profile (localStorage) drives the "You" engine config.
   const youConfig = useMemo(() => loadYouConfig(), []);
 
+  // The player's ACTUAL plays this shoe (bets and stake-0 calls), recorded by
+  // Live Session. Each play's main side becomes the call on that hand; hands
+  // with no play stay null. Sessions with nothing recorded return all-null —
+  // the as-recorded lens then honestly shows zero calls, never invented ones.
+  const recordedPreds = useMemo<(Outcome | null)[]>(() => {
+    const preds: (Outcome | null)[] = outcomes.map(() => null);
+    for (const b of session.bets ?? []) {
+      const side = b.slip.main?.side;
+      if (side === "banker" || side === "player") preds[b.handId - 1] = side;
+    }
+    return preds;
+  }, [session.bets, outcomes]);
+
+  // Real money ledger from the recorded plays (stake-0 calls excluded).
+  const money = useMemo(() => {
+    let pl = 0, betWins = 0, betLosses = 0, betHands = 0;
+    for (const b of session.bets ?? []) {
+      if (b.staked <= 0) continue;
+      betHands++;
+      pl += b.profit;
+      if (b.profit > 0) betWins++;
+      else if (b.profit < 0) betLosses++;
+    }
+    return { pl, betWins, betLosses, betHands };
+  }, [session.bets]);
+
   const predictions = useMemo(() => ({
-    you: predictBoard(outcomes, configForVersion("you", versions.you, youConfig)),
+    // You index 0 = the recorded plays; index 1+ = the system-profile engine.
+    you: versions.you === 0
+      ? recordedPreds
+      : predictBoard(outcomes, configForVersion("you", versions.you, youConfig)),
     sniper: predictBoard(outcomes, configForVersion("sniper", versions.sniper, youConfig)),
     grinder: predictBoard(outcomes, configForVersion("grinder", versions.grinder, youConfig)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [session.id, versions, youConfig]);
+  }), [session.id, versions, youConfig, recordedPreds]);
 
   // Tile-wash bet results always follow the selected You profile
   const youExtras = useMemo(() => outcomes.map((o, i) => {
@@ -225,24 +226,24 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
                     </div>
                   </div>
 
-                  {/* Right: compact P/L box in the empty space (You, as-recorded lens) */}
+                  {/* Right: compact P/L box (You, as-recorded lens) — the REAL
+                      money ledger from the session's recorded bets */}
                   {id === "you" && versions.you === 0 && (() => {
-                    const m = mockMoney(session.id, predictions.you, outcomes);
-                    if (m.betHands === 0) return (
+                    if (money.betHands === 0) return (
                       <div className="pl-box">
                         <div className="pl-box-label">Profit / (Loss)</div>
-                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>No bets</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>No recorded bets</div>
                       </div>
                     );
-                    const won = m.pl >= 0;
+                    const won = money.pl >= 0;
                     return (
                       <div className="pl-box">
                         <div className="pl-box-label">Profit / (Loss)</div>
                         <div className="pl-box-amount" style={{ color: won ? "var(--tie-green)" : "var(--banker-red)" }}>
-                          {won ? `$${m.pl}` : `($${Math.abs(m.pl)})`}
+                          {won ? `$${money.pl}` : `($${Math.abs(money.pl)})`}
                         </div>
                         <div className="pl-box-sub">
-                          {won ? "Won" : "Loss"} · {won ? `${m.betWins} W` : `${m.betLosses} L`} / {m.betHands} bets
+                          {won ? "Won" : "Loss"} · {won ? `${money.betWins} W` : `${money.betLosses} L`} / {money.betHands} bets
                         </div>
                       </div>
                     );

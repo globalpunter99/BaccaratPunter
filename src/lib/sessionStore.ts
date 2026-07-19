@@ -41,6 +41,22 @@ export function addSavedSession(draft: Session): Session {
   return saved;
 }
 
+/**
+ * Persist a finished live session from the Live Session screen. Ids run
+ * L1, L2, … (never colliding with saved or built-in ids). Returns the
+ * stored session.
+ */
+export function addLiveSession(draft: Omit<Session, "id">): Session {
+  const list = loadSavedSessions();
+  const taken = new Set<string>([...list, ...mockSessions].map(s => s.id));
+  let n = 1;
+  while (taken.has(`L${n}`)) n++;
+  const saved: Session = { ...draft, id: `L${n}`, savedAt: new Date().toISOString() };
+  writeSavedSessions([saved, ...list]);
+  pushSession(saved);
+  return saved;
+}
+
 export function deleteSavedSession(id: string): void {
   writeSavedSessions(loadSavedSessions().filter(s => s.id !== id));
 }
