@@ -58,6 +58,10 @@ interface Props {
   // screen. `canDeletePhotos` is granted only in the Library.
   screenId?: string;
   canDeletePhotos?: boolean;
+  // Analyse-only: when a game is highlighted, the Big Road header offers a
+  // "Focus to here" toggle that hides every game after the white tile so the
+  // shoe reads as if it stopped there. Off elsewhere (Live, Practice, Upload).
+  enableFocusView?: boolean;
 }
 
 // ── Markers (naturals, pairs, tigers, dragons) ──────────────────────────────
@@ -756,14 +760,35 @@ function PredictorTable({ outcomes, selectedGame, onClearSelection }: {
 // ── Main export — casino screen layout ───────────────────────────────────────
 export default function RoadsDisplay({
   outcomes, extras, compact = false, betsToggle = true, betsToggleLabel = "Bets", onCycleOutcome, analysisOverlay,
-  screenId, canDeletePhotos,
+  screenId, canDeletePhotos, enableFocusView = false,
 }: Props) {
   // View mode for Big Road + Bead Plate markers:
   // basic = outcomes, ties and naturals only · detailed = + pairs and exotics
   const [viewMode, setViewMode] = useState<"basic" | "detailed">("detailed");
   const [showBetOverlay, setShowBetOverlay] = useState(true);
   const [editingBeads, setEditingBeads] = useState(false);
-  const shownExtras = extras?.map(e => {
+
+  // Cross-road tile highlight: tap a Big Road / Bead Plate tile to light up
+  // every screen's cell for that game. Reset when the shoe changes.
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
+  // Focus view (Analyse only): hide games after the highlighted tile.
+  const [focusView, setFocusView] = useState(false);
+  const selectionActive = selectedGame != null && selectedGame < outcomes.length;
+  const focusActive = enableFocusView && focusView && selectionActive;
+
+  // Effective data the screens render from: sliced to the white tile when
+  // Focus is on, otherwise the whole shoe. Game indices are unchanged within
+  // the slice, so the highlight stays on the (now last) tile.
+  const viewOutcomes = useMemo(
+    () => (focusActive ? outcomes.slice(0, selectedGame! + 1) : outcomes),
+    [focusActive, outcomes, selectedGame],
+  );
+  const viewExtras = useMemo(
+    () => (focusActive && extras ? extras.slice(0, selectedGame! + 1) : extras),
+    [focusActive, extras, selectedGame],
+  );
+
+  const shownExtras = viewExtras?.map(e => {
     if (!e) return e;
     const base = viewMode === "detailed"
       ? { ...e }
@@ -771,22 +796,25 @@ export default function RoadsDisplay({
     if (!showBetOverlay) delete base.betResult;
     return base;
   });
-  const stones = useMemo(() => toBigRoad(outcomes), [outcomes]);
+  const stones = useMemo(() => toBigRoad(viewOutcomes), [viewOutcomes]);
 
-  // Cross-road tile highlight: tap a Big Road / Bead Plate tile to light up
-  // every screen's cell for that game. Reset when the shoe changes.
-  const [selectedGame, setSelectedGame] = useState<number | null>(null);
+  // Reset the highlight when the shoe changes; drop Focus when the highlight
+  // clears so the games always reappear once nothing is selected.
   const outcomesKey = outcomes.join("|");
   useEffect(() => { setSelectedGame(null); }, [outcomesKey]);
+  useEffect(() => { if (selectedGame == null) setFocusView(false); }, [selectedGame]);
   const selectGame = (g: number) => setSelectedGame(prev => (prev === g ? null : g));
+  // Changing any other view mode also exits Focus (and shows every game).
+  const setViewModeExit = (m: "basic" | "detailed") => { setFocusView(false); setViewMode(m); };
+  const toggleBetOverlay = () => { setFocusView(false); setShowBetOverlay(p => !p); };
 
   // Stone index → game index (stones drop ties)
   const stoneToGame = useMemo(() => {
     const arr: number[] = [];
     let si = 0;
-    outcomes.forEach((o, gi) => { if (o !== "tie") arr[si++] = gi; });
+    viewOutcomes.forEach((o, gi) => { if (o !== "tie") arr[si++] = gi; });
     return arr;
-  }, [outcomes]);
+  }, [viewOutcomes]);
 
   // Derived roads with per-mark game mapping
   const bebDet = useMemo(() => deriveRoadDetailed(stones, 1), [stones]);
@@ -819,17 +847,17 @@ export default function RoadsDisplay({
       <RoadSection titleCn="大路" titleEn="Big Road" align="left"
         headerExtra={
           <>
-            <HeaderStats outcomes={outcomes} />
+            <HeaderStats outcomes={viewOutcomes} />
             <span className="view-toggle">
               <button
                 className={`view-toggle-btn ${viewMode === "basic" ? "active" : ""}`}
-                onClick={() => setViewMode("basic")}
+                onClick={() => setViewModeExit("basic")}
               >
                 Basic
               </button>
               <button
                 className={`view-toggle-btn ${viewMode === "detailed" ? "active" : ""}`}
-                onClick={() => setViewMode("detailed")}
+                onClick={() => setViewModeExit("detailed")}
               >
                 Detailed
               </button>
@@ -839,24 +867,38 @@ export default function RoadsDisplay({
                 <button
                   className={`view-toggle-btn ${showBetOverlay ? "active" : ""}`}
                   title="Show/hide your bet results on the tiles"
-                  onClick={() => setShowBetOverlay(p => !p)}
+                  onClick={toggleBetOverlay}
                 >
                   {betsToggleLabel}
                 </button>
               </span>
             )}
             <LegendKey />
-            {/* Far-right group: the Game N highlight key (when active) sits
-                just left of the camera control so the two never overlap. */}
-            {(screenId || bigRoadHasSel) && (
+            {/* Far-right group: the Focus toggle + Game N highlight key (both
+                only while a game is highlighted) sit just left of the camera
+                control so nothing overlaps. */}
+            {(screenId || selectionActive) && (
               <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+                {enableFocusView && selectionActive && (
+                  <span className="view-toggle">
+                    <button
+                      className={`view-toggle-btn ${focusView ? "active" : ""}`}
+                      title={focusView
+                        ? "Show every game again"
+                        : `Hide games after Game ${selectedGame! + 1} to study your next play`}
+                      onClick={() => setFocusView(v => !v)}
+                    >
+                      {focusView ? "Show all" : "Focus to here"}
+                    </button>
+                  </span>
+                )}
                 {selKey(bigRoadHasSel)}
                 {screenId && <ScreenPhotos screenId={screenId} canDelete={canDeletePhotos} />}
               </span>
             )}
           </>
         }>
-        <BigRoad outcomes={outcomes} extras={shownExtras} cellSize={bigCell} analysisOverlay={analysisOverlay}
+        <BigRoad outcomes={viewOutcomes} extras={shownExtras} cellSize={bigCell} analysisOverlay={analysisOverlay}
           selectedGame={selectedGame} onSelectGame={selectGame} />
       </RoadSection>
 
@@ -880,7 +922,7 @@ export default function RoadsDisplay({
         <RoadSection titleCn="珠盘路" titleEn="Bead Plate"
           headerExtra={
             <>
-              <HeaderStats outcomes={outcomes} />
+              <HeaderStats outcomes={viewOutcomes} />
               {onCycleOutcome && (
                 <button
                   className="bead-edit-btn"
@@ -894,7 +936,7 @@ export default function RoadsDisplay({
           }
           selectionKey={selKey(beadHasSel)}>
           <BeadPlate
-            outcomes={outcomes}
+            outcomes={viewOutcomes}
             extras={shownExtras}
             cellSize={bigCell}
             onCycle={editingBeads ? onCycleOutcome : undefined}
@@ -903,13 +945,13 @@ export default function RoadsDisplay({
           />
         </RoadSection>
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-          <StatsPanel outcomes={outcomes} />
+          <StatsPanel outcomes={viewOutcomes} />
           <PredictorTable
-            outcomes={outcomes}
+            outcomes={viewOutcomes}
             selectedGame={hasSel ? selectedGame : null}
             onClearSelection={() => setSelectedGame(null)}
           />
-          <SideBetCounts extras={extras} />
+          <SideBetCounts extras={viewExtras} />
         </div>
       </div>
     </div>

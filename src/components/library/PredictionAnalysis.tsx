@@ -288,6 +288,7 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
           : undefined}
         screenId={`session-${session.id}`}
         canDeletePhotos
+        enableFocusView
       />
     </div>
   );
