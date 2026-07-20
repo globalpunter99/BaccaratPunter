@@ -923,43 +923,45 @@ select.input { cursor: pointer; }
 }
 
 /* Stats panel — casino style */
+/* Sized so the Games/Banker/Player/Tie block, the predictor table and a
+   6-row x 2-column side-bet counter sit side by side on one desktop row. */
 .stats-panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 14px 18px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
+  gap: 7px;
 }
 .stats-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 17px;
+  gap: 12px;
+  font-size: 14px;
 }
-.stats-row .stats-label { min-width: 110px; }
+.stats-row .stats-label { min-width: 76px; }
 .stats-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   color: var(--text-dim);
 }
-.stats-value { font-size: 22px; font-weight: 700; }
+.stats-value { font-size: 18px; font-weight: 700; }
 .stats-value.games  { color: var(--gold, #e8c34a); }
 .stats-value.banker { color: var(--banker-red); }
 .stats-value.player { color: var(--player-blue); }
 .stats-value.tie    { color: var(--tie-green); }
 .stats-dot {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
   line-height: 1;
@@ -1132,18 +1134,18 @@ select.input { cursor: pointer; }
   font-weight: 700;
 }
 
-/* Side-bet counters beside the predictor table. All 12 bets plus Natural, so
-   they run in two columns to stay the height of the roads panel. */
+/* Side-bet counters beside the predictor table: Natural plus the 11 bets
+   worth counting, laid out 6 rows x 2 columns. */
 .side-bet-list {
   display: grid;
   grid-auto-flow: column;
-  grid-template-rows: repeat(7, auto);
+  grid-template-rows: repeat(6, auto);
   column-gap: 16px;
   row-gap: 6px;
   margin-top: 18px; /* aligns with predictor table top */
 }
 @media (max-width: 620px) {
-  .side-bet-list { grid-template-rows: repeat(13, auto); grid-auto-flow: row; }
+  .side-bet-list { grid-template-rows: repeat(12, auto); grid-auto-flow: row; }
 }
 .stats-side-item {
   display: flex;

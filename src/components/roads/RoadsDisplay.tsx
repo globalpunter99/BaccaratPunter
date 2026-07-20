@@ -628,6 +628,11 @@ function SideBetCounts({ outcomes, extras }: {
     hands.filter(h => sideBetResult(type, h, DEFAULT_PAYOUTS).won).length;
   const naturals = (extras ?? []).filter(e => e?.natural).length;
 
+  // Any Tiger is still placeable on the bet slip, but it adds nothing to
+  // count: it wins on exactly the hands Small Tiger and Big Tiger already
+  // record between them. Dropping it leaves 12 counters — a clean 6 x 2.
+  const counted = SIDE_BET_TYPES.filter(t => t !== "anyTiger");
+
   const icon: Partial<Record<SideBetType, React.ReactNode>> = {
     tie: <span className="stats-dot tie-dot inline">和</span>,
     bPair: <span className="marker-pair banker-pair inline" />,
@@ -635,7 +640,6 @@ function SideBetCounts({ outcomes, extras }: {
     anyPair: <span className="marker-pair any-pair inline" />,
     smlTiger: <span style={{ fontSize: 11 }}>🐯</span>,
     bigTiger: <span style={{ fontSize: 14 }}>🐯</span>,
-    anyTiger: <span style={{ fontSize: 12 }}>🐯</span>,
     tigerTie: <span className="marker-tietotal tiger inline">6</span>,
     smlDragon: <DragonIcon size={12} />,
     bigDragon: <DragonIcon size={15} big />,
@@ -648,7 +652,7 @@ function SideBetCounts({ outcomes, extras }: {
       <span className="stats-side-item">
         <b className="marker-natural inline">N</b> Natural <b>{naturals}</b>
       </span>
-      {SIDE_BET_TYPES.map(type => (
+      {counted.map(type => (
         <span key={type} className="stats-side-item">
           {icon[type]} {SIDE_BET_LABELS[type]} <b>{hits(type)}</b>
         </span>
@@ -1012,7 +1016,9 @@ export default function RoadsDisplay({
             onSelectGame={editingBeads ? undefined : selectGame}
           />
         </RoadSection>
-        <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+        {/* Stats block, predictor table and side-bet counters share one row on
+            a desktop; they wrap only once the panel is genuinely too narrow. */}
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
           <StatsPanel outcomes={viewOutcomes} />
           <PredictorTable
             outcomes={viewOutcomes}
