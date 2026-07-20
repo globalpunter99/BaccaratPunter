@@ -94,6 +94,27 @@ const shoe2Outcomes: Outcome[] = [
   "banker","player","banker","player","player","banker","player","banker",
 ];
 
+// A deliberately chop-heavy shoe for reviewing the roads at full width: run
+// lengths are mostly 1-2, so 84 hands produce ~55 Big Road columns — well past
+// the 36-column default — and the derived roads run longer still. Use it to
+// check the side-scroll indicators on every road.
+const wideShoeRuns = [
+  1, 1, 2, 1, 1, 1, 3, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 4, 1,
+  1, 2, 1, 1, 1, 1, 3, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 5, 1,
+  1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 3, 1, 1, 1, 2, 1,
+];
+
+const wideShoeOutcomes: Outcome[] = (() => {
+  const out: Outcome[] = [];
+  wideShoeRuns.forEach((len, i) => {
+    const side: Outcome = i % 2 === 0 ? "banker" : "player";
+    for (let n = 0; n < len; n++) out.push(side);
+  });
+  // A few ties sprinkled in — they annotate stones rather than start columns
+  [12, 31, 58].forEach(i => out.splice(i, 0, "tie"));
+  return out;
+})();
+
 export const mockSessions: Session[] = [
   {
     id: "s1",
@@ -172,6 +193,34 @@ export const mockSessions: Session[] = [
       natural: false,
     })),
     notes: "Uploaded from bead plate photo",
+  },
+  {
+    // Design reference shoe — see `wideShoeOutcomes`. Every road overflows its
+    // default width, so the scroll dots and the widened Cockroach bands can be
+    // reviewed. Markers are spread across the shoe so every side-bet counter
+    // has something to show.
+    id: "s5",
+    date: "2026-07-18",
+    venue: "Design Reference",
+    tableNumber: "Wide Shoe Mockup",
+    type: "extra",
+    hands: wideShoeOutcomes.map((outcome, i) => ({
+      id: i + 1,
+      outcome,
+      bankerPair: i % 17 === 4,
+      playerPair: i % 19 === 9,
+      natural: i % 7 === 2,
+      variant:
+        i === 6 ? "sml-tiger" :
+        i === 24 ? "lge-tiger" :
+        i === 40 ? "sml-dragon" :
+        i === 55 ? "big-dragon" :
+        i === 68 ? "dragontiger-4" :
+        i === 74 ? "dragontiger-6" : undefined,
+      tieTotal:
+        outcome === "tie" ? (i < 20 ? 6 : i < 45 ? 7 : 4) : undefined,
+    })),
+    notes: "Mockup: extra-wide shoe for reviewing road column overflow.",
   },
 ];
 

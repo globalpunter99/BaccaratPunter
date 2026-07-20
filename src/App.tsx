@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./index.css";
 import LiveSession from "./components/session/LiveSession";
 import SessionLibrary from "./components/library/SessionLibrary";
@@ -31,9 +31,79 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "settings",        label: "Settings",        group: "Help" },
 ];
 
+/** True while the viewport is narrower than `px` — drives the phone nav menu. */
+function useNarrow(px: number): boolean {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(`(max-width: ${px}px)`).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${px}px)`);
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    // `change` alone is enough in a normal browser, but some embedded views
+    // resize without firing it — `resize` is the reliable backstop.
+    mq.addEventListener("change", sync);
+    window.addEventListener("resize", sync);
+    return () => {
+      mq.removeEventListener("change", sync);
+      window.removeEventListener("resize", sync);
+    };
+  }, [px]);
+  return narrow;
+}
+
+// Phone nav: the tab strip overflows below ~700px, so it collapses into a
+// single labelled button that drops the full list down.
+function NavMenu({
+  nav, tab, onPick,
+}: { nav: typeof NAV; tab: Tab; onPick: (t: Tab) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = nav.find(n => n.id === tab);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div className="nav-menu" ref={ref}>
+      <button
+        className="nav-menu-btn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className="nav-menu-bars">☰</span>
+        <span className="nav-menu-label">{current?.label ?? "Menu"}</span>
+        <span className="nav-menu-caret">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <div className="nav-menu-list" role="menu">
+          {nav.map(n => (
+            <button
+              key={n.id}
+              role="menuitem"
+              className={`nav-menu-item${tab === n.id ? " active" : ""}`}
+              onClick={() => { onPick(n.id); setOpen(false); }}
+            >
+              {n.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppShell() {
   const { loading, userId, localMode, isSuperAdmin, profile, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>("live");
+  const narrow = useNarrow(700);
 
   // Cloud mode: wait for the session check, then gate behind sign-in.
   if (!localMode) {
@@ -71,17 +141,21 @@ function AppShell() {
           BaccaratPunter
           <span>v0.1 prototype</span>
         </div>
-        <nav className="nav-tabs">
-          {nav.map(n => (
-            <button
-              key={n.id}
-              className={`nav-tab${tab === n.id ? " active" : ""}`}
-              onClick={() => setTab(n.id)}
-            >
-              {n.label}
-            </button>
-          ))}
-        </nav>
+        {narrow ? (
+          <NavMenu nav={nav} tab={tab} onPick={setTab} />
+        ) : (
+          <nav className="nav-tabs">
+            {nav.map(n => (
+              <button
+                key={n.id}
+                className={`nav-tab${tab === n.id ? " active" : ""}`}
+                onClick={() => setTab(n.id)}
+              >
+                {n.label}
+              </button>
+            ))}
+          </nav>
+        )}
         {!localMode && userId && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", flexShrink: 0 }}>
             <span className="header-user-name" style={{ fontSize: 12, color: "var(--text-muted)" }}>

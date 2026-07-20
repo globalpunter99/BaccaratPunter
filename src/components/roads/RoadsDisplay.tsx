@@ -6,6 +6,11 @@ import {
   placeBigRoad, placeMarks, deriveRoadDetailed,
   type RoadMark, type PlacedCell, type BigRoadStone,
 } from "../../game/roads";
+import {
+  DEFAULT_PAYOUTS, SIDE_BET_LABELS, SIDE_BET_TYPES, sideBetResult,
+  type HandResultForSettle, type SideBetType,
+} from "../../game/payouts";
+import RoadScroller from "./RoadScroller";
 import ScreenPhotos from "./ScreenPhotos";
 
 // Extra elements of a hand beyond the outcome, displayed as markers on
@@ -485,16 +490,21 @@ function DerivedRoad({
 
 // Cockroach Road — two stacked bands. Sticks travel left to right; when the
 // top band runs out of columns the marks continue on the bottom band
-// (matches casino display behaviour).
+// (matches casino display behaviour). A long shoe can outgrow both bands, so
+// the bands widen to hold every mark and the section scrolls sideways —
+// nothing is ever dropped off the end.
 function CockroachBands({
-  marks, markGames, cellSize, bandCols, selectedGame,
+  marks, markGames, cellSize, minBandCols, selectedGame,
 }: {
-  marks: RoadMark[]; markGames?: number[]; cellSize: number; bandCols: number;
+  marks: RoadMark[]; markGames?: number[]; cellSize: number; minBandCols: number;
   selectedGame?: number | null;
 }) {
   const placed = placeMarks(marks, ROWS);
   const gameOf = new Map<string, number>();
   if (markGames) placed.forEach((p, k) => gameOf.set(`${p.col},${p.row}`, markGames[k]));
+
+  const usedCols = placed.length ? Math.max(...placed.map(p => p.col)) + 1 : 0;
+  const bandCols = Math.max(minBandCols, Math.ceil(usedCols / 2));
 
   const topCells = placed.filter(p => p.col < bandCols);
   const bottomCells = placed.filter(p => p.col >= bandCols).map(p => ({ ...p, col: p.col - bandCols }));
@@ -549,10 +559,12 @@ function HeaderStats({ outcomes }: { outcomes: Outcome[] }) {
 // ── Section wrapper ──────────────────────────────────────────────────────────
 function RoadSection({
   titleCn, titleEn, children, style, align = "center", headerExtra, selectionKey,
+  followKey,
 }: {
   titleCn: string; titleEn: string; children: React.ReactNode;
   style?: React.CSSProperties; align?: "left" | "center";
   headerExtra?: React.ReactNode; selectionKey?: React.ReactNode;
+  followKey?: string | number;
 }) {
   return (
     <div className="road-section" style={style}>
@@ -565,7 +577,7 @@ function RoadSection({
         {headerExtra && <span className="header-extra">{headerExtra}</span>}
         {selectionKey && <span className="road-sel-key">{selectionKey}</span>}
       </div>
-      <div style={{ overflowX: "auto" }}>{children}</div>
+      <RoadScroller followKey={followKey}>{children}</RoadScroller>
     </div>
   );
 }
@@ -597,18 +609,50 @@ function StatsPanel({ outcomes }: { outcomes: Outcome[] }) {
   );
 }
 
-// Exotic side-bet counters, stacked vertically beside the predictor table.
-function SideBetCounts({ extras }: { extras?: (HandExtra | undefined)[] }) {
-  const count = (pred: (e: HandExtra) => boolean) =>
-    (extras ?? []).filter((e): e is HandExtra => !!e && pred(e)).length;
+// Side-bet counters, stacked vertically beside the predictor table.
+// Every bet the app can take is listed, counted with the same predicate the
+// pay engine settles by (`sideBetResult`) so a row can never disagree with
+// what a bet on that hand would actually have paid. Natural is included on
+// top: it isn't a bet, but it's a Big Road marker players count.
+function SideBetCounts({ outcomes, extras }: {
+  outcomes: Outcome[]; extras?: (HandExtra | undefined)[];
+}) {
+  const hands: HandResultForSettle[] = outcomes.map((outcome, i) => ({
+    outcome,
+    bankerPair: extras?.[i]?.bankerPair,
+    playerPair: extras?.[i]?.playerPair,
+    variant: extras?.[i]?.variant,
+    tieTotal: extras?.[i]?.tieTotal,
+  }));
+  const hits = (type: SideBetType) =>
+    hands.filter(h => sideBetResult(type, h, DEFAULT_PAYOUTS).won).length;
+  const naturals = (extras ?? []).filter(e => e?.natural).length;
+
+  const icon: Partial<Record<SideBetType, React.ReactNode>> = {
+    tie: <span className="stats-dot tie-dot inline">和</span>,
+    bPair: <span className="marker-pair banker-pair inline" />,
+    pPair: <span className="marker-pair player-pair inline" />,
+    anyPair: <span className="marker-pair any-pair inline" />,
+    smlTiger: <span style={{ fontSize: 11 }}>🐯</span>,
+    bigTiger: <span style={{ fontSize: 14 }}>🐯</span>,
+    anyTiger: <span style={{ fontSize: 12 }}>🐯</span>,
+    tigerTie: <span className="marker-tietotal tiger inline">6</span>,
+    smlDragon: <DragonIcon size={12} />,
+    bigDragon: <DragonIcon size={15} big />,
+    dragonTie: <span className="marker-tietotal dragon inline">7</span>,
+    dragonTiger: <span className="marker-variant dragontiger inline" style={{ width: 13, height: 13 }}>#</span>,
+  };
+
   return (
     <div className="side-bet-list">
-      <span className="stats-side-item"><b className="marker-natural inline">N</b> Natural <b>{count(e => !!e.natural)}</b></span>
-      <span className="stats-side-item"><span className="marker-pair banker-pair inline" /> B Pair <b>{count(e => !!e.bankerPair)}</b></span>
-      <span className="stats-side-item"><span className="marker-pair player-pair inline" /> P Pair <b>{count(e => !!e.playerPair)}</b></span>
-      <span className="stats-side-item">🐯 Tiger <b>{count(e => e.variant === "sml-tiger" || e.variant === "lge-tiger")}</b></span>
-      <span className="stats-side-item"><DragonIcon size={14} /> Dragon <b>{count(e => e.variant === "sml-dragon" || e.variant === "big-dragon")}</b></span>
-      <span className="stats-side-item"><span className="marker-variant dragontiger inline" style={{ width: 13, height: 13 }}>#</span> D-Tiger <b>{count(e => !!e.variant?.startsWith("dragontiger-"))}</b></span>
+      <span className="stats-side-item">
+        <b className="marker-natural inline">N</b> Natural <b>{naturals}</b>
+      </span>
+      {SIDE_BET_TYPES.map(type => (
+        <span key={type} className="stats-side-item">
+          {icon[type]} {SIDE_BET_LABELS[type]} <b>{hits(type)}</b>
+        </span>
+      ))}
     </div>
   );
 }
@@ -845,6 +889,7 @@ export default function RoadsDisplay({
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Row 1 — Big Road full width */}
       <RoadSection titleCn="大路" titleEn="Big Road" align="left"
+        followKey={stones.length}
         headerExtra={
           <>
             <HeaderStats outcomes={viewOutcomes} />
@@ -905,21 +950,25 @@ export default function RoadsDisplay({
       {/* Row 2 — left: Big Eye above Small Road · right: Cockroach two bands */}
       <div className="roads-mid-grid">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <RoadSection titleCn="大眼仔" titleEn="Big Eye Boy" selectionKey={selKey(bebHasSel)}>
+          <RoadSection titleCn="大眼仔" titleEn="Big Eye Boy" selectionKey={selKey(bebHasSel)}
+            followKey={beb.length}>
             <DerivedRoad marks={beb} markGames={bebGames} cellSize={smallCell} markStyle="donut" selectedGame={selectedGame} />
           </RoadSection>
-          <RoadSection titleCn="小路" titleEn="Small Road" selectionKey={selKey(srHasSel)}>
+          <RoadSection titleCn="小路" titleEn="Small Road" selectionKey={selKey(srHasSel)}
+            followKey={sr.length}>
             <DerivedRoad marks={sr} markGames={srGames} cellSize={smallCell} markStyle="solid" selectedGame={selectedGame} />
           </RoadSection>
         </div>
-        <RoadSection titleCn="曱甴路" titleEn="Cockroach Road" selectionKey={selKey(cpHasSel)}>
-          <CockroachBands marks={cp} markGames={cpGames} cellSize={smallCell} bandCols={DERIVED_MIN_COLS} selectedGame={selectedGame} />
+        <RoadSection titleCn="曱甴路" titleEn="Cockroach Road" selectionKey={selKey(cpHasSel)}
+          followKey={cp.length}>
+          <CockroachBands marks={cp} markGames={cpGames} cellSize={smallCell} minBandCols={DERIVED_MIN_COLS} selectedGame={selectedGame} />
         </RoadSection>
       </div>
 
       {/* Row 3 — Bead Plate left · stats panel right */}
       <div className="roads-bottom-grid">
         <RoadSection titleCn="珠盘路" titleEn="Bead Plate"
+          followKey={viewOutcomes.length}
           headerExtra={
             <>
               <HeaderStats outcomes={viewOutcomes} />
@@ -951,7 +1000,7 @@ export default function RoadsDisplay({
             selectedGame={hasSel ? selectedGame : null}
             onClearSelection={() => setSelectedGame(null)}
           />
-          <SideBetCounts extras={viewExtras} />
+          <SideBetCounts outcomes={viewOutcomes} extras={viewExtras} />
         </div>
       </div>
     </div>

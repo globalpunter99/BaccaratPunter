@@ -86,6 +86,70 @@ export interface Settlement {
   lines: string[];  // human-readable per-bet outcomes
 }
 
+/** Every side bet the app can take, in display order. */
+export const SIDE_BET_TYPES: SideBetType[] = [
+  "tie",
+  "bPair", "pPair", "anyPair",
+  "smlTiger", "bigTiger", "anyTiger", "tigerTie",
+  "smlDragon", "bigDragon", "dragonTie",
+  "dragonTiger",
+];
+
+/** Short labels used on bet slips and the side-bet counter. */
+export const SIDE_BET_LABELS: Record<SideBetType, string> = {
+  tie: "Tie",
+  bPair: "B Pair", pPair: "P Pair", anyPair: "Any Pair",
+  smlTiger: "Sml Tiger", bigTiger: "Big Tiger", anyTiger: "Any Tiger", tigerTie: "Tiger Tie",
+  smlDragon: "Sml Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",
+  dragonTiger: "D-Tiger",
+};
+
+/**
+ * Does `type` win on this hand, and at what rate? Single source of truth for
+ * both settlement and the side-bet counters, so the two can never disagree.
+ * Rate is 0 when the bet loses.
+ */
+export function sideBetResult(
+  type: SideBetType, hand: HandResultForSettle, table: PayoutTable,
+): { won: boolean; rate: number } {
+  const win = (rate: number) => ({ won: true, rate });
+  const lose = { won: false, rate: 0 };
+  const v = hand.variant;
+  switch (type) {
+    case "tie":
+      return hand.outcome === "tie" ? win(table.tie) : lose;
+    case "bPair":
+      return hand.bankerPair ? win(table.bPair) : lose;
+    case "pPair":
+      return hand.playerPair ? win(table.pPair) : lose;
+    case "anyPair":
+      return hand.bankerPair || hand.playerPair ? win(table.anyPair) : lose;
+    case "anyTiger":
+      return v === "sml-tiger" || v === "lge-tiger" ? win(table.anyTiger) : lose;
+    case "smlTiger":
+      return v === "sml-tiger" ? win(table.smlTiger) : lose;
+    case "bigTiger":
+      return v === "lge-tiger" ? win(table.bigTiger) : lose;
+    case "tigerTie":
+      return hand.outcome === "tie" && hand.tieTotal === 6 ? win(table.tigerTie) : lose;
+    case "smlDragon":
+      // Dragon bets also pay in a Dragon Tiger situation. 4 cards means the
+      // Player won on two cards (small); 5 cards settles as small
+      // (conservative — venue rules vary).
+      return v === "sml-dragon" || v === "dragontiger-4" || v === "dragontiger-5"
+        ? win(table.smlDragon) : lose;
+    case "bigDragon":
+      return v === "big-dragon" || v === "dragontiger-6" ? win(table.bigDragon) : lose;
+    case "dragonTie":
+      return hand.outcome === "tie" && hand.tieTotal === 7 ? win(table.dragonTie) : lose;
+    case "dragonTiger":
+      if (v === "dragontiger-4") return win(table.dragonTiger4);
+      if (v === "dragontiger-5") return win(table.dragonTiger5);
+      if (v === "dragontiger-6") return win(table.dragonTiger6);
+      return lose;
+  }
+}
+
 export function totalStake(slip: BetSlip): number {
   return (slip.main?.stake ?? 0)
     + Object.values(slip.side).reduce((s, v) => s + (v ?? 0), 0);
@@ -136,58 +200,8 @@ export function settle(
   // ── Side bets ──
   const sideBet = (type: SideBetType, stake: number) => {
     staked += stake;
-    let rate = 0;
-    let won = false;
-    switch (type) {
-      case "bPair":
-        won = !!hand.bankerPair; rate = table.bPair; break;
-      case "pPair":
-        won = !!hand.playerPair; rate = table.pPair; break;
-      case "tie":
-        if (hand.outcome === "tie") { won = true; rate = table.tie; }
-        break;
-      case "anyPair":
-        if (hand.bankerPair || hand.playerPair) { won = true; rate = table.anyPair; }
-        break;
-      case "anyTiger":
-        if (hand.variant === "sml-tiger" || hand.variant === "lge-tiger") { won = true; rate = table.anyTiger; }
-        break;
-      case "smlTiger":
-        if (hand.variant === "sml-tiger") { won = true; rate = table.smlTiger; }
-        break;
-      case "bigTiger":
-        if (hand.variant === "lge-tiger") { won = true; rate = table.bigTiger; }
-        break;
-      case "tigerTie":
-        if (hand.outcome === "tie" && hand.tieTotal === 6) { won = true; rate = table.tigerTie; }
-        break;
-      case "smlDragon":
-        // Dragon bets also pay in a Dragon Tiger situation. 4 cards means
-        // the Player won on two cards (small); 5 cards settles as small
-        // (conservative — venue rules vary).
-        if (hand.variant === "sml-dragon"
-          || hand.variant === "dragontiger-4"
-          || hand.variant === "dragontiger-5") { won = true; rate = table.smlDragon; }
-        break;
-      case "bigDragon":
-        if (hand.variant === "big-dragon" || hand.variant === "dragontiger-6") { won = true; rate = table.bigDragon; }
-        break;
-      case "dragonTie":
-        if (hand.outcome === "tie" && hand.tieTotal === 7) { won = true; rate = table.dragonTie; }
-        break;
-      case "dragonTiger":
-        if (hand.variant === "dragontiger-4") { won = true; rate = table.dragonTiger4; }
-        if (hand.variant === "dragontiger-5") { won = true; rate = table.dragonTiger5; }
-        if (hand.variant === "dragontiger-6") { won = true; rate = table.dragonTiger6; }
-        break;
-    }
-    const label: Record<SideBetType, string> = {
-      tie: "Tie",
-      bPair: "B Pair", pPair: "P Pair", anyPair: "Any Pair",
-      smlTiger: "Sml Tiger", bigTiger: "Big Tiger", anyTiger: "Any Tiger", tigerTie: "Tiger Tie",
-      smlDragon: "Sml Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",
-      dragonTiger: "D-Tiger",
-    };
+    const { won, rate } = sideBetResult(type, hand, table);
+    const label = SIDE_BET_LABELS;
     if (won) {
       const win = stake * rate;
       returned += stake + win;

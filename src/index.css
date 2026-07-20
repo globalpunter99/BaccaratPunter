@@ -125,6 +125,64 @@ body {
   border-bottom: 2px solid var(--gold);
 }
 
+/* Phone nav: the tab strip collapses into a drop-down under ~700px */
+.nav-menu {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.nav-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-sm);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nav-menu-bars { font-size: 14px; color: var(--text-secondary); }
+.nav-menu-label {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-menu-caret { font-size: 10px; color: var(--text-muted); }
+.nav-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  max-width: 260px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  padding: 4px;
+  z-index: 200;
+}
+.nav-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nav-menu-item:hover { background: var(--bg-panel); }
+.nav-menu-item.active { background: var(--bg-panel); color: var(--gold); font-weight: 600; }
+
 .app-content {
   flex: 1;
   overflow-y: auto;
@@ -910,6 +968,13 @@ select.input { cursor: pointer; }
 .stats-dot.player-dot { background: var(--player-blue); }
 .stats-dot.tie-dot    { background: var(--tie-green); }
 
+/* A cell the photo detector located but couldn't read — the user must set it */
+.road-stone.unread {
+  background: transparent;
+  border: 2px dashed var(--gold);
+  color: var(--gold);
+}
+
 /* Big Road stones — hollow rings, authentic Macau style */
 .road-stone.big-road-banker {
   background: transparent;
@@ -1055,12 +1120,30 @@ select.input { cursor: pointer; }
   flex-shrink: 0;
 }
 
-/* Side-bet counters beside the predictor table */
+/* Any Pair marker — split disc, banker red over player blue */
+.marker-pair.any-pair {
+  background: linear-gradient(135deg, var(--banker-red) 50%, var(--player-blue) 50%);
+}
+/* Tie counter dot, shrunk from the 30px stats-panel disc to list size */
+.stats-dot.inline {
+  width: 13px;
+  height: 13px;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+/* Side-bet counters beside the predictor table. All 12 bets plus Natural, so
+   they run in two columns to stay the height of the roads panel. */
 .side-bet-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, auto);
+  column-gap: 16px;
+  row-gap: 6px;
   margin-top: 18px; /* aligns with predictor table top */
+}
+@media (max-width: 620px) {
+  .side-bet-list { grid-template-rows: repeat(13, auto); grid-auto-flow: row; }
 }
 .stats-side-item {
   display: flex;
@@ -1519,6 +1602,41 @@ select.input { cursor: pointer; }
   gap: 7px;
   position: relative;
 }
+/* Roads scroll sideways once a shoe outgrows the panel. No scrollbar — space
+   is tight — just a small dot on the edge that has more columns behind it.
+   The dot is clickable to nudge the road along. */
+.road-scroller { position: relative; }
+.road-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* old Edge */
+  overscroll-behavior-x: contain;
+}
+.road-scroll::-webkit-scrollbar { display: none; }
+
+.road-more {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-50%);
+  transition: opacity 0.18s;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  z-index: 3;
+}
+.road-more.left  { left: 4px; }
+.road-more.right { right: 4px; }
+.road-more.on { opacity: 0.75; visibility: visible; }
+.road-more.on:hover { opacity: 1; }
+
 .road-section-header.align-center { justify-content: center; }
 .road-section-header.align-left   { justify-content: flex-start; }
 .road-section-title-en {

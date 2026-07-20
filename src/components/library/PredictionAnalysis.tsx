@@ -167,11 +167,23 @@ export default function PredictionAnalysis({ session }: { session: Session }) {
   }), [session.id, versions, youConfig, recordedPreds]);
 
   // Tile-wash bet results always follow the selected You profile
-  const youExtras = useMemo(() => outcomes.map((o, i) => {
+  // Each hand's recorded markers (naturals, pairs, tigers/dragons, tie totals)
+  // carried through so the roads and the side-bet counters show what was
+  // actually dealt, with You's per-hand win/loss wash layered on top.
+  const youExtras = useMemo(() => session.hands.map((h, i) => {
     const p = predictions.you[i];
-    if (!p || o === "tie") return undefined;
-    return { betResult: (p === o ? "win" : "loss") as "win" | "loss" };
-  }), [predictions, outcomes]);
+    const betResult = p && h.outcome !== "tie"
+      ? ((p === h.outcome ? "win" : "loss") as "win" | "loss")
+      : undefined;
+    return {
+      natural: h.natural,
+      bankerPair: h.bankerPair,
+      playerPair: h.playerPair,
+      variant: h.variant,
+      tieTotal: h.tieTotal,
+      betResult,
+    };
+  }), [predictions, session.hands]);
 
   return (
     <div>

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { supabase, cloudEnabled } from "./supabase";
 import { hydrateFromCloud, setCloudUser } from "./cloud";
+import { clearActivity, isIdleExpired, markActive, watchActivity } from "./activity";
 
 export interface Profile {
   id: string;
@@ -77,17 +78,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         alert("This account has been disabled. Contact the administrator.");
         return;
       }
+      markActive(true);
       setUserId(id);
       setProfile(p);
       setLoading(false);
     }
 
-    supabase.auth.getSession().then(({ data }) => adopt(data.session?.user.id ?? null));
+    supabase.auth.getSession().then(async ({ data }) => {
+      const id = data.session?.user.id ?? null;
+      // A persisted session is honoured unless the user has been idle past
+      // the 24-hour limit, in which case it is dropped before the app mounts.
+      if (id && isIdleExpired()) {
+        clearActivity();
+        await supabase!.auth.signOut();
+        adopt(null);
+        return;
+      }
+      adopt(id);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       adopt(session?.user.id ?? null);
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
   }, []);
+
+  // Idle clock: only runs while signed in, and signs the user out after 24
+  // hours with no interaction.
+  useEffect(() => {
+    if (!supabase || !userId) return;
+    return watchActivity(() => {
+      clearActivity();
+      void signOut();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) return "Auth not configured";
@@ -108,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     if (!supabase) return;
+    clearActivity();
     await supabase.auth.signOut();
     // Drop the per-user cache so the next account doesn't inherit it.
     ["bp-saved-sessions", "bp-favourites", "bp-hidden-sessions",

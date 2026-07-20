@@ -42,6 +42,10 @@ manual checks.
 ```
 src/
   game/baccarat.ts    Rules engine: scoring + third-card draw rules (pure)
+  game/beadExtract.ts Bead-plate photo reader: pure pixel → result-sequence
+                      detector (colour blobs → grid fit → column-major read).
+                      Reports failure rather than guessing; browser glue that
+                      feeds it a canvas is in `lib/beadPhoto.ts`.
   game/roads.ts       Road derivation: Bead Plate, Big Road, and the three
                       derived roads (Big Eye Boy / Small Road / Cockroach
                       Pig via `deriveRoad(stones, lookback)`). Pure functions
@@ -104,7 +108,15 @@ Built and working:
   (account, casinos → game types → odds), Stats, Guide.
 - Real signal/profile engine in `game/signals.ts` + `game/profile.ts`
   (walk-forward, descriptive of a ruleset — never a prediction claim).
-- Responsive across phone/tablet/desktop (verified 375 / 768 / 1366).
+- Responsive across phone/tablet/desktop (verified 375 / 768 / 1366); the nav
+  tab strip collapses to a drop-down menu below 700px.
+- Upload Session runs the real photo detector — it extracts the shoe and saves
+  it to the Library (ids `U1`, `U2`, …), or refuses the photo outright.
+- Roads grow columns without limit and scroll sideways; overflow is signalled
+  by a small gold dot on the edge that has more columns (no scrollbar, to save
+  vertical space). Mock session `s5` "Design Reference" is a deliberately
+  wide shoe for reviewing that layout.
+- Signed-in users stay signed in until 24h of inactivity (`lib/activity.ts`).
 
 Open items (nothing blocking):
 - Practice saves don't record per-hand bets/calls yet, so their

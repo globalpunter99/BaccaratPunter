@@ -57,6 +57,22 @@ export function addLiveSession(draft: Omit<Session, "id">): Session {
   return saved;
 }
 
+/**
+ * Persist a shoe extracted from a bead-plate photo. Ids run U1, U2, … so an
+ * uploaded shoe is distinguishable from a live one (L1) or a practice save
+ * (`<id>-P1`) at a glance.
+ */
+export function addUploadedSession(draft: Omit<Session, "id">): Session {
+  const list = loadSavedSessions();
+  const taken = new Set<string>([...list, ...mockSessions].map(s => s.id));
+  let n = 1;
+  while (taken.has(`U${n}`)) n++;
+  const saved: Session = { ...draft, id: `U${n}`, savedAt: new Date().toISOString() };
+  writeSavedSessions([saved, ...list]);
+  pushSession(saved);
+  return saved;
+}
+
 export function deleteSavedSession(id: string): void {
   writeSavedSessions(loadSavedSessions().filter(s => s.id !== id));
 }

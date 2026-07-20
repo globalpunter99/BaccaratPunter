@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
 import {
-  settle, totalStake,
+  settle, totalStake, SIDE_BET_LABELS, SIDE_BET_TYPES,
   type BetSlip, type MainSide, type SideBetType, type Settlement,
 } from "../../game/payouts";
 import { loadPayoutSettings, tableForGame } from "../../lib/payoutSettings";
@@ -769,15 +769,7 @@ export default function LiveSession() {
                 </button>
                 {sideBetMode && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                    {([
-                      ["tie", "Tie"],
-                      ["bPair", "B Pair"], ["pPair", "P Pair"],
-                      ["anyPair", "Any Pair"], ["anyTiger", "Any Tiger"],
-                      ["smlTiger", "Sml Tiger"], ["bigTiger", "Big Tiger"],
-                      ["smlDragon", "Sml Dragon"], ["bigDragon", "Big Dragon"],
-                      ["tigerTie", "Tiger Tie"], ["dragonTie", "Dragon Tie"],
-                      ["dragonTiger", "D-Tiger"],
-                    ] as [SideBetType, string][]).map(([type, label]) => (
+                    {SIDE_BET_TYPES.map(type => { const label = SIDE_BET_LABELS[type]; return (
                       <div key={type} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 62, flexShrink: 0 }}>{label}</span>
                         <input
@@ -791,7 +783,7 @@ export default function LiveSession() {
                           }}
                         />
                       </div>
-                    ))}
+                    ); })}
                   </div>
                 )}
               </div>

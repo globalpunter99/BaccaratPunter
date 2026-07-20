@@ -1,23 +1,22 @@
 import { useRef, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
+import type { BeadCell, ExtractSuccess } from "../../game/beadExtract";
+import { extractFromFile } from "../../lib/beadPhoto";
+import { addUploadedSession } from "../../lib/sessionStore";
 import RoadsDisplay from "../roads/RoadsDisplay";
 
 type Step = "upload" | "review" | "done";
-
-const DEMO_EXTRACTED = [
-  "B","B","P","B","B","P","P","B","T","B",
-  "P","P","P","B","B","B","P","P","B","P",
-  "B","B","P","P","P","B","B","B","P","P",
-];
 
 const BEAD_ROWS = 6;
 const BEAD_MIN_COLS = 15;
 
 // Extracted results shown as a corrected-in-place bead plate:
 // 6 rows deep, filled top-to-bottom then left-to-right, click to cycle B→P→T.
+// A "?" cell is one the detector located but couldn't read — it's drawn as an
+// empty amber ring and must be set by the user before the shoe can be saved.
 function ExtractedBeadPlate({
   results, onCycle, imageUrl,
-}: { results: string[]; onCycle: (idx: number) => void; imageUrl: string | null }) {
+}: { results: BeadCell[]; onCycle: (idx: number) => void; imageUrl: string | null }) {
   const cols = Math.max(Math.ceil(results.length / BEAD_ROWS), BEAD_MIN_COLS);
   const cellSize = 34;
   const banker = results.filter(r => r === "B").length;
@@ -89,7 +88,9 @@ function ExtractedBeadPlate({
                 const col = idx % cols;
                 const handIdx = col * BEAD_ROWS + row;
                 const r = handIdx < results.length ? results[handIdx] : null;
-                const clickable = !!r && editing;
+                // Unread cells are always clickable — they have to be resolved
+                // before the shoe can be saved, edit mode or not.
+                const clickable = !!r && (editing || r === "?");
                 return (
                   <div
                     key={idx}
@@ -98,14 +99,22 @@ function ExtractedBeadPlate({
                     title={clickable ? `Hand ${handIdx + 1} — click to correct` : undefined}
                     onClick={clickable ? () => onCycle(handIdx) : undefined}
                   >
-                    {r && (
+                    {r === "?" ? (
+                      <div
+                        className="road-stone unread"
+                        style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
+                        title="Couldn't be read — click to set"
+                      >
+                        ?
+                      </div>
+                    ) : r ? (
                       <div
                         className={`road-stone ${r === "B" ? "banker" : r === "P" ? "player" : "tie"}`}
                         style={{ width: cellSize * 0.72, height: cellSize * 0.72 }}
                       >
                         {r}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
@@ -180,23 +189,31 @@ export default function UploadSession() {
   const [sessionDate, setSessionDate] = useState("");
   const [notes, setNotes] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [extracted, setExtracted] = useState<string[]>(DEMO_EXTRACTED);
+  const [extracted, setExtracted] = useState<BeadCell[]>([]);
+  const [report, setReport] = useState<Omit<ExtractSuccess, "results"> | null>(null);
+  const [failure, setFailure] = useState<{ reason: string; detail: string } | null>(null);
+  const [analysing, setAnalysing] = useState(false);
   const [previewAll, setPreviewAll] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  const extractedOutcomes: Outcome[] = extracted.map(r =>
-    r === "B" ? "banker" : r === "P" ? "player" : "tie",
-  );
+  // "?" cells have no outcome yet, so they're held back from the roads preview.
+  const extractedOutcomes: Outcome[] = extracted
+    .filter((r): r is "B" | "P" | "T" => r !== "?")
+    .map(r => (r === "B" ? "banker" : r === "P" ? "player" : "tie"));
+  const unresolved = extracted.filter(r => r === "?").length;
 
   function cycleResult(idx: number) {
-    const NEXT: Record<string, string> = { B: "P", P: "T", T: "B" };
+    const NEXT: Record<BeadCell, BeadCell> = { "?": "B", B: "P", P: "T", T: "B" };
     setExtracted(prev => prev.map((r, i) => (i === idx ? NEXT[r] : r)));
   }
 
   function handleFile(file: File) {
+    setImageFile(file);
     setImageName(file.name);
+    setFailure(null);
     setImageUrl(prev => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
@@ -215,13 +232,44 @@ export default function UploadSession() {
     if (file) handleFile(file);
   }
 
-  function processImage() {
-    setStep("review");
+  async function processImage() {
+    if (!imageFile) return;
+    setAnalysing(true);
+    setFailure(null);
+    try {
+      const res = await extractFromFile(imageFile);
+      if (!res.ok) {
+        // No fallback, no invented shoe: an unreadable photo is reported as
+        // unreadable so the user retakes it.
+        setFailure({ reason: res.reason, detail: res.detail });
+        return;
+      }
+      const { results, ...rest } = res;
+      setExtracted(results);
+      setReport(rest);
+      setStep("review");
+    } finally {
+      setAnalysing(false);
+    }
   }
 
   function saveSession() {
-    // Backend pass will return the real ID; prototype generates one
-    setSessionId(`EX-${String(Date.now()).slice(-6)}`);
+    if (unresolved > 0) return;
+    const saved = addUploadedSession({
+      date: sessionDate || new Date().toISOString().slice(0, 10),
+      venue: venue.trim() || "Not set",
+      tableNumber: tableNum.trim() || "Not set",
+      type: "extra",
+      hands: extractedOutcomes.map((outcome, i) => ({
+        id: i + 1,
+        outcome,
+        bankerPair: false,
+        playerPair: false,
+        natural: false,
+      })),
+      notes: notes.trim() || "Extracted from a bead plate photo.",
+    });
+    setSessionId(saved.id);
     setStep("done");
   }
 
@@ -231,7 +279,11 @@ export default function UploadSession() {
     setTableNum("");
     setSessionDate("");
     setNotes("");
+    setImageFile(null);
     setImageName(null);
+    setExtracted([]);
+    setReport(null);
+    setFailure(null);
     setImageUrl(prev => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -307,7 +359,40 @@ export default function UploadSession() {
               </div>
             </div>
 
-            <button className="btn btn-gold" onClick={saveSession}>Save to Library</button>
+            {report && (
+              <div className="panel" style={{ fontSize: 12 }}>
+                <div className="panel-title">Extraction</div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ color: "var(--text-muted)" }}>Confidence</span>
+                  <b style={{ color: report.confidence >= 0.85 ? "var(--signal-green)" : "var(--gold)" }}>
+                    {Math.round(report.confidence * 100)}%
+                  </b>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ color: "var(--text-muted)" }}>Grid read</span>
+                  <b>{report.rows} rows × {report.cols} cols</b>
+                </div>
+                {report.warnings.map((w, i) => (
+                  <div key={i} style={{ color: "var(--gold)", lineHeight: 1.5, marginTop: 6 }}>⚠ {w}</div>
+                ))}
+              </div>
+            )}
+
+            {unresolved > 0 && (
+              <div className="panel" style={{ fontSize: 12, color: "var(--gold)", borderColor: "var(--gold)" }}>
+                {unresolved} cell{unresolved > 1 ? "s" : ""} still marked <b>?</b>. Click each one on
+                the grid to set it before saving.
+              </div>
+            )}
+
+            <button
+              className="btn btn-gold"
+              onClick={saveSession}
+              disabled={unresolved > 0}
+              style={{ opacity: unresolved > 0 ? 0.4 : 1 }}
+            >
+              Save to Library
+            </button>
             <button className="btn btn-secondary" onClick={() => setStep("upload")}>Re-upload</button>
           </div>
 
@@ -406,10 +491,29 @@ export default function UploadSession() {
         )}
       </div>
 
+      {failure && (
+        <div
+          className="panel mb-16"
+          style={{ borderColor: "var(--banker-red)", fontSize: 13 }}
+        >
+          <div style={{ color: "var(--banker-red)", fontWeight: 700, marginBottom: 6 }}>
+            ✕ {failure.reason}
+          </div>
+          <div style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            {failure.detail}
+          </div>
+          <div style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 10 }}>
+            Nothing was extracted — this photo can't be used. Take another one and try again,
+            or record the shoe by hand in Live Session.
+          </div>
+        </div>
+      )}
+
       <div className="panel mb-16" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
         <div className="panel-title">Tips for best results</div>
         <ul style={{ paddingLeft: 16, lineHeight: 2 }}>
           <li>Hold the phone parallel to the screen — avoid angles</li>
+          <li>Frame the bead plate only, not the whole board</li>
           <li>Make sure all columns of the bead plate are visible</li>
           <li>Good lighting, no glare on the casino screen</li>
           <li>You can correct any misread cells before saving</li>
@@ -418,11 +522,11 @@ export default function UploadSession() {
 
       <button
         className="btn btn-gold"
-        disabled={!imageName}
+        disabled={!imageName || analysing}
         onClick={processImage}
-        style={{ opacity: imageName ? 1 : 0.4 }}
+        style={{ opacity: imageName && !analysing ? 1 : 0.4 }}
       >
-        Extract Results →
+        {analysing ? "Reading photo…" : "Extract Results →"}
       </button>
     </div>
   );
