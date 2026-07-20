@@ -82,39 +82,38 @@ supabase/migrations/  0003_app_schema.sql is THE schema (profiles, sessions,
 - **Never** put the Supabase `service_role` key — or any secret — into a
   `VITE_`-prefixed var or anywhere in client code. Vite inlines those into the
   browser bundle. This app has no server, so `service_role` has no place here.
-- RLS is enabled on all tables but no access policies exist yet. Adding auth +
-  policies is an open task before real multi-user use.
+- RLS is enabled on every table with owner-or-super-admin policies (migration
+  `0003`). A disabled account loses all data access at the database layer.
 - The same two env vars must be set in Vercel's project settings for deploys.
 
-## Current state / open items
+## Current state (Jul 2026)
 
-- Code is scaffolded and pushed to `main` on GitHub.
-- Supabase project is provisioned; `.env` is populated locally.
-- Verify the SQL migrations in `supabase/migrations/` have been applied to the
-  Supabase project (SQL Editor). `0001` and `0002` should both be run.
-- This `CLAUDE.md` was committed and pushed to `origin/main` from another
-  environment. Locally you are on `main` at the app-work commit, and
-  `origin/main` is exactly one commit ahead (this file). `CLAUDE.md` sits in the
-  working tree as an untracked-but-identical file. To sync, once, on the machine:
-  `git fetch origin && git reset --soft origin/main`
-  (fast-forwards the branch pointer without touching your working tree; the
-  untracked CLAUDE.md becomes tracked and unmodified). If stale `.git/*.lock`
-  files block git first, remove them:
-  `rm -f .git/*.lock .git/refs/heads/*.lock .git/objects/*.lock`
-- Not yet done: user auth + RLS policies, Vercel env vars / first deploy.
-- `game/roads.ts` (Bead Plate, Big Road, Big Eye Boy/Small Road/Cockroach Pig)
-  is written and unit-tested (`npm test`) but has no UI yet — no component
-  renders these grids. That's the natural next step: a road-display component
-  fed by `toBigRoad`/`bigEyeBoy` etc., likely reusing the outcome data already
-  flowing through `BoardsTab`/`PredictTab`.
-- The derived-road algorithm (`deriveRoad`) implements the commonly published
-  "compare against an earlier column" rule. It's internally consistent (tests
-  pass) but hasn't been checked against a real Macau screen/known shoe —
-  worth a sanity pass before leaning on it for anything beyond a visual
-  reference.
-- Bigger product direction (discussed outside this repo's session): phone
-  capture + web admin split, a "playability" confidence layer showing the
-  user's own rule signal alongside a self-tuning "machine" model, and a
-  profiling questionnaire to calibrate what "aligned roads" means for this
-  specific player. None of that is built yet — `roads.ts` is the first piece
-  it all sits on.
+**Working full-stack app, live at https://baccarat-punter.vercel.app/.**
+Supabase project `xdjjoxrgthaexwtismma` is wired: migrations `0003` + `0004`
+applied, `.env` populated locally, env vars set in Vercel. Sign-in gates the
+app; the super admin is bootstrapped by email (see `super_admin_email()` in
+`0003`) and gets a **Users** tab to promote/disable accounts.
+
+Built and working:
+- All 5 Macau roads (`RoadsDisplay.tsx`) with markers, cross-road tile
+  highlight, Focus-to-here (Analyse only), predictor table, screen photos.
+- Live Session: 3 record modes, My Bets pay engine, real signal engine +
+  assistant, **End Session** saves the shoe (hands + bets) to the Library.
+- Session Library: Analyse / Practice per shoe, casino + type filters.
+- Profile hub (Establish / Calibrate / Upgrade / Review), Settings
+  (account, casinos → game types → odds), Stats, Guide.
+- Real signal/profile engine in `game/signals.ts` + `game/profile.ts`
+  (walk-forward, descriptive of a ruleset — never a prediction claim).
+- Responsive across phone/tablet/desktop (verified 375 / 768 / 1366).
+
+Open items (nothing blocking):
+- Practice saves don't record per-hand bets/calls yet, so their
+  "as recorded" lens shows "No recorded bets".
+- Live Session state is in-memory — a tab reload loses an unsaved shoe.
+- Bundle ~547 KB; code-split `supabase-js` when convenient.
+- Touch ergonomics polish (tap-target / keypad sizing) on phones.
+- Foundation calibration boards are still simulated placeholders
+  (`mock/foundationGames.ts`) — they should become real recorded games.
+- The derived-road algorithm (`deriveRoad`) follows the commonly published
+  "compare against an earlier column" rule and is unit-tested, but hasn't
+  been checked against a real Macau screen — worth a sanity pass.
