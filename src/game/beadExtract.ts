@@ -175,35 +175,64 @@ function median(xs: number[]): number {
 }
 
 // ── Grid fitting ────────────────────────────────────────────────────────────
+//
+// The plate is found *inside* the photo rather than assumed to fill it. A
+// photo of a table screen routinely catches more than the plate — the caption
+// strip under it, a reflection, the roads above — and any of that would
+// otherwise be taken for extra rows of the plate.
 
-/** Group 1-D positions into lines separated by at least `gap`. */
-function cluster(values: number[], gap: number): number[] {
-  const sorted = [...values].sort((a, b) => a - b);
-  const centres: number[] = [];
-  let run: number[] = [];
-  for (const v of sorted) {
-    if (run.length && v - run[run.length - 1] > gap) {
-      centres.push(run.reduce((a, b) => a + b, 0) / run.length);
-      run = [];
+/**
+ * Cell pitch. On a filled plate every marker's nearest neighbour is the cell
+ * next to it, so the median nearest-neighbour distance is the pitch. Strays
+ * are isolated, so they only ever sit in the tail of that distribution.
+ */
+function nearestNeighbourPitch(beads: Blob[]): number {
+  const dists: number[] = [];
+  for (const b of beads) {
+    let best = Infinity;
+    for (const o of beads) {
+      if (o === b) continue;
+      const d = Math.hypot(b.cx - o.cx, b.cy - o.cy);
+      if (d < best) best = d;
     }
-    run.push(v);
+    if (Number.isFinite(best)) dists.push(best);
   }
-  if (run.length) centres.push(run.reduce((a, b) => a + b, 0) / run.length);
-  return centres;
+  return median(dists);
 }
 
 /**
- * Pitch of a set of grid lines. Consecutive gaps are divided down by their
- * nearest whole multiple of the smallest gap, so a plate with empty columns
- * in the middle still yields the true single-cell spacing.
+ * Where the lattice sits along one axis, as an offset in [0, pitch).
+ *
+ * Taking each position modulo the pitch turns a grid into a tight cluster of
+ * angles around the circle, so the circular mean recovers the lattice offset.
+ * Unlike chaining positions into clusters, one stray can't shift the answer —
+ * it is a single vector against everything else.
  */
-function pitchOf(centres: number[], fallback: number): number {
-  if (centres.length < 2) return fallback;
-  const gaps = centres.slice(1).map((c, i) => c - centres[i]).filter(g => g > 0);
-  if (!gaps.length) return fallback;
-  const unit = Math.min(...gaps);
-  const normalised = gaps.map(g => g / Math.max(1, Math.round(g / unit)));
-  return median(normalised);
+function latticePhase(values: number[], pitch: number): number {
+  let sx = 0, sy = 0;
+  for (const v of values) {
+    const a = (2 * Math.PI * v) / pitch;
+    sx += Math.cos(a); sy += Math.sin(a);
+  }
+  let a = Math.atan2(sy, sx);
+  if (a < 0) a += 2 * Math.PI;
+  return (a / (2 * Math.PI)) * pitch;
+}
+
+/** The run of consecutive column indices holding the most markers. */
+function bestColumnRun(cols: number[]): { from: number; to: number } {
+  const present = [...new Set(cols)].sort((a, b) => a - b);
+  let from = present[0], to = present[0], best = -1;
+  let i = 0;
+  while (i < present.length) {
+    let j = i;
+    while (j + 1 < present.length && present[j + 1] === present[j] + 1) j++;
+    const s = present[i], e = present[j];
+    const n = cols.filter(c => c >= s && c <= e).length;
+    if (n > best) { best = n; from = s; to = e; }
+    i = j + 1;
+  }
+  return { from, to };
 }
 
 export function extractBeadPlate(img: ImageLike): ExtractResult {
@@ -242,65 +271,113 @@ export function extractBeadPlate(img: ImageLike): ExtractResult {
   }
 
   const diameter = median(beads.map(b => (b.w + b.h) / 2));
-  const gap = diameter * 0.55;
-  const colCentres = cluster(beads.map(b => b.cx), gap);
-  const rowCentres = cluster(beads.map(b => b.cy), gap);
 
-  if (rowCentres.length > ROWS_MAX) {
-    return {
-      ok: false,
-      reason: "This doesn't look like a bead plate",
-      detail: `${rowCentres.length} rows of markers were found — a bead plate is at most ${ROWS_MAX} deep. Make sure only the bead plate screen is in frame, not the whole board.`,
-    };
-  }
-  if (rowCentres.length < 2 || colCentres.length < 2) {
-    return {
-      ok: false,
-      reason: "This doesn't look like a bead plate",
-      detail: "The markers don't form a grid. Hold the phone parallel to the screen and include the whole plate.",
-    };
-  }
+  // Bead cells are square, so one pitch serves both axes.
+  let pitch = nearestNeighbourPitch(beads);
+  if (!(pitch > diameter * 0.7) || pitch > diameter * 2.5) pitch = diameter * 1.2;
 
-  const pitchX = pitchOf(colCentres, diameter * 1.2);
-  const pitchY = pitchOf(rowCentres, diameter * 1.2);
-  const x0 = Math.min(...colCentres);
-  const y0 = Math.min(...rowCentres);
+  const phaseX = latticePhase(beads.map(b => b.cx), pitch);
+  const phaseY = latticePhase(beads.map(b => b.cy), pitch);
 
-  // Snap every disc to a cell and measure how far off the ideal grid it sits.
-  const cells = new Map<string, { bead: Bead; err: number }>();
+  // Snap every marker to the lattice and measure how far off it sits.
+  interface Snap { col: number; row: number; bead: Bead; err: number }
+  const snapped: Snap[] = [];
   let misfits = 0;
+  for (const b of beads) {
+    const col = Math.round((b.cx - phaseX) / pitch);
+    const row = Math.round((b.cy - phaseY) / pitch);
+    const dx = Math.abs(b.cx - (phaseX + col * pitch)) / pitch;
+    const dy = Math.abs(b.cy - (phaseY + row * pitch)) / pitch;
+    // A marker more than a third of a cell off its gridline means the photo is
+    // skewed or the "grid" isn't one.
+    if (dx > 0.33 || dy > 0.33) { misfits++; continue; }
+    snapped.push({ col, row, bead: classToBead(b.cls), err: dx + dy });
+  }
+
+  const total = beads.length;
+  if (misfits / total > 0.25 || snapped.length < MIN_BLOBS) {
+    return {
+      ok: false,
+      reason: "Photo quality too poor to read",
+      detail: "The markers are there but too skewed or blurred to line up into a grid. Retake the photo square-on to the screen, filling the frame, with no glare.",
+    };
+  }
+
+  // A bead plate fills each column from the top straight down and never goes
+  // deeper than 6, so no column can hold an unbroken run of more than 6
+  // markers. A grid that does is some other board, and reading 6 rows out of
+  // it would invent a shoe. Two such columns rules out a stray sitting
+  // directly under the plate.
+  const deepColumns = [...new Set(snapped.map(s => s.col))].filter(col => {
+    const rows = snapped.filter(s => s.col === col).map(s => s.row).sort((a, b) => a - b);
+    let longest = 1, current = 1;
+    for (let i = 1; i < rows.length; i++) {
+      current = rows[i] === rows[i - 1] + 1 ? current + 1 : 1;
+      if (current > longest) longest = current;
+    }
+    return longest > ROWS_MAX;
+  });
+  if (deepColumns.length >= 2) {
+    return {
+      ok: false,
+      reason: "This doesn't look like a bead plate",
+      detail: `Columns of more than ${ROWS_MAX} markers were found — a bead plate fills each column top to bottom and is never deeper than ${ROWS_MAX}. Make sure only the bead plate screen is in frame, not the whole board.`,
+    };
+  }
+
+  // Anything else the camera caught — the caption strip under the screen, a
+  // reflection, the roads above — lands on other lattice rows, so keep the
+  // 6-row band holding the most markers and discard the rest instead of
+  // calling the whole photo unusable.
+  let bandTop = snapped[0].row;
+  let bandCount = -1;
+  for (const { row: top } of snapped) {
+    const n = snapped.filter(s => s.row >= top && s.row < top + ROWS_MAX).length;
+    if (n > bandCount) { bandCount = n; bandTop = top; }
+  }
+  let plate = snapped.filter(s => s.row >= bandTop && s.row < bandTop + ROWS_MAX);
+
+  // Likewise across: keep the unbroken run of columns holding the most
+  // markers, so something off to one side can't stretch the plate to reach it.
+  const run = bestColumnRun(plate.map(s => s.col));
+  plate = plate.filter(s => s.col >= run.from && s.col <= run.to);
+
+  if (plate.length < MIN_BLOBS) {
+    return {
+      ok: false,
+      reason: "No bead plate found in this photo",
+      detail: "The markers in this photo don't form a 6-row plate. Frame the bead plate screen square-on, with the whole grid visible.",
+    };
+  }
+
+  // The plate fills from the top of its first column, so the topmost and
+  // leftmost markers found are row 0 and column 0.
+  const rowBase = Math.min(...plate.map(s => s.row));
+  const colBase = Math.min(...plate.map(s => s.col));
+
+  const cells = new Map<string, { bead: Bead; err: number }>();
   let conflicts = 0;
   let maxRow = 0;
   let maxCol = 0;
-
-  for (const b of beads) {
-    const col = Math.round((b.cx - x0) / pitchX);
-    const row = Math.round((b.cy - y0) / pitchY);
-    const dx = Math.abs(b.cx - (x0 + col * pitchX)) / pitchX;
-    const dy = Math.abs(b.cy - (y0 + row * pitchY)) / pitchY;
-    // A disc more than a third of a cell off its gridline means the photo is
-    // skewed or the "grid" isn't one.
-    if (dx > 0.33 || dy > 0.33) { misfits++; continue; }
-    if (row < 0 || row >= ROWS_MAX || col < 0) { misfits++; continue; }
-
+  for (const s of plate) {
+    const col = s.col - colBase;
+    const row = s.row - rowBase;
     const key = `${col},${row}`;
     const existing = cells.get(key);
-    const err = dx + dy;
     if (existing) {
       conflicts++;
-      if (err >= existing.err) continue;
+      if (s.err >= existing.err) continue;
     }
-    cells.set(key, { bead: classToBead(b.cls), err });
+    cells.set(key, { bead: s.bead, err: s.err });
     if (row > maxRow) maxRow = row;
     if (col > maxCol) maxCol = col;
   }
 
-  const total = beads.length;
-  if (misfits / total > 0.15 || conflicts / total > 0.1) {
+  if (conflicts / plate.length > 0.1) {
     return {
       ok: false,
       reason: "Photo quality too poor to read",
-      detail: "The bead plate is there but too skewed or blurred to line up into a grid. Retake it square-on to the screen, filling the frame, with no glare.",
+      detail: "Markers are overlapping on the grid, so the plate can't be read reliably. Retake the photo square-on to the screen.",
     };
   }
 

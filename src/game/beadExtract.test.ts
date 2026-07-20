@@ -128,6 +128,22 @@ function withMoire(img: ImageLike): ImageLike {
   return { data: out, width: W, height: H };
 }
 
+/** A filled coloured blob — stands in for glare, a caption glyph, a stray. */
+function withSpot(img: ImageLike, cx: number, cy: number, r: number,
+                  [cr, cg, cb]: [number, number, number]): ImageLike {
+  const { width: W, height: H } = img;
+  const out = new Uint8ClampedArray(img.data);
+  for (let y = cy - r; y <= cy + r; y++) {
+    for (let x = cx - r; x <= cx + r; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      if ((x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+      const p = (y * W + x) * 4;
+      out[p] = cr; out[p + 1] = cg; out[p + 2] = cb;
+    }
+  }
+  return { data: out, width: W, height: H };
+}
+
 /** The small black pair marker that sits on a ring and bites into it. */
 function withPairDot(img: ImageLike, cx: number, cy: number, r = 7): ImageLike {
   const { width: W, height: H } = img;
@@ -267,6 +283,37 @@ describe("extractBeadPlate", () => {
     expect(res.results).toEqual(CROWN);
   });
 
+  it("finds the plate when the photo also caught other things", () => {
+    // The real failure case: a photo of a table screen catches more than the
+    // plate — a caption strip below it and glare blobs off to the side. Those
+    // land on their own lattice rows and used to be counted as extra rows of
+    // the plate ("11 rows of markers were found"), killing the read.
+    let img = drawPlate(CROWN, {
+      pitch: 60, radius: 25, ringStroke: 7, margin: 30, lightBackground: true,
+    });
+    // Caption strip well below the plate
+    for (let i = 0; i < 7; i++) img = withSpot(img, 60 + i * 70, 30 + 6 * 60 + 55, 16, COLOURS.B);
+    // A couple of stray highlights out to the right of the plate
+    img = withSpot(img, 30 + 5 * 60, 30 + 90, 20, COLOURS.T);
+    img = withSpot(img, 30 + 6 * 60, 30 + 150, 20, COLOURS.P);
+
+    const res = extractBeadPlate(img);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.results).toEqual(CROWN);
+    expect(res.rows).toBe(6);
+  });
+
+  it("reads a plate that sits low in the frame", () => {
+    // The lattice origin must come from the markers, not the image corner.
+    const res = extractBeadPlate(drawPlate(CROWN, {
+      pitch: 60, radius: 25, ringStroke: 7, margin: 200, lightBackground: true,
+    }));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.results).toEqual(CROWN);
+  });
+
   it("rejects a photo with no bead plate in it", () => {
     const blank: ImageLike = {
       data: new Uint8ClampedArray(200 * 200 * 4).fill(20),
@@ -304,7 +351,7 @@ describe("extractBeadPlate", () => {
     const res = extractBeadPlate(drawPlate(long, { rows: 8 }));
     expect(res.ok).toBe(false);
     if (res.ok) return;
-    expect(res.detail).toMatch(/rows/i);
+    expect(res.detail).toMatch(/deeper|column/i);
   });
 
   it("rejects an image too small to hold a plate", () => {
