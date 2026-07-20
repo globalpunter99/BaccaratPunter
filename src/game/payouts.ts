@@ -101,7 +101,7 @@ export const SIDE_BET_LABELS: Record<SideBetType, string> = {
   bPair: "B Pair", pPair: "P Pair", anyPair: "Any Pair",
   smlTiger: "Sml Tiger", bigTiger: "Big Tiger", anyTiger: "Any Tiger", tigerTie: "Tiger Tie",
   smlDragon: "Sml Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",
-  dragonTiger: "D-Tiger",
+  dragonTiger: "Dragon Tiger",
 };
 
 /**

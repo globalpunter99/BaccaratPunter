@@ -628,16 +628,15 @@ function SideBetCounts({ outcomes, extras }: {
     hands.filter(h => sideBetResult(type, h, DEFAULT_PAYOUTS).won).length;
   const naturals = (extras ?? []).filter(e => e?.natural).length;
 
-  // Any Tiger is still placeable on the bet slip, but it adds nothing to
-  // count: it wins on exactly the hands Small Tiger and Big Tiger already
-  // record between them. Dropping it leaves 12 counters — a clean 6 x 2.
-  const counted = SIDE_BET_TYPES.filter(t => t !== "anyTiger");
+  // Any Tiger and Any Pair stay placeable on the bet slip, but neither adds
+  // anything to count: each wins on exactly the hands its two specific
+  // counterparts already record between them.
+  const counted = SIDE_BET_TYPES.filter(t => t !== "anyTiger" && t !== "anyPair");
 
   const icon: Partial<Record<SideBetType, React.ReactNode>> = {
     tie: <span className="stats-dot tie-dot inline">和</span>,
     bPair: <span className="marker-pair banker-pair inline" />,
     pPair: <span className="marker-pair player-pair inline" />,
-    anyPair: <span className="marker-pair any-pair inline" />,
     smlTiger: <span style={{ fontSize: 11 }}>🐯</span>,
     bigTiger: <span style={{ fontSize: 14 }}>🐯</span>,
     tigerTie: <span className="marker-tietotal tiger inline">6</span>,
@@ -647,15 +646,27 @@ function SideBetCounts({ outcomes, extras }: {
     dragonTiger: <span className="marker-variant dragontiger inline" style={{ width: 13, height: 13 }}>#</span>,
   };
 
+  const rows = [
+    { key: "natural", icon: <b className="marker-natural inline">N</b>, label: "Natural", count: naturals },
+    ...counted.map(t => ({ key: t, icon: icon[t], label: SIDE_BET_LABELS[t], count: hits(t) })),
+  ];
+  // Split into two columns. Each column is its own grid, so within it the
+  // icons share a centred column and the labels and counts each line up left.
+  const half = Math.ceil(rows.length / 2);
+  const columns = [rows.slice(0, half), rows.slice(half)];
+
   return (
     <div className="side-bet-list">
-      <span className="stats-side-item">
-        <b className="marker-natural inline">N</b> Natural <b>{naturals}</b>
-      </span>
-      {counted.map(type => (
-        <span key={type} className="stats-side-item">
-          {icon[type]} {SIDE_BET_LABELS[type]} <b>{hits(type)}</b>
-        </span>
+      {columns.map((col, i) => (
+        <div className="side-bet-col" key={i}>
+          {col.map(r => (
+            <Fragment key={r.key}>
+              <span className="sb-icon">{r.icon}</span>
+              <span className="sb-label">{r.label}</span>
+              <b className="sb-count">{r.count}</b>
+            </Fragment>
+          ))}
+        </div>
       ))}
     </div>
   );

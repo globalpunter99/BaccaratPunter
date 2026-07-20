@@ -909,9 +909,13 @@ select.input { cursor: pointer; }
   gap: 10px;
   align-items: stretch;
 }
+/* Bead plate | stats + predictor + side-bet counters. The right column takes
+   exactly the width its three blocks need to sit on one row; the bead plate
+   takes the rest and scrolls internally, so it never squeezes them into
+   wrapping. */
 .roads-bottom-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: stretch;
 }
@@ -941,7 +945,9 @@ select.input { cursor: pointer; }
   gap: 10px;
   font-size: 16px;
 }
-.stats-row .stats-label { min-width: 74px; }
+/* Fixed label column so Games / Banker / Player / Tie all start their number
+   at the same x, whether the label leads with a disc or with 局数. */
+.stats-row .stats-label { width: 104px; }
 .stats-label {
   display: flex;
   align-items: center;
@@ -1135,28 +1141,42 @@ select.input { cursor: pointer; }
   font-weight: 700;
 }
 
-/* Side-bet counters beside the predictor table: Natural plus the 11 bets
-   worth counting, laid out 6 rows x 2 columns. */
+/* Side-bet counters beside the predictor table: Natural plus the bets worth
+   counting, in two columns. Each column is a 3-track grid — a fixed centred
+   track for the symbol, then the name and the count, both left-aligned — so
+   the three read as straight lines down the column however wide each symbol
+   happens to be. */
 .side-bet-list {
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(6, auto);
-  column-gap: 13px;
-  row-gap: 6px;
+  display: flex;
+  gap: 13px;
   margin-top: 18px; /* aligns with predictor table top */
 }
-@media (max-width: 620px) {
-  .side-bet-list { grid-template-rows: repeat(12, auto); grid-auto-flow: row; }
+.side-bet-col {
+  display: grid;
+  grid-template-columns: 16px auto auto;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 6px;
 }
-.stats-side-item {
+.sb-icon {
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  width: 16px;
+}
+.sb-label {
   font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
 }
-.stats-side-item b { color: var(--text-primary); }
+.sb-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+@media (max-width: 620px) {
+  .side-bet-list { flex-direction: column; gap: 6px; }
+}
 
 /* View toggle (Basic / Detailed) on the Big Road header */
 .view-toggle {

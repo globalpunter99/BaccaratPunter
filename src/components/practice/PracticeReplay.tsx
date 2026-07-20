@@ -495,7 +495,7 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     {SIDE_BET_TYPES.map(type => { const label = SIDE_BET_LABELS[type]; return (
                       <div key={type} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 62, flexShrink: 0 }}>{label}</span>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 70, flexShrink: 0 }}>{label}</span>
                         <input
                           className="input"
                           type="number" min={0} placeholder="stake"
