@@ -559,12 +559,12 @@ function HeaderStats({ outcomes }: { outcomes: Outcome[] }) {
 // ── Section wrapper ──────────────────────────────────────────────────────────
 function RoadSection({
   titleCn, titleEn, children, style, align = "center", headerExtra, selectionKey,
-  followKey,
+  followKey, contentWidth,
 }: {
   titleCn: string; titleEn: string; children: React.ReactNode;
   style?: React.CSSProperties; align?: "left" | "center";
   headerExtra?: React.ReactNode; selectionKey?: React.ReactNode;
-  followKey?: string | number;
+  followKey?: string | number; contentWidth?: number;
 }) {
   return (
     <div className="road-section" style={style}>
@@ -577,7 +577,7 @@ function RoadSection({
         {headerExtra && <span className="header-extra">{headerExtra}</span>}
         {selectionKey && <span className="road-sel-key">{selectionKey}</span>}
       </div>
-      <RoadScroller followKey={followKey}>{children}</RoadScroller>
+      <RoadScroller followKey={followKey} contentWidth={contentWidth}>{children}</RoadScroller>
     </div>
   );
 }
@@ -885,11 +885,30 @@ export default function RoadsDisplay({
   const bigCell   = compact ? 20 : 26;
   const smallCell = compact ? 11 : 13;
 
+  // How wide the *filled* part of each road actually is. The grids are drawn
+  // to a minimum column count regardless of how much has been played, so this
+  // is what tells the scroller whether there is anything off-screen worth a
+  // dot. Recomputing the placements here is cheap and keeps them pure.
+  const filledWidths = useMemo(() => {
+    const used = (placed: { col: number }[]) =>
+      placed.length ? Math.max(...placed.map(p => p.col)) + 1 : 0;
+    const cpUsed = used(placeMarks(cp, ROWS));
+    // Cockroach wraps into two bands, so its width is one band's worth
+    const cpBandCols = Math.max(DERIVED_MIN_COLS, Math.ceil(cpUsed / 2));
+    return {
+      bigRoad: used(placeBigRoad(stones, ROWS)) * bigCell,
+      beb: used(placeMarks(beb, ROWS)) * smallCell,
+      sr: used(placeMarks(sr, ROWS)) * smallCell,
+      cp: Math.min(cpUsed, cpBandCols) * smallCell,
+      bead: Math.ceil(viewOutcomes.length / ROWS) * bigCell,
+    };
+  }, [stones, beb, sr, cp, viewOutcomes.length, bigCell, smallCell]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {/* Row 1 — Big Road full width */}
       <RoadSection titleCn="大路" titleEn="Big Road" align="left"
-        followKey={stones.length}
+        followKey={stones.length} contentWidth={filledWidths.bigRoad}
         headerExtra={
           <>
             <HeaderStats outcomes={viewOutcomes} />
@@ -951,16 +970,16 @@ export default function RoadsDisplay({
       <div className="roads-mid-grid">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <RoadSection titleCn="大眼仔" titleEn="Big Eye Boy" selectionKey={selKey(bebHasSel)}
-            followKey={beb.length}>
+            followKey={beb.length} contentWidth={filledWidths.beb}>
             <DerivedRoad marks={beb} markGames={bebGames} cellSize={smallCell} markStyle="donut" selectedGame={selectedGame} />
           </RoadSection>
           <RoadSection titleCn="小路" titleEn="Small Road" selectionKey={selKey(srHasSel)}
-            followKey={sr.length}>
+            followKey={sr.length} contentWidth={filledWidths.sr}>
             <DerivedRoad marks={sr} markGames={srGames} cellSize={smallCell} markStyle="solid" selectedGame={selectedGame} />
           </RoadSection>
         </div>
         <RoadSection titleCn="曱甴路" titleEn="Cockroach Road" selectionKey={selKey(cpHasSel)}
-          followKey={cp.length}>
+          followKey={cp.length} contentWidth={filledWidths.cp}>
           <CockroachBands marks={cp} markGames={cpGames} cellSize={smallCell} minBandCols={DERIVED_MIN_COLS} selectedGame={selectedGame} />
         </RoadSection>
       </div>
@@ -968,7 +987,7 @@ export default function RoadsDisplay({
       {/* Row 3 — Bead Plate left · stats panel right */}
       <div className="roads-bottom-grid">
         <RoadSection titleCn="珠盘路" titleEn="Bead Plate"
-          followKey={viewOutcomes.length}
+          followKey={viewOutcomes.length} contentWidth={filledWidths.bead}
           headerExtra={
             <>
               <HeaderStats outcomes={viewOutcomes} />

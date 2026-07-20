@@ -1603,8 +1603,9 @@ select.input { cursor: pointer; }
   position: relative;
 }
 /* Roads scroll sideways once a shoe outgrows the panel. No scrollbar — space
-   is tight — just a small dot on the edge that has more columns behind it.
-   The dot is clickable to nudge the road along. */
+   is tight — just a small dot riding the card's bottom border line on the
+   side that has more columns behind it. The dot is clickable to nudge the
+   road along, and only ever appears when there are results out of frame. */
 .road-scroller { position: relative; }
 .road-scroll {
   overflow-x: auto;
@@ -1617,7 +1618,9 @@ select.input { cursor: pointer; }
 
 .road-more {
   position: absolute;
-  top: 50%;
+  /* Rides the card's bottom border: the scroller is the section's last child,
+     so its bottom edge is the border line itself. */
+  bottom: 0;
   width: 7px;
   height: 7px;
   padding: 0;
@@ -1626,15 +1629,15 @@ select.input { cursor: pointer; }
   background: var(--gold);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-50%);
   transition: opacity 0.18s;
   cursor: pointer;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
   z-index: 3;
 }
-.road-more.left  { left: 4px; }
-.road-more.right { right: 4px; }
-.road-more.on { opacity: 0.75; visibility: visible; }
+/* Inset past the corner radius so the dot reads as sitting on the line */
+.road-more.left  { left: 8px; }
+.road-more.right { right: 8px; }
+.road-more.on { opacity: 0.8; visibility: visible; }
 .road-more.on:hover { opacity: 1; }
 
 .road-section-header.align-center { justify-content: center; }
