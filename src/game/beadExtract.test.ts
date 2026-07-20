@@ -22,19 +22,38 @@ interface DrawOpts {
   holes?: number[];
   /** Uniform noise amplitude added to every channel */
   noise?: number;
+  /** Draw hollow rings of this stroke width instead of solid discs */
+  ringStroke?: number;
+  /** Light panel with grid lines, like a Crown-style screen */
+  lightBackground?: boolean;
 }
 
 function drawPlate(seq: Bead[], opts: DrawOpts = {}): ImageLike {
-  const { pitch = 24, radius = 9, margin = 12, rows = 6, jitter = 0, holes = [], noise = 0 } = opts;
+  const {
+    pitch = 24, radius = 9, margin = 12, rows = 6, jitter = 0, holes = [], noise = 0,
+    ringStroke, lightBackground = false,
+  } = opts;
   const cols = Math.ceil(seq.length / rows);
   const width = margin * 2 + cols * pitch;
   const height = margin * 2 + rows * pitch;
   const data = new Uint8ClampedArray(width * height * 4);
 
-  // Dark panel background
+  const bg = lightBackground ? [244, 246, 249] : [18, 20, 24];
   for (let i = 0; i < width * height; i++) {
     const p = i * 4;
-    data[p] = 18; data[p + 1] = 20; data[p + 2] = 24; data[p + 3] = 255;
+    data[p] = bg[0]; data[p + 1] = bg[1]; data[p + 2] = bg[2]; data[p + 3] = 255;
+  }
+
+  // Pale blue-grey cell borders, as a real screen draws them
+  if (lightBackground) {
+    const line = [176, 190, 210];
+    const put = (x: number, y: number) => {
+      if (x < 0 || y < 0 || x >= width || y >= height) return;
+      const p = (y * width + x) * 4;
+      data[p] = line[0]; data[p + 1] = line[1]; data[p + 2] = line[2];
+    };
+    for (let c = 0; c <= cols; c++) for (let y = margin; y < margin + rows * pitch; y++) put(margin + c * pitch, y);
+    for (let r = 0; r <= rows; r++) for (let x = margin; x < margin + cols * pitch; x++) put(x, margin + r * pitch);
   }
 
   const rand = mulberry32(7);
@@ -47,10 +66,13 @@ function drawPlate(seq: Bead[], opts: DrawOpts = {}): ImageLike {
     const cx = margin + col * pitch + pitch / 2 + jx;
     const cy = margin + row * pitch + pitch / 2 + jy;
     const [r, g, b] = COLOURS[bead];
+    const inner = ringStroke ? radius - ringStroke : 0;
     for (let y = Math.floor(cy - radius); y <= Math.ceil(cy + radius); y++) {
       for (let x = Math.floor(cx - radius); x <= Math.ceil(cx + radius); x++) {
         if (x < 0 || y < 0 || x >= width || y >= height) continue;
-        if ((x - cx) ** 2 + (y - cy) ** 2 > radius ** 2) continue;
+        const d2 = (x - cx) ** 2 + (y - cy) ** 2;
+        if (d2 > radius ** 2) continue;
+        if (inner > 0 && d2 < inner ** 2) continue; // hollow centre
         const p = (y * width + x) * 4;
         data[p] = r; data[p + 1] = g; data[p + 2] = b; data[p + 3] = 255;
       }
@@ -66,6 +88,59 @@ function drawPlate(seq: Bead[], opts: DrawOpts = {}): ImageLike {
   }
 
   return { data, width, height };
+}
+
+/** 3x3 box blur — stands in for a phone camera's soft focus. */
+function blur(img: ImageLike): ImageLike {
+  const { width: W, height: H } = img;
+  const src = img.data;
+  const out = new Uint8ClampedArray(W * H * 4);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      for (let c = 0; c < 3; c++) {
+        let sum = 0, n = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+            sum += src[(ny * W + nx) * 4 + c]; n++;
+          }
+        }
+        out[(y * W + x) * 4 + c] = sum / n;
+      }
+      out[(y * W + x) * 4 + 3] = 255;
+    }
+  }
+  return { data: out, width: W, height: H };
+}
+
+/** Horizontal banding, as a camera picks up off an LCD. */
+function withMoire(img: ImageLike): ImageLike {
+  const { width: W, height: H } = img;
+  const out = new Uint8ClampedArray(img.data);
+  for (let y = 0; y < H; y++) {
+    const band = Math.sin(y / 2.3) * 9;
+    for (let x = 0; x < W; x++) {
+      const p = (y * W + x) * 4;
+      out[p] += band; out[p + 1] += band; out[p + 2] += band;
+    }
+  }
+  return { data: out, width: W, height: H };
+}
+
+/** The small black pair marker that sits on a ring and bites into it. */
+function withPairDot(img: ImageLike, cx: number, cy: number, r = 7): ImageLike {
+  const { width: W, height: H } = img;
+  const out = new Uint8ClampedArray(img.data);
+  for (let y = cy - r; y <= cy + r; y++) {
+    for (let x = cx - r; x <= cx + r; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      if ((x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+      const p = (y * W + x) * 4;
+      out[p] = 15; out[p + 1] = 15; out[p + 2] = 18;
+    }
+  }
+  return { data: out, width: W, height: H };
 }
 
 /** Deterministic PRNG so a failing test always fails the same way. */
@@ -130,6 +205,66 @@ describe("extractBeadPlate", () => {
     // Every other result is still correct
     res.results.forEach((r, i) => { if (i !== 14) expect(r).toBe(SHOE[i]); });
     expect(res.warnings.length).toBeGreaterThan(0);
+  });
+
+  // Casinos draw the plate either way, so both have to read. This mirrors a
+  // real Crown Melbourne screen: thick hollow rings on a white panel with pale
+  // grid lines, last column part-filled.
+  const CROWN: Bead[] = [
+    "B", "B", "B", "B", "B", "P",
+    "B", "T", "B", "P", "B", "T",
+    "B", "P", "B", "B", "P", "B",
+    "B", "P",
+  ];
+
+  it("reads hollow rings on a light panel (Crown-style screen)", () => {
+    const res = extractBeadPlate(drawPlate(CROWN, {
+      pitch: 60, radius: 25, ringStroke: 6, margin: 30, lightBackground: true,
+    }));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.results).toEqual(CROWN);
+    expect(res.rows).toBe(6);
+    expect(res.unresolved).toEqual([]);
+  });
+
+  it("reads hollow rings drawn with a thin stroke", () => {
+    // A 3px stroke on a 25px radius covers only ~22% of the bounding box —
+    // well under what a solid disc covers.
+    const res = extractBeadPlate(drawPlate(CROWN, {
+      pitch: 60, radius: 25, ringStroke: 3, margin: 30, lightBackground: true,
+    }));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.results).toEqual(CROWN);
+  });
+
+  it("reads a photographed ring plate with skew and noise", () => {
+    const res = extractBeadPlate(drawPlate(CROWN, {
+      pitch: 60, radius: 25, ringStroke: 7, margin: 30,
+      lightBackground: true, jitter: 3, noise: 12,
+    }));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.results).toEqual(CROWN);
+  });
+
+  it("reads a real-world phone shot of a ring plate", () => {
+    // Everything a photo of a casino screen actually adds: soft focus, the
+    // moiré banding a camera picks up off an LCD, and a pair marker — a small
+    // black dot that sits on the ring and nicks a bite out of it.
+    let img = drawPlate(CROWN, {
+      pitch: 60, radius: 25, ringStroke: 7, margin: 30,
+      lightBackground: true, jitter: 2,
+    });
+    img = withPairDot(img, 30 + 3 * 60 + 30 - 18, 30 + 30 - 18); // col 4, row 1
+    img = withMoire(img);
+    img = blur(img);
+
+    const res = extractBeadPlate(img);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.results).toEqual(CROWN);
   });
 
   it("rejects a photo with no bead plate in it", () => {

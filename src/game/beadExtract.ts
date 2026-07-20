@@ -83,7 +83,10 @@ function classToBead(c: Cls): Bead {
 
 interface Blob {
   cls: Cls;
+  /** Centre of mass */
   cx: number; cy: number;
+  /** Centre of the bounding box */
+  bx: number; by: number;
   w: number; h: number;
   area: number;
 }
@@ -127,6 +130,7 @@ function findBlobs(img: ImageLike): Blob[] {
     blobs.push({
       cls,
       cx: sumX / area, cy: sumY / area,
+      bx: (minX + maxX) / 2, by: (minY + maxY) / 2,
       w: maxX - minX + 1, h: maxY - minY + 1,
       area,
     });
@@ -135,16 +139,32 @@ function findBlobs(img: ImageLike): Blob[] {
   return blobs;
 }
 
-/** Keep blobs that look like a disc rather than text, glare or a screen edge. */
-function discLike(b: Blob, W: number, H: number): boolean {
+/**
+ * Keep blobs that look like a bead marker rather than text, glare or a screen
+ * edge.
+ *
+ * Casinos draw the bead plate either as solid discs or as hollow rings, and
+ * both have to pass. A solid disc covers ~78% of its bounding box; a hollow
+ * ring only ~25-40% depending on how thick the stroke is. So coverage alone
+ * can't separate a marker from a glyph — what does is that a disc and a ring
+ * are both *centred and square*: the centre of mass sits on the centre of the
+ * bounding box. A letter, an arc or a stray highlight is lopsided.
+ */
+function markerLike(b: Blob, W: number, H: number): boolean {
   const long = Math.max(b.w, b.h);
   const short = Math.min(b.w, b.h);
   if (long < 6) return false;                          // noise / anti-aliasing
   if (long > Math.min(W, H) * 0.3) return false;       // a panel, not a bead
   if (short / long < 0.6) return false;                // slashes, bars, text
-  // A filled circle covers ~78% of its bounding box; a ring or a glyph much
-  // less. 0.45 admits soft-focus discs while rejecting outlines and digits.
-  return b.area / (b.w * b.h) >= 0.45;
+
+  const fill = b.area / (b.w * b.h);
+  // Below ~0.15 is a hairline or an arc; 0.95+ is a filled rectangle.
+  if (fill < 0.15 || fill > 0.95) return false;
+
+  // Radially symmetric: centre of mass within a tenth of the box of its
+  // geometric centre. True of both a filled disc and a ring, false of glyphs.
+  return Math.abs(b.cx - b.bx) <= b.w * 0.12
+      && Math.abs(b.cy - b.by) <= b.h * 0.12;
 }
 
 function median(xs: number[]): number {
@@ -193,7 +213,7 @@ export function extractBeadPlate(img: ImageLike): ExtractResult {
   }
 
   const all = findBlobs(img);
-  let beads = all.filter(b => discLike(b, W, H));
+  let beads = all.filter(b => markerLike(b, W, H));
 
   if (beads.length < MIN_BLOBS) {
     return {

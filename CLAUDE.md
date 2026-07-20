@@ -44,8 +44,11 @@ src/
   game/baccarat.ts    Rules engine: scoring + third-card draw rules (pure)
   game/beadExtract.ts Bead-plate photo reader: pure pixel → result-sequence
                       detector (colour blobs → grid fit → column-major read).
-                      Reports failure rather than guessing; browser glue that
-                      feeds it a canvas is in `lib/beadPhoto.ts`.
+                      Handles BOTH marker styles casinos use — solid discs and
+                      hollow rings — on dark or light panels; a marker is
+                      identified by being radially symmetric, not by how much
+                      of its box it fills. Reports failure rather than
+                      guessing; browser glue is in `lib/beadPhoto.ts`.
   game/roads.ts       Road derivation: Bead Plate, Big Road, and the three
                       derived roads (Big Eye Boy / Small Road / Cockroach
                       Pig via `deriveRoad(stones, lookback)`). Pure functions
