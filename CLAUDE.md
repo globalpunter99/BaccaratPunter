@@ -67,7 +67,12 @@ src/
   App.tsx             Tab shell + auth gate + admin Users tab
 supabase/migrations/  0003_app_schema.sql is THE schema (profiles, sessions,
                       user_state, RLS, super-admin bootstrap, storage bucket).
-                      It drops the 0001/0002 prototype tables.
+                      It drops the 0001/0002 prototype tables. 0005 adds the
+                      feedback table and repairs the signup trigger.
+supabase/functions/   Edge Functions. `feedback-notify` emails a copy of each
+                      feedback submission; the destination address is an Edge
+                      Function secret, never a VITE_ var, so it stays out of
+                      the browser bundle.
 ```
 
 ## Conventions
@@ -120,6 +125,11 @@ Built and working:
   vertical space). Mock session `s5` "Design Reference" is a deliberately
   wide shoe for reviewing that layout.
 - Signed-in users stay signed in until 24h of inactivity (`lib/activity.ts`).
+- Feedback tab: Subject/Topic dropdown + free text → `feedback` table (RLS:
+  insert your own, read super-admin only) → confirmation screen. The super
+  admin gets a Submit / All Submissions toggle on the same tab. An email copy
+  goes out via the `feedback-notify` Edge Function when it is deployed; if it
+  isn't, the submission still saves and the admin list still shows it.
 
 Open items (nothing blocking):
 - Practice saves don't record per-hand bets/calls yet, so their

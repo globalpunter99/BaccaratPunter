@@ -47,7 +47,18 @@ export const useAuth = () => useContext(AuthContext);
 async function fetchProfile(userId: string): Promise<Profile | null> {
   if (!supabase) return null;
   const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  return (data as Profile | null) ?? null;
+  if (data) return data as Profile;
+
+  // No profile row. That means the signup trigger didn't run or failed for
+  // this account, which otherwise leaves the user signed in but invisible to
+  // `is_active_user()` — every read and write then silently returns nothing.
+  // `ensure_profile()` (migration 0005) creates the row for the caller.
+  const { data: made, error } = await supabase.rpc("ensure_profile");
+  if (error) {
+    console.warn("[auth] could not create the missing profile row:", error.message);
+    return null;
+  }
+  return (made as Profile | null) ?? null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -125,6 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email, password, options: { data: { username } },
     });
     if (error) return error.message;
+    // Supabase does not reveal that an address is taken: it returns success
+    // with a user carrying no identities. Without this check the user is told
+    // to watch for a confirmation email that will never arrive.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      return "That email is already registered. Sign in instead, or reset the password.";
+    }
     // With email confirmation enabled there is no session yet.
     if (!data.session) return "CONFIRM_EMAIL";
     return null;

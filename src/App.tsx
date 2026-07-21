@@ -7,6 +7,7 @@ import ProfileHub from "./components/profile/ProfileHub";
 import StatsLeaderboard from "./components/stats/StatsLeaderboard";
 import Guide from "./components/guide/Guide";
 import SettingsPage from "./components/settings/SettingsPage";
+import FeedbackPage from "./components/feedback/FeedbackPage";
 import UserManagement from "./components/admin/UserManagement";
 import LoginPage from "./components/auth/LoginPage";
 import { AuthProvider, useAuth } from "./lib/auth";
@@ -19,6 +20,7 @@ type Tab =
   | "stats"
   | "guide"
   | "settings"
+  | "feedback"
   | "users";
 
 const NAV: { id: Tab; label: string; group: string }[] = [
@@ -29,6 +31,7 @@ const NAV: { id: Tab; label: string; group: string }[] = [
   { id: "stats",           label: "Stats",           group: "Profile" },
   { id: "guide",           label: "Guide",           group: "Help" },
   { id: "settings",        label: "Settings",        group: "Help" },
+  { id: "feedback",        label: "Feedback",        group: "Help" },
 ];
 
 /** True while the viewport is narrower than `px` — drives the phone nav menu. */
@@ -130,6 +133,7 @@ function AppShell() {
       case "stats":           return <StatsLeaderboard />;
       case "guide":           return <Guide />;
       case "settings":        return <SettingsPage />;
+      case "feedback":        return <FeedbackPage />;
       case "users":           return isSuperAdmin ? <UserManagement /> : <LiveSession />;
     }
   }

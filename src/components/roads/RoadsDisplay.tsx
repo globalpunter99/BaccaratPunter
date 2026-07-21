@@ -957,7 +957,7 @@ export default function RoadsDisplay({
                 only while a game is highlighted) sit just left of the camera
                 control so nothing overlaps. */}
             {(screenId || selectionActive) && (
-              <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              <span className="road-header-right">
                 {enableFocusView && selectionActive && (
                   <span className="view-toggle">
                     <button

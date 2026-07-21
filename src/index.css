@@ -666,6 +666,13 @@ select.input { cursor: pointer; }
   min-width: 0;
 }
 .header-stats { display: flex; align-items: center; gap: 14px; }
+/* Far-right header group: Focus toggle, Game N key chip, camera control. */
+.road-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 /* Screen-photo camera control (Big Road header, far right) */
 .screen-photo-btn {
@@ -946,8 +953,11 @@ select.input { cursor: pointer; }
   font-size: 16px;
 }
 /* Fixed label column so Games / Banker / Player / Tie all start their number
-   at the same x, whether the label leads with a disc or with 局数. */
-.stats-row .stats-label { width: 104px; }
+   at the same x, whether the label leads with a disc or with 局数. Kept as
+   tight as the longest label allows: every pixel saved here moves the counts,
+   the predictor table and the side-bet names left, which is what buys room for
+   the full side-bet names ("Banker Pair" rather than "B Pair"). */
+.stats-row .stats-label { width: 86px; }
 .stats-label {
   display: flex;
   align-items: center;
@@ -1174,8 +1184,28 @@ select.input { cursor: pointer; }
   font-weight: 700;
   color: var(--text-primary);
 }
+/* Phones: the two tall columns become one long list that pushes the page down.
+   Instead, dissolve the column wrappers (`display: contents`) so all eleven
+   counters become direct children of the list and lay out as a real grid —
+   3 across, 4 deep. Each of the three groups keeps its own icon/name/count
+   tracks, so the names still line up down each column.
+   Three across needs about 290px; narrower than that the same cells reflow to
+   2 x 6 rather than overflowing the page. */
 @media (max-width: 620px) {
-  .side-bet-list { flex-direction: column; gap: 6px; }
+  .side-bet-list {
+    display: grid;
+    grid-template-columns: repeat(3, 16px auto 1fr);
+    align-items: center;
+    column-gap: 5px;
+    row-gap: 7px;
+    margin-top: 12px;
+  }
+  .side-bet-col { display: contents; }
+  .sb-label { font-size: 11px; }
+  .sb-count { font-size: 11px; }
+}
+@media (max-width: 330px) {
+  .side-bet-list { grid-template-columns: repeat(2, 16px auto 1fr); }
 }
 
 /* View toggle (Basic / Detailed) on the Big Road header */
@@ -1783,6 +1813,26 @@ select.input { cursor: pointer; }
      the extras drop to their own full-width row under the title */
   .road-section-header, .header-extra { flex-wrap: wrap; row-gap: 4px; }
   .header-extra { flex: 1 1 100%; }
+
+  /* Phone: centre everything in the Big Road and Bead Plate headers. The
+     title block loses its desktop min-width (which would push it off-centre)
+     and each wrapped row centres its own contents. The camera is the one
+     exception — it is lifted out of the flow and pinned to the right edge,
+     vertically centred against the whole (possibly two-row) header. The
+     symmetric side padding reserves its space, so the centred content is
+     centred on the card, not on what is left over. */
+  .road-section-header { padding-left: 34px; padding-right: 34px; }
+  .road-section-header.align-left,
+  .road-section-header.align-center { justify-content: center; }
+  .road-title-block { min-width: 0; justify-content: center; }
+  .header-extra { justify-content: center; }
+  .road-header-right { margin-left: 0; justify-content: center; }
+  .road-section-header .screen-photo-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
 }
 
 /* Scoreboard: entities may shrink below content width, dropdowns shrink to
@@ -1815,3 +1865,37 @@ select.input { cursor: pointer; }
 
 /* Wide tables (user management) scroll rather than clip */
 .table-scroll { overflow-x: auto; }
+
+/* ── Live Session header ──
+   Title + actions on the first line, the session summary on the second. Both
+   the buttons and the summary are held to a single line each: the buttons are
+   one character tall and take their length from the row instead of growing it,
+   and the summary clips with an ellipsis rather than wrapping, so the header
+   is the same height whatever the venue and game type are called. */
+.live-header { display: flex; flex-direction: column; gap: 6px; }
+.live-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.live-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.live-header-btn {
+  padding: 3px 22px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.live-header-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 760px) {
+  /* Phone: the buttons drop under the title and stretch the full width,
+     still one line tall, with the summary line beneath them. */
+  .live-header-top { flex-wrap: wrap; }
+  .live-header-actions { flex: 1 1 100%; }
+  .live-header-btn { flex: 1 1 0; padding: 3px 8px; }
+}

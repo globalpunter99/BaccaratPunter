@@ -95,12 +95,14 @@ export const SIDE_BET_TYPES: SideBetType[] = [
   "dragonTiger",
 ];
 
-/** Short labels used on bet slips and the side-bet counter. */
+/** Labels used on bet slips and the side-bet counter. Names are written out in
+ *  full — abbreviations like "Sml" and "B Pair" read as jargon on a board a
+ *  player is scanning quickly. */
 export const SIDE_BET_LABELS: Record<SideBetType, string> = {
   tie: "Tie",
-  bPair: "B Pair", pPair: "P Pair", anyPair: "Any Pair",
-  smlTiger: "Sml Tiger", bigTiger: "Big Tiger", anyTiger: "Any Tiger", tigerTie: "Tiger Tie",
-  smlDragon: "Sml Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",
+  bPair: "Banker Pair", pPair: "Player Pair", anyPair: "Any Pair",
+  smlTiger: "Small Tiger", bigTiger: "Big Tiger", anyTiger: "Any Tiger", tigerTie: "Tiger Tie",
+  smlDragon: "Small Dragon", bigDragon: "Big Dragon", dragonTie: "Dragon Tie",
   dragonTiger: "Dragon Tiger",
 };
 

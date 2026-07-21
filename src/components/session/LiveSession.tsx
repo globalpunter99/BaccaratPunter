@@ -494,27 +494,30 @@ export default function LiveSession() {
 
   return (
     <div className="page">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-12">
-        <div>
-          <div className="page-title">Live Session</div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-            {(details.casino || "Casino not set")}
-            {details.gameType ? ` · ${details.gameType}` : ""}
-            {` · ${details.commission ? "Commission" : "Non-comm"}`}
-            {details.tableNumber ? ` — Table ${details.tableNumber}` : ""}
-            {details.shoeNumber ? ` — Shoe ${details.shoeNumber}` : ""}
-            {" · "}
-            {sessionStart.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-            {" "}
-            {sessionStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      {/* Header row. The title sits on its own line with the two actions to its
+          right; the session summary runs underneath as a single clipped line,
+          so the header is a fixed two-line block however long the venue and
+          game names get. */}
+      <div className="live-header mb-12">
+        <div className="live-header-top">
+          <div className="page-title" style={{ marginBottom: 0 }}>Live Session</div>
+          <div className="live-header-actions">
+            <button className="btn btn-ghost live-header-btn" onClick={undoLast} disabled={hands.length === 0}>↩ Undo</button>
+            <button className="btn btn-secondary live-header-btn" onClick={() => setEndOpen(true)} disabled={hands.length === 0 && !savedAs}>
+              End Session
+            </button>
           </div>
         </div>
-        <div className="flex gap-8">
-          <button className="btn btn-ghost" onClick={undoLast} disabled={hands.length === 0}>↩ Undo</button>
-          <button className="btn btn-secondary" onClick={() => setEndOpen(true)} disabled={hands.length === 0 && !savedAs}>
-            End Session
-          </button>
+        <div className="live-header-meta" title="Session details">
+          {(details.casino || "Casino not set")}
+          {details.gameType ? ` · ${details.gameType}` : ""}
+          {` · ${details.commission ? "Commission" : "Non-comm"}`}
+          {details.tableNumber ? ` — Table ${details.tableNumber}` : ""}
+          {details.shoeNumber ? ` — Shoe ${details.shoeNumber}` : ""}
+          {" · "}
+          {sessionStart.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+          {" "}
+          {sessionStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
       </div>
 
@@ -771,7 +774,7 @@ export default function LiveSession() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     {SIDE_BET_TYPES.map(type => { const label = SIDE_BET_LABELS[type]; return (
                       <div key={type} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 70, flexShrink: 0 }}>{label}</span>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 78, flexShrink: 0 }}>{label}</span>
                         <input
                           className="input"
                           type="number" min={0} placeholder="stake"
@@ -793,7 +796,12 @@ export default function LiveSession() {
           {/* Big entry buttons */}
           <div className="panel" style={{ position: "relative" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 8, position: "relative" }}>
-              <div className="panel-title" style={{ marginBottom: 0 }}>Record Result</div>
+              {/* Once a game is on the board the title reads "Record Result for"
+                  and runs into the centred Game N chip, so there is no doubt
+                  which hand the keypad is about to record. */}
+              <div className="panel-title" style={{ marginBottom: 0 }}>
+                Record Result{hands.length > 0 ? " for" : ""}
+              </div>
               <span
                 className="game-indicator"
                 style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}
