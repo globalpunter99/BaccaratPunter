@@ -1617,19 +1617,30 @@ select.input { cursor: pointer; }
 }
 .btn-ghost:hover { border-color: var(--border-accent); color: white; }
 
-/* Re-bet / Clear Bet. The plain ghost grey nearly vanished against the dark
-   teal slip, so these two carry a pale sky blue that keeps enough white in it
-   to read at 11px without competing with the gold of the active stake field. */
+/* Re-bet / Clear Bet / Clear cards — the slip's "undo" controls.
+   The default ghost colour is a pale cyan that sits too close to the teal
+   panel to register at 11px. These carry a near-white sky blue instead, with
+   a faint wash and a tinted border so the whole control reads as sky blue
+   rather than just its text. Deliberately cooler and lighter than the gold of
+   the active stake field, so the eye still lands on the bet before the undo. */
 .btn-slip-action {
-  color: #cfe8f7;
-  border-color: rgba(207, 232, 247, 0.38);
+  color: #e6f3ff;
+  font-weight: 700;
+  border-color: rgba(170, 214, 244, 0.6);
+  background: rgba(170, 214, 244, 0.12);
 }
 .btn-slip-action:hover:not(:disabled) {
   color: #fff;
-  border-color: #cfe8f7;
-  background: rgba(207, 232, 247, 0.08);
+  border-color: #bfe0f7;
+  background: rgba(170, 214, 244, 0.24);
 }
-.btn-slip-action:disabled { opacity: 0.45; }
+/* These sit disabled most of the time — Re-bet needs a previous slip, Clear
+   Bet needs money on the active field — so the resting state must still read
+   as sky blue. Muted enough to say "not yet", not so faint it disappears. */
+.btn-slip-action:disabled {
+  opacity: 0.62;
+  background: transparent;
+}
 
 /* ── Signal / Playability ── */
 .signal-band {

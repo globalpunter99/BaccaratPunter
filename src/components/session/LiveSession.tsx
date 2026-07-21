@@ -983,7 +983,7 @@ export default function LiveSession() {
                     <button key={r} className="keypad-btn" onClick={() => tapCardValue(r)}>{r}</button>
                   ))}
                 </div>
-                <button className="btn btn-ghost" style={{ padding: "6px 0", fontSize: 12 }} onClick={clearAdvance}>
+                <button className="btn btn-ghost btn-slip-action" style={{ padding: "6px 0", fontSize: 12 }} onClick={clearAdvance}>
                   ✕ Clear cards
                 </button>
 
