@@ -1635,11 +1635,15 @@ select.input { cursor: pointer; }
   background: rgba(170, 214, 244, 0.24);
 }
 /* These sit disabled most of the time — Re-bet needs a previous slip, Clear
-   Bet needs money on the active field — so the resting state must still read
-   as sky blue. Muted enough to say "not yet", not so faint it disappears. */
+   Bet needs money on the active field — so the DISABLED state is the one the
+   player normally sees. It therefore keeps the full sky-blue text: dimming it
+   composited back to almost exactly the old pale cyan, which is why earlier
+   attempts at this looked like no change at all. Availability is signalled by
+   dropping the wash and softening the border, not by fading the label. */
 .btn-slip-action:disabled {
-  opacity: 0.62;
   background: transparent;
+  border-color: rgba(170, 214, 244, 0.3);
+  cursor: not-allowed;
 }
 
 /* ── Signal / Playability ── */
