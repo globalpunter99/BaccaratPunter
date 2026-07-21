@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { mockSessions, type Session } from "../../mock/data";
+import { visibleBuiltInSessions, type Session } from "../../mock/data";
 import type { Outcome } from "../../game/baccarat";
 import PredictionAnalysis from "./PredictionAnalysis";
 import PracticePlayer from "../practice/PracticeReplay";
@@ -13,6 +13,7 @@ import { configForVersion, type ProfileConfig } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
 import { loadPayoutSettings } from "../../lib/payoutSettings";
 import { ENTITY_COLOURS, ENTITY_LABELS, type EntityId } from "../../lib/entities";
+import { useAuth } from "../../lib/auth";
 
 const ENTITIES: EntityId[] = ["you", "sniper", "grinder"];
 // Distinct profile versions per entity (see configForVersion).
@@ -46,6 +47,7 @@ type Mode =
   | { kind: "practice"; session: Session };
 
 export default function SessionLibrary() {
+  const { isSuperAdmin, actingProfile } = useAuth();
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [filter, setFilter] = useState<"all" | "live" | "extra" | "practice" | "fav">("all");
   const [casinoFilter, setCasinoFilter] = useState<string>("all"); // "all" | "others" | casino name
@@ -55,10 +57,18 @@ export default function SessionLibrary() {
   const [hidden, setHidden] = useState<string[]>(() => loadHiddenSessions());
   const [deleteTarget, setDeleteTarget] = useState<Session | null>(null);
 
+  // Built-ins: every account gets the foundation shoes; the development
+  // fixtures are super-admin only. While viewing another user's library the
+  // fixtures are hidden too — the point is to see what THAT user sees.
+  const builtIns = useMemo(
+    () => visibleBuiltInSessions(isSuperAdmin && !actingProfile),
+    [isSuperAdmin, actingProfile],
+  );
+
   // findSession searches every session (even hidden) so links still resolve;
   // the visible list below excludes hidden ones.
-  const findSession = (id?: string) => [...saved, ...mockSessions].find(s => s.id === id);
-  const allSessions = [...saved, ...mockSessions].filter(s => !hidden.includes(s.id));
+  const findSession = (id?: string) => [...saved, ...builtIns].find(s => s.id === id);
+  const allSessions = [...saved, ...builtIns].filter(s => !hidden.includes(s.id));
 
   // Casinos configured in Settings form the "database" the casino filter draws
   // on; any session whose venue isn't one of them falls under "Others".

@@ -104,7 +104,10 @@ function NavMenu({
 }
 
 function AppShell() {
-  const { loading, userId, localMode, isSuperAdmin, profile, signOut } = useAuth();
+  const {
+    loading, userId, localMode, isSuperAdmin, profile, signOut,
+    actingProfile, stopViewingUser,
+  } = useAuth();
   const [tab, setTab] = useState<Tab>("live");
   const narrow = useNarrow(700);
 
@@ -172,6 +175,21 @@ function AppShell() {
           </div>
         )}
       </header>
+      {/* Viewing someone else's account is a state you must never be in by
+          accident: the banner is always on screen, names the account, and
+          carries the way out. */}
+      {actingProfile && (
+        <div className="acting-banner">
+          <span className="acting-banner-dot" />
+          <span>
+            Viewing <b>{actingProfile.username || actingProfile.email}</b>'s data —
+            sessions, bets, profile and settings below are theirs, and changes save to their account.
+          </span>
+          <button className="btn btn-ghost acting-banner-exit" onClick={stopViewingUser}>
+            Back to my account
+          </button>
+        </div>
+      )}
       <main className="app-content">
         {renderTab()}
       </main>

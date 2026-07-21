@@ -111,7 +111,21 @@ Built and working:
   highlight, Focus-to-here (Analyse only), predictor table, screen photos.
 - Live Session: 3 record modes, My Bets pay engine, real signal engine +
   assistant, **End Session** saves the shoe (hands + bets) to the Library.
-- Session Library: Analyse / Practice per shoe, casino + type filters.
+- Session Library: Analyse / Practice per shoe, casino + type filters. Every
+  account's library, bets and calls are its own (`sessions` rows keyed by
+  `user_id`, RLS owner-or-super-admin). Built-ins split in two:
+  `FOUNDATION_SESSIONS` (s1, s2) ship with every account and are deletable;
+  `DEMO_SESSIONS` (s1-P1, s3, s4, s5) are fabricated fixtures shown to the
+  super admin only. Compose them with `visibleBuiltInSessions(isSuperAdmin)` —
+  never import `mockSessions` into a user-facing list.
+- Super admin "View data": Users tab → View data enters another account.
+  `cloud.ts` tracks own vs acting user and points every read/write at the
+  acting one, so all screens work unchanged; a gold banner names the account
+  and exits. The acting id lives in sessionStorage (survives the reload that
+  re-seeds every store, dies with the tab) and is re-checked against the
+  super-admin role on each load. Entering/leaving clears the localStorage
+  cache, so any of your own sessions whose cloud push had failed are lost —
+  the same pre-existing caveat as sign-out.
 - Profile hub (Establish / Calibrate / Upgrade / Review), Settings
   (account, casinos → game types → odds), Stats, Guide.
 - Real signal/profile engine in `game/signals.ts` + `game/profile.ts`

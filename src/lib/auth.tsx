@@ -7,8 +7,27 @@ import {
   createContext, useContext, useEffect, useState, type ReactNode,
 } from "react";
 import { supabase, cloudEnabled } from "./supabase";
-import { hydrateFromCloud, setCloudUser } from "./cloud";
+import { hydrateFromCloud, setCloudUser, setActingUser } from "./cloud";
 import { clearActivity, isIdleExpired, markActive, watchActivity } from "./activity";
+
+// Per-user cache keys. Cleared on sign-out and whenever the acting account
+// changes, so one account's data can never show through as another's.
+const USER_CACHE_KEYS = [
+  "bp-saved-sessions", "bp-favourites", "bp-hidden-sessions",
+  "bp-payout-settings", "bp-player-profile", "bp-calibration", "bp-account",
+];
+
+function clearUserCache(): void {
+  USER_CACHE_KEYS.forEach(k => localStorage.removeItem(k));
+}
+
+// Which account a super admin is currently viewing. Kept in sessionStorage,
+// not localStorage: it must survive the reload that re-seeds every store, but
+// must NOT outlive the tab — closing it always returns to your own account.
+const ACTING_KEY = "bp-acting-user";
+const readActingId = (): string | null => {
+  try { return sessionStorage.getItem(ACTING_KEY); } catch { return null; }
+};
 
 export interface Profile {
   id: string;
@@ -26,9 +45,16 @@ interface AuthState {
   loading: boolean;
   /** Signed-in user id, or null. Always null in local mode. */
   userId: string | null;
+  /** The signed-in account's own profile. Drives the admin surfaces. */
   profile: Profile | null;
   isSuperAdmin: boolean;
   localMode: boolean;
+  /** Set while a super admin is viewing another account's data. */
+  actingProfile: Profile | null;
+  /** Enter another account (super admin only). Reloads the app. */
+  viewAsUser: (userId: string) => void;
+  /** Return to your own account. Reloads the app. */
+  stopViewingUser: () => void;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string, username: string) => Promise<string | null>;
   signOut: () => Promise<void>;
@@ -36,7 +62,9 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState>({
   loading: false, userId: null, profile: null, isSuperAdmin: false,
-  localMode: true,
+  localMode: true, actingProfile: null,
+  viewAsUser: () => {},
+  stopViewingUser: () => {},
   signIn: async () => "Auth not configured",
   signUp: async () => "Auth not configured",
   signOut: async () => {},
@@ -44,10 +72,24 @@ const AuthContext = createContext<AuthState>({
 
 export const useAuth = () => useContext(AuthContext);
 
+/** Plain read. Safe for any id — a super admin may read every profile. */
 async function fetchProfile(userId: string): Promise<Profile | null> {
   if (!supabase) return null;
   const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  if (data) return data as Profile;
+  return (data as Profile | null) ?? null;
+}
+
+/**
+ * The signed-in account's own profile, repairing it if it is missing.
+ *
+ * Only ever call this for the CALLER. `ensure_profile()` works on auth.uid(),
+ * so calling it for someone else would hand back the caller's own row and the
+ * app would think it was looking at that user.
+ */
+async function fetchOwnProfile(userId: string): Promise<Profile | null> {
+  if (!supabase) return null;
+  const p = await fetchProfile(userId);
+  if (p) return p;
 
   // No profile row. That means the signup trigger didn't run or failed for
   // this account, which otherwise leaves the user signed in but invisible to
@@ -65,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(cloudEnabled);
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [acting, setActing] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -74,24 +117,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       if (!id) {
         setCloudUser(null);
+        setActing(null);
         setUserId(null);
         setProfile(null);
         setLoading(false);
         return;
       }
-      // Hydrate the local cache BEFORE the app mounts so every store's
-      // synchronous load sees the cloud copy.
-      await hydrateFromCloud(id);
-      const p = await fetchProfile(id);
+      setCloudUser(id);
+
+      // The profile has to resolve BEFORE hydration, because whether an
+      // acting session is honoured depends on this account being a super
+      // admin — a stale sessionStorage key must never grant access on its own.
+      const p = await fetchOwnProfile(id);
       if (cancelled) return;
       if (p && p.status === "disabled") {
         await supabase!.auth.signOut();
         alert("This account has been disabled. Contact the administrator.");
         return;
       }
+
+      const wanted = readActingId();
+      const canAct = p?.role === "super_admin" && p.status === "active";
+      const target = wanted && canAct && wanted !== id ? wanted : null;
+      if (wanted && !target) {
+        // Not entitled (or pointing at yourself) — drop it rather than
+        // silently half-applying it.
+        try { sessionStorage.removeItem(ACTING_KEY); } catch { /* ignore */ }
+      }
+
+      // Hydrate the local cache BEFORE the app mounts so every store's
+      // synchronous load sees the right account's copy.
+      if (target) setActingUser(target);
+      await hydrateFromCloud(target ?? id);
+      if (cancelled) return;
+
+      const ap = target ? await fetchProfile(target) : null;
+      if (cancelled) return;
+
       markActive(true);
       setUserId(id);
       setProfile(p);
+      setActing(ap);
       setLoading(false);
     }
 
@@ -150,11 +216,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     if (!supabase) return;
     clearActivity();
+    try { sessionStorage.removeItem(ACTING_KEY); } catch { /* ignore */ }
     await supabase.auth.signOut();
     // Drop the per-user cache so the next account doesn't inherit it.
-    ["bp-saved-sessions", "bp-favourites", "bp-hidden-sessions",
-     "bp-payout-settings", "bp-player-profile", "bp-calibration", "bp-account",
-    ].forEach(k => localStorage.removeItem(k));
+    clearUserCache();
+    window.location.reload();
+  };
+
+  // Entering and leaving another account both go through a full reload. Every
+  // store reads localStorage synchronously at mount, so a reload is the only
+  // way to guarantee no screen is left holding the previous account's data.
+  const viewAsUser = (targetId: string) => {
+    if (profile?.role !== "super_admin" || targetId === userId) return;
+    try { sessionStorage.setItem(ACTING_KEY, targetId); } catch { /* ignore */ }
+    clearUserCache();
+    window.location.reload();
+  };
+
+  const stopViewingUser = () => {
+    try { sessionStorage.removeItem(ACTING_KEY); } catch { /* ignore */ }
+    clearUserCache();
     window.location.reload();
   };
 
@@ -163,6 +244,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading, userId, profile,
       isSuperAdmin: profile?.role === "super_admin",
       localMode: !cloudEnabled,
+      actingProfile: acting,
+      viewAsUser, stopViewingUser,
       signIn, signUp, signOut,
     }}>
       {children}

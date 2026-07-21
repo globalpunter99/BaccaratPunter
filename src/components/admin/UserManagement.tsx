@@ -11,7 +11,7 @@ import { supabase } from "../../lib/supabase";
 import { useAuth, type Profile } from "../../lib/auth";
 
 export default function UserManagement() {
-  const { profile: me } = useAuth();
+  const { profile: me, viewAsUser } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,20 +104,29 @@ export default function UserManagement() {
                       {u.created_at?.slice(0, 10)}
                     </td>
                     <td style={{ padding: "10px 14px" }}>
-                      {isSuper ? (
-                        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>protected</span>
-                      ) : (
-                        <span style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }} disabled={busy}
-                            onClick={() => update(u.id, { role: u.role === "admin" ? "user" : "admin" })}>
-                            {u.role === "admin" ? "Demote to user" : "Make admin"}
+                      <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {!isSelf && (
+                          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px", color: "var(--gold)" }}
+                            title={`Open ${u.username || u.email}'s library, profile and settings`}
+                            onClick={() => viewAsUser(u.id)}>
+                            View data
                           </button>
-                          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px", color: u.status === "active" ? "var(--banker-red)" : "var(--tie-green)" }} disabled={busy}
-                            onClick={() => update(u.id, { status: u.status === "active" ? "disabled" : "active" })}>
-                            {u.status === "active" ? "Disable" : "Re-activate"}
-                          </button>
-                        </span>
-                      )}
+                        )}
+                        {isSuper ? (
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", alignSelf: "center" }}>protected</span>
+                        ) : (
+                          <>
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }} disabled={busy}
+                              onClick={() => update(u.id, { role: u.role === "admin" ? "user" : "admin" })}>
+                              {u.role === "admin" ? "Demote to user" : "Make admin"}
+                            </button>
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px", color: u.status === "active" ? "var(--banker-red)" : "var(--tie-green)" }} disabled={busy}
+                              onClick={() => update(u.id, { status: u.status === "active" ? "disabled" : "active" })}>
+                              {u.status === "active" ? "Disable" : "Re-activate"}
+                            </button>
+                          </>
+                        )}
+                      </span>
                     </td>
                   </tr>
                 );

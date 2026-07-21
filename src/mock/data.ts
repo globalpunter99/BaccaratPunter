@@ -115,7 +115,18 @@ const wideShoeOutcomes: Outcome[] = (() => {
   return out;
 })();
 
-export const mockSessions: Session[] = [
+/**
+ * Foundation games — the starter shoes every account has in its Session
+ * Library from sign-up. They are ordinary library entries: a user may delete
+ * them (the delete persists per user via `hidden_sessions`, so one user
+ * removing them never affects anyone else), practise them, and analyse them.
+ *
+ * These two are placeholders for the real recorded foundation set described in
+ * the product notes. They are deliberately two FULL live shoes of differing
+ * character rather than slices or mockups, so a new user's first reads are of
+ * boards that behave like real ones.
+ */
+export const FOUNDATION_SESSIONS: Session[] = [
   {
     id: "s1",
     date: "2026-07-05",
@@ -131,6 +142,30 @@ export const mockSessions: Session[] = [
     })),
     notes: "Strong streak patterns mid-shoe",
   },
+  {
+    id: "s2",
+    date: "2026-07-03",
+    venue: "Crown Melbourne",
+    tableNumber: "Main Floor Table 12",
+    type: "live",
+    hands: shoe2Outcomes.map((outcome, i) => ({
+      id: i + 1,
+      outcome,
+      bankerPair: i === 5,
+      playerPair: i === 11,
+      natural: i === 2 || i === 33,
+    })),
+  },
+];
+
+/**
+ * Development fixtures — visible ONLY to the super admin. These are not real
+ * games: `s1-P1` is a fabricated practice save, `s3`/`s4` are slices dressed
+ * up as photo uploads, and `s5` is a layout mockup. They would read as genuine
+ * history in a paying user's library, so regular accounts never see them; they
+ * stay available to the super admin as test fixtures.
+ */
+export const DEMO_SESSIONS: Session[] = [
   {
     // A saved practice session (demo) — same shoe as s1, played in Practice
     // mode and saved back. Shows the "Practice" badge and links to s1.
@@ -149,20 +184,6 @@ export const mockSessions: Session[] = [
     practiceOf: "s1",
     savedAt: "2026-07-10",
     notes: "Saved practice session of Crown Melbourne. Result 22W / 14L / 2T (61%).",
-  },
-  {
-    id: "s2",
-    date: "2026-07-03",
-    venue: "Crown Melbourne",
-    tableNumber: "Main Floor Table 12",
-    type: "live",
-    hands: shoe2Outcomes.map((outcome, i) => ({
-      id: i + 1,
-      outcome,
-      bankerPair: i === 5,
-      playerPair: i === 11,
-      natural: i === 2 || i === 33,
-    })),
   },
   {
     id: "s3",
@@ -223,6 +244,20 @@ export const mockSessions: Session[] = [
     notes: "Mockup: extra-wide shoe for reviewing road column overflow.",
   },
 ];
+
+/**
+ * Every built-in shoe, both sets. Use this ONLY where the audience does not
+ * matter — id-collision checks when minting a new session id, and the
+ * still-mock Profile/Stats screens. Anything a user actually browses must
+ * compose `FOUNDATION_SESSIONS` with `DEMO_SESSIONS` gated on super admin
+ * (see `visibleBuiltInSessions`).
+ */
+export const mockSessions: Session[] = [...FOUNDATION_SESSIONS, ...DEMO_SESSIONS];
+
+/** The built-in shoes this account may see. */
+export function visibleBuiltInSessions(isSuperAdmin: boolean): Session[] {
+  return isSuperAdmin ? [...FOUNDATION_SESSIONS, ...DEMO_SESSIONS] : FOUNDATION_SESSIONS;
+}
 
 export const mockSignal: SignalState = {
   playability: "green",
