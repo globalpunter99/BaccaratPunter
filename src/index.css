@@ -1866,13 +1866,21 @@ select.input { cursor: pointer; }
 /* Wide tables (user management) scroll rather than clip */
 .table-scroll { overflow-x: auto; }
 
+/* Record Result title and its Game N chip, read as one phrase */
+.record-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
 /* ── Live Session header ──
    Title + actions on the first line, the session summary on the second. Both
    the buttons and the summary are held to a single line each: the buttons are
    one character tall and take their length from the row instead of growing it,
    and the summary clips with an ellipsis rather than wrapping, so the header
    is the same height whatever the venue and game type are called. */
-.live-header { display: flex; flex-direction: column; gap: 6px; }
+.live-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .live-header-top {
   display: flex;
   align-items: center;
@@ -1880,9 +1888,11 @@ select.input { cursor: pointer; }
   gap: 10px;
 }
 .live-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+/* One line of text tall, sized to match the Game N chip in the Record Result
+   card so the two read as the same class of control. */
 .live-header-btn {
   padding: 3px 22px;
-  line-height: 1.15;
+  line-height: 1.3;
   white-space: nowrap;
 }
 .live-header-meta {
@@ -1894,8 +1904,12 @@ select.input { cursor: pointer; }
 }
 @media (max-width: 760px) {
   /* Phone: the buttons drop under the title and stretch the full width,
-     still one line tall, with the summary line beneath them. */
+     still one line tall. The summary line then sits centred directly above
+     the Session Details panel, close enough to read as that panel's caption
+     rather than as a stray line under the buttons. */
   .live-header-top { flex-wrap: wrap; }
   .live-header-actions { flex: 1 1 100%; }
   .live-header-btn { flex: 1 1 0; padding: 3px 8px; }
+  .live-header { margin-bottom: 3px; }
+  .live-header-meta { text-align: center; }
 }

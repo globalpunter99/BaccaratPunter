@@ -498,7 +498,7 @@ export default function LiveSession() {
           right; the session summary runs underneath as a single clipped line,
           so the header is a fixed two-line block however long the venue and
           game names get. */}
-      <div className="live-header mb-12">
+      <div className="live-header">
         <div className="live-header-top">
           <div className="page-title" style={{ marginBottom: 0 }}>Live Session</div>
           <div className="live-header-actions">
@@ -796,18 +796,28 @@ export default function LiveSession() {
           {/* Big entry buttons */}
           <div className="panel" style={{ position: "relative" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 8, position: "relative" }}>
-              {/* Once a game is on the board the title reads "Record Result for"
-                  and runs into the centred Game N chip, so there is no doubt
-                  which hand the keypad is about to record. */}
-              <div className="panel-title" style={{ marginBottom: 0 }}>
-                Record Result{hands.length > 0 ? " for" : ""}
+              {/* Once a game is on the board the title reads "Record Result
+                  for" and the chip follows it in normal flow, so the phrase
+                  reads straight through and the chip can never sit on top of
+                  the word "for" however wide the title renders. Before the
+                  first game there is no "for" to clear, so the chip keeps its
+                  centred position. */}
+              <div className="record-title-row">
+                <div className="panel-title" style={{ marginBottom: 0 }}>
+                  Record Result{hands.length > 0 ? " for" : ""}
+                </div>
+                {hands.length > 0 && (
+                  <span className="game-indicator">Game {hands.length + 1}</span>
+                )}
               </div>
-              <span
-                className="game-indicator"
-                style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}
-              >
-                Game {hands.length + 1}
-              </span>
+              {hands.length === 0 && (
+                <span
+                  className="game-indicator"
+                  style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}
+                >
+                  Game 1
+                </span>
+              )}
               <button
                 className="info-icon"
                 title="How this works"
