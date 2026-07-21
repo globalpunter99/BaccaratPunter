@@ -3,9 +3,12 @@ import type { Session } from "../../mock/data";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
 import {
-  settle, totalStake, SIDE_BET_LABELS, SIDE_BET_TYPES,
+  settle, totalStake,
   type BetSlip, type SideBetType, type Settlement,
 } from "../../game/payouts";
+import {
+  ChipRow, ChipTargetHint, SideBetGrid, StakeField, type ChipTarget,
+} from "../session/BetSlipControls";
 import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
 import { nextSignal } from "../../game/signals";
 import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
@@ -50,7 +53,8 @@ export default function PracticePlayer({ session, onBack, onSave }: {
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
   const [settledGame, setSettledGame] = useState<number | null>(null);
   const [ledger, setLedger] = useState({ staked: 0, returned: 0 });
-  const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
+  // Which stake field the chips feed — see BetSlipControls.
+  const [chipTarget, setChipTarget] = useState<ChipTarget>("main");
 
   const pendingSlip: BetSlip = {
     main: pendingMain && pendingStake > 0 ? { side: pendingMain, stake: pendingStake } : undefined,
@@ -58,10 +62,27 @@ export default function PracticePlayer({ session, onBack, onSave }: {
   };
   const hasPendingBet = totalStake(pendingSlip) > 0;
 
+  function addChip(value: number) {
+    if (chipTarget === "main") {
+      setPendingStake(s => s + value);
+      return;
+    }
+    setPendingSides(p => ({ ...p, [chipTarget]: (p[chipTarget] ?? 0) + value }));
+  }
+
+  /** Collapsing the side bets hands the chips back to the main bet. */
+  function toggleSideBets() {
+    setSideBetMode(open => {
+      if (open) setChipTarget("main");
+      return !open;
+    });
+  }
+
   function clearPendingBet() {
     setPendingMain(null);
     setPendingStake(0);
     setPendingSides({});
+    setChipTarget("main");
   }
 
   function repeatLastBet() {
@@ -69,6 +90,7 @@ export default function PracticePlayer({ session, onBack, onSave }: {
     setPendingMain(lastSlip.main?.side === "tie" ? null : lastSlip.main?.side ?? null);
     setPendingStake(lastSlip.main?.stake ?? 0);
     setPendingSides({ ...lastSlip.side });
+    setChipTarget("main");
   }
 
   // Place the bet: settles against the hidden result and reveals it
@@ -434,32 +456,18 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                       {s === "banker" ? "庄 B" : "闲 P"}
                     </button>
                   ))}
-                  <span className={`amount-wrap${pendingStake > 0 ? " has-value" : ""}`}>
-                    <span className="amount-prefix">$</span>
-                    <input
-                      className="input amount-input"
-                      type="number" min={1} placeholder="Amount $"
-                      value={pendingStake > 0 ? pendingStake : ""}
-                      onChange={e => {
-                        const v = parseInt(e.target.value, 10);
-                        setPendingStake(isNaN(v) || v <= 0 ? 0 : v);
-                      }}
-                    />
-                  </span>
+                  <StakeField
+                    amount={pendingStake}
+                    active={chipTarget === "main"}
+                    emptyLabel="Amount $"
+                    title="Tap, then tap chips to stake the main bet"
+                    onSelect={() => setChipTarget("main")}
+                  />
                 </div>
 
-                {/* Casino chips — each press adds to the amount */}
-                <div className="chip-row" style={{ justifyContent: "center" }}>
-                  {STAKE_PRESETS.map(v => (
-                    <button
-                      key={v}
-                      className={`bet-chip chip-${v}`}
-                      onClick={() => setPendingStake(s => s + v)}
-                    >
-                      <span className="chip-label">${v >= 1000 ? `${v / 1000}k` : v}</span>
-                    </button>
-                  ))}
-                </div>
+                {/* Casino chips — each press adds to whichever field is active */}
+                <ChipRow onAdd={addChip} centred />
+                {sideBetMode && <ChipTargetHint target={chipTarget} />}
 
                 {/* Play actions */}
                 <button
@@ -487,28 +495,16 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                 <button
                   className="btn btn-ghost"
                   style={{ width: "100%", fontSize: 11, marginTop: 8, marginBottom: sideBetMode ? 8 : 0 }}
-                  onClick={() => setSideBetMode(p => !p)}
+                  onClick={toggleSideBets}
                 >
                   {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
                 </button>
                 {sideBetMode && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                    {SIDE_BET_TYPES.map(type => { const label = SIDE_BET_LABELS[type]; return (
-                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: "var(--text-secondary)", width: 78, flexShrink: 0 }}>{label}</span>
-                        <input
-                          className="input"
-                          type="number" min={0} placeholder="stake"
-                          style={{ padding: "4px 6px", fontSize: 11, minWidth: 0 }}
-                          value={pendingSides[type] ?? ""}
-                          onChange={e => {
-                            const v = parseInt(e.target.value, 10);
-                            setPendingSides(p => ({ ...p, [type]: isNaN(v) || v <= 0 ? undefined : v }));
-                          }}
-                        />
-                      </div>
-                    ); })}
-                  </div>
+                  <SideBetGrid
+                    values={pendingSides}
+                    target={chipTarget}
+                    onSelect={setChipTarget}
+                  />
                 )}
                 </>
                 )}

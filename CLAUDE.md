@@ -111,6 +111,15 @@ Built and working:
   highlight, Focus-to-here (Analyse only), predictor table, screen photos.
 - Live Session: 3 record modes, My Bets pay engine, real signal engine +
   assistant, **End Session** saves the shoe (hands + bets) to the Library.
+- **Stakes are tapped, never typed** (`components/session/BetSlipControls.tsx`,
+  shared by Live Session and Practice Play). Stake fields are `<button>`s, not
+  `<input>`s, because a focused input opens the virtual keyboard and makes the
+  browser zoom/re-flow the page mid-shoe on a phone or tablet. Chips add to
+  whichever field is active: the main bet by default, and a side bet only once
+  its `$0` has been tapped while the side bets are expanded. Collapsing the
+  side bets, Clear and Re-bet all hand the chips back to the main bet. There is
+  no per-chip undo by design — a mistake is Cleared and re-tapped. Do not
+  reintroduce a numeric input here.
 - Session Library: Analyse / Practice per shoe, casino + type filters. Every
   account's library, bets and calls are its own (`sessions` rows keyed by
   `user_id`, RLS owner-or-super-admin). Built-ins split in two:

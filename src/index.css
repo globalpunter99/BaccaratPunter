@@ -504,6 +504,73 @@ body {
 .amount-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .amount-input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
+/* Tap-only stake fields. Buttons, not inputs: tapping one never opens the
+   virtual keyboard and never triggers the viewport zoom/re-flow a focused
+   <input> causes on a phone or tablet. The active field is the one the chips
+   add to, and says so with a gold ring. */
+.stake-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  /* Never let a double-tap zoom the board on iOS */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.stake-field.has-value { color: var(--text-primary); }
+.stake-field:hover { border-color: var(--gold-muted); }
+.stake-field.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold) inset;
+}
+
+/* Side bets: name on the left, tappable stake on the right, two per row */
+.side-bet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.side-bet-stake-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.side-bet-stake-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  width: 78px;
+  flex-shrink: 0;
+}
+.side-bet-stake-row .stake-field { padding: 4px 6px; font-size: 11px; }
+@media (max-width: 420px) {
+  /* One per row on a small phone, so neither the name nor the stake squeezes */
+  .side-bet-grid { grid-template-columns: 1fr; }
+}
+
+/* Tells the player which field the next chip lands on */
+.chip-target-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -4px;
+  margin-bottom: 8px;
+}
+.chip-target-hint b { color: var(--gold); }
+
 /* Casino chip stake buttons */
 .chip-row {
   display: flex;
