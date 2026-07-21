@@ -1624,15 +1624,15 @@ select.input { cursor: pointer; }
    rather than just its text. Deliberately cooler and lighter than the gold of
    the active stake field, so the eye still lands on the bet before the undo. */
 .btn-slip-action {
-  color: #e6f3ff;
+  background: #cfe4f2;          /* cloud sky blue, whitened */
+  color: #0c3a45;               /* deep teal ink, reads dark on the fill */
   font-weight: 700;
-  border-color: rgba(170, 214, 244, 0.6);
-  background: rgba(170, 214, 244, 0.12);
+  border-color: #cfe4f2;
 }
 .btn-slip-action:hover:not(:disabled) {
-  color: #fff;
-  border-color: #bfe0f7;
-  background: rgba(170, 214, 244, 0.24);
+  background: #e4f1fb;          /* lifts toward white on hover */
+  border-color: #e4f1fb;
+  color: #0c3a45;
 }
 /* These sit disabled most of the time — Re-bet needs a previous slip, Clear
    Bet needs money on the active field — so the DISABLED state is the one the
@@ -1641,8 +1641,11 @@ select.input { cursor: pointer; }
    attempts at this looked like no change at all. Availability is signalled by
    dropping the wash and softening the border, not by fading the label. */
 .btn-slip-action:disabled {
-  background: transparent;
-  border-color: rgba(170, 214, 244, 0.3);
+  /* Keeps the light blue fill — this is the state the player normally sees,
+     so it must not wash out. Only slightly stepped back from the live one. */
+  background: #a9c6d6;
+  border-color: #a9c6d6;
+  color: #0c3a45;
   cursor: not-allowed;
 }
 
