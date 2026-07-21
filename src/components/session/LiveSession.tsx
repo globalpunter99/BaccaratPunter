@@ -496,7 +496,7 @@ export default function LiveSession() {
     && cardEntry.banker[0] === cardEntry.banker[1];
 
   // Exotic side-bet detection from the entered cards:
-  // - Small/Large Tiger: Banker wins on a total of 6 with two/three cards
+  // - Small/Big Tiger: Banker wins on a total of 6 with two/three cards
   // - Small/Big Dragon: Player wins on 7 (two/three cards) v Banker 5 or less
   // - Dragon Tiger: Player 7 beats Banker 6; labelled by total cards (4/5/6)
   const pCardCount = cardEntry.player.filter(c => c !== null).length;
@@ -511,7 +511,7 @@ export default function LiveSession() {
     }
   }
   const VARIANT_LABELS: Record<string, string> = {
-    "sml-tiger": "SMALL TIGER", "lge-tiger": "LARGE TIGER",
+    "sml-tiger": "SMALL TIGER", "lge-tiger": "BIG TIGER",
     "sml-dragon": "SMALL DRAGON", "big-dragon": "BIG DRAGON",
     "dragontiger-4": "DRAGON TIGER (4 CARD)",
     "dragontiger-5": "DRAGON TIGER (5 CARD)",
@@ -922,7 +922,7 @@ export default function LiveSession() {
                   <button className="btn btn-banker medium-btn" onClick={() => addHand("banker")}>庄 BANKER</button>
                   <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { natural: true })}>BANKER<br /><span className="medium-sub">Natural (8/9)</span></button>
                   <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "sml-tiger" })}>BANKER<br /><span className="medium-sub">Small Tiger</span></button>
-                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "lge-tiger" })}>BANKER<br /><span className="medium-sub">Large Tiger</span></button>
+                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "lge-tiger" })}>BANKER<br /><span className="medium-sub">Big Tiger</span></button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player")}>闲 PLAYER</button>
