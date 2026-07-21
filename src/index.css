@@ -71,13 +71,48 @@ body {
 .app-header {
   background: var(--bg-dark);
   border-bottom: 2px solid var(--border-accent);
-  padding: 0 20px;
   display: flex;
   align-items: center;
-  gap: 32px;
   height: 52px;
   flex-shrink: 0;
   z-index: 100;
+}
+
+/* Matches `.page`, so the header's contents sit on the same left and right
+   edges as the boards below it. The bar itself stays full-bleed. */
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+  min-width: 0;
+}
+
+/* Signed-in account block, pinned to the right edge of the content column */
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  min-width: 0;
+}
+.header-user-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  /* The name is the only part that may be squeezed — Sign out never is */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.header-signout {
+  font-size: 12px;
+  padding: 4px 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .app-logo {
@@ -99,7 +134,13 @@ body {
   display: flex;
   gap: 2px;
   flex: 1;
+  /* Must be allowed to shrink, or the tab strip pushes the account block off
+     the right edge on a tablet instead of scrolling within itself. */
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.nav-tabs::-webkit-scrollbar { display: none; }
 
 .nav-tab {
   padding: 6px 16px;
@@ -983,13 +1024,16 @@ select.input { cursor: pointer; }
   gap: 10px;
   align-items: stretch;
 }
-/* Bead plate | stats + predictor + side-bet counters. The right column takes
-   exactly the width its three blocks need to sit on one row; the bead plate
-   takes the rest and scrolls internally, so it never squeezes them into
-   wrapping. */
+/* Bead plate | stats + predictor + side-bet counters.
+   Same 1fr 1fr split as the row above, so the Bead Plate card is exactly as
+   wide as the Big Eye Boy and Small Road cards stacked above it and the whole
+   board reads as one grid. (It used to be `minmax(0,1fr) auto`, which sized
+   the right column to its contents and left the bead plate a few pixels off
+   every other card.) The right column's three blocks wrap when they no longer
+   fit, dropping the side-bet counters below the stats and predictor. */
 .roads-bottom-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   align-items: stretch;
 }
@@ -1857,16 +1901,21 @@ select.input { cursor: pointer; }
 
 /* App header: nav scrolls horizontally on small screens (no scrollbar) */
 @media (max-width: 900px) {
-  .app-header { padding: 0 10px; gap: 12px; }
+  .app-header-inner { padding: 0 10px; gap: 12px; }
   .app-logo { font-size: 15px; }
   .app-logo span { display: none; } /* hide the version tag */
-  .nav-tabs { overflow-x: auto; scrollbar-width: none; }
-  .nav-tabs::-webkit-scrollbar { display: none; }
   .nav-tab { padding: 6px 10px; font-size: 12px; }
   .header-user-name { display: none; } /* keep Sign out, drop the name */
   .library-filter-row { flex-wrap: wrap; }
   .library-filter-group { flex-wrap: wrap; }
   .filter-btn { flex: 1 1 30%; }
+}
+
+/* Tablet: the full tab strip plus a long username no longer fits on one line.
+   Cap the name so it ellipsises rather than shoving Sign out off the edge. */
+@media (max-width: 1000px) {
+  .app-header-inner { gap: 16px; }
+  .header-user-name { max-width: 120px; }
 }
 
 @media (max-width: 760px) {

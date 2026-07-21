@@ -117,9 +117,17 @@ Built and working:
   browser zoom/re-flow the page mid-shoe on a phone or tablet. Chips add to
   whichever field is active: the main bet by default, and a side bet only once
   its `$0` has been tapped while the side bets are expanded. Collapsing the
-  side bets, Clear and Re-bet all hand the chips back to the main bet. There is
-  no per-chip undo by design — a mistake is Cleared and re-tapped. Do not
-  reintroduce a numeric input here.
+  side bets and Re-bet hand the chips back to the main bet. There is no
+  per-chip undo by design — a mistake is Cleared and re-tapped. Do not
+  reintroduce a numeric input here. **Clear Bet** empties only the highlighted
+  field (`clearActiveBet`); `clearPendingBet` is the full reset and is reserved
+  for post-settlement.
+- Super admin can **delete** an account (Users tab, type-the-name confirm).
+  Deleting an auth user needs rights the client must never hold, so it runs
+  through `public.delete_user(uuid)` — SECURITY DEFINER, checks the caller is
+  an active super admin, refuses self-delete and the bootstrap admin, clears
+  the account's storage objects (no FK there) and lets everything else cascade
+  (migration `0006`).
 - Session Library: Analyse / Practice per shoe, casino + type filters. Every
   account's library, bets and calls are its own (`sessions` rows keyed by
   `user_id`, RLS owner-or-super-admin). Built-ins split in two:

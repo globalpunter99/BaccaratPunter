@@ -16,6 +16,11 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Deletion is irreversible and cascades every session, bet and photo the
+  // account owns, so it is gated behind typing the account's name.
+  const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   async function refresh() {
     if (!supabase) return;
@@ -39,6 +44,24 @@ export default function UserManagement() {
     setBusyId(null);
   }
 
+  /** The word the admin must type to arm the Delete button. */
+  const confirmWord = (u: Profile) => u.username || u.email;
+
+  async function confirmDelete() {
+    if (!supabase || !deleteTarget) return;
+    setDeleting(true);
+    setError(null);
+    const { error: err } = await supabase.rpc("delete_user", { target_id: deleteTarget.id });
+    setDeleting(false);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    setDeleteTarget(null);
+    setConfirmText("");
+    await refresh();
+  }
+
   const roleLabel: Record<Profile["role"], string> = {
     super_admin: "Super Admin", admin: "Admin", user: "User",
   };
@@ -47,10 +70,11 @@ export default function UserManagement() {
     <div className="page">
       <div className="page-title">User Management</div>
       <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14, lineHeight: 1.6 }}>
-        Disabling an account blocks all its access and data immediately (the user
-        is signed out on their next request). Deleting an auth user entirely is done
-        from the Supabase dashboard — Authentication &gt; Users — which also removes
-        all their data.
+        <b>View data</b> opens that account — its library, bets, profile and settings —
+        and anything you change there saves to their account. <b>Disable</b> blocks all
+        access and data immediately and is reversible. <b>Delete</b> is permanent: it
+        removes the sign-in, every recorded session and bet, and all screen photos,
+        with no way back.
       </div>
 
       {error && (
@@ -124,6 +148,11 @@ export default function UserManagement() {
                               onClick={() => update(u.id, { status: u.status === "active" ? "disabled" : "active" })}>
                               {u.status === "active" ? "Disable" : "Re-activate"}
                             </button>
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px", color: "var(--banker-red)" }} disabled={busy}
+                              title="Permanently delete this account and all its data"
+                              onClick={() => { setDeleteTarget(u); setConfirmText(""); setError(null); }}>
+                              🗑 Delete
+                            </button>
                           </>
                         )}
                       </span>
@@ -133,6 +162,49 @@ export default function UserManagement() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Delete confirmation — the account's name must be typed to arm it */}
+      {deleteTarget && (
+        <div className="info-overlay" onClick={() => !deleting && setDeleteTarget(null)}>
+          <div className="info-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, color: "var(--banker-red)" }}>
+              Delete this account permanently?
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 12 }}>
+              <b style={{ color: "var(--text-primary)" }}>{deleteTarget.username || "—"}</b>
+              {" "}({deleteTarget.email}) will be removed along with every session,
+              bet and screen photo on the account. They will not be able to sign in
+              again. <b>This cannot be undone.</b>
+            </div>
+            <label className="field-col" style={{ marginBottom: 14 }}>
+              <span className="field-label">
+                Type <b style={{ color: "var(--gold)" }}>{confirmWord(deleteTarget)}</b> to confirm
+              </span>
+              <input
+                className="input"
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                placeholder={confirmWord(deleteTarget)}
+                autoFocus
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button className="btn btn-ghost" disabled={deleting}
+                onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{ background: "var(--banker-red)", color: "#fff" }}
+                disabled={deleting || confirmText.trim() !== confirmWord(deleteTarget)}
+                onClick={confirmDelete}
+              >
+                {deleting ? "Deleting…" : "Delete permanently"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

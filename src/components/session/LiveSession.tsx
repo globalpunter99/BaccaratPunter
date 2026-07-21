@@ -143,11 +143,35 @@ export default function LiveSession() {
   // post-game analysis even when the user chose not to bet).
   const hasPendingCall = pendingMain === "banker" || pendingMain === "player";
 
+  /** Full reset — used after a hand settles, not by the Clear Bet button. */
   function clearPendingBet() {
     setPendingMain(null);
     setPendingStake(0);
     setPendingSides({});
     setChipTarget("main");
+  }
+
+  /** What the highlighted field currently holds. */
+  const activeAmount = chipTarget === "main"
+    ? pendingStake
+    : (pendingSides[chipTarget] ?? 0);
+
+  /**
+   * Clear Bet empties ONLY the gold-highlighted field, so correcting a
+   * mis-tapped side bet doesn't throw away the main bet (or vice versa).
+   * With the side bets collapsed the highlight is always the main bet, so
+   * there it behaves exactly as a plain clear.
+   */
+  function clearActiveBet() {
+    if (chipTarget === "main") {
+      setPendingStake(0);
+      return;
+    }
+    setPendingSides(p => {
+      const next = { ...p };
+      delete next[chipTarget];
+      return next;
+    });
   }
 
   function repeatLastBet() {
@@ -730,8 +754,8 @@ export default function LiveSession() {
                   <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
                     ↻ Re-bet
                   </button>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet && !hasPendingCall} onClick={clearPendingBet}>
-                    ✕ Clear
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={activeAmount <= 0} onClick={clearActiveBet}>
+                    ✕ Clear Bet
                   </button>
                 </div>
                 <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet || hasPendingCall ? "var(--gold)" : "var(--text-muted)" }}>

@@ -144,6 +144,10 @@ function AppShell() {
   return (
     <div className="app-shell">
       <header className="app-header">
+        {/* Inner track shares the page's max-width and padding, so the logo
+            lines up with the left edge of the Big Road and the account block
+            with its right edge, instead of running to the window edges. */}
+        <div className="app-header-inner">
         <div className="app-logo">
           BaccaratPunter
           <span>v0.1 prototype</span>
@@ -164,16 +168,17 @@ function AppShell() {
           </nav>
         )}
         {!localMode && userId && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", flexShrink: 0 }}>
-            <span className="header-user-name" style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <div className="header-account">
+            <span className="header-user-name">
               {profile?.username || profile?.email}
               {isSuperAdmin && <span style={{ color: "var(--gold)" }}> · super admin</span>}
             </span>
-            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 12px" }} onClick={signOut}>
+            <button className="btn btn-ghost header-signout" onClick={signOut}>
               Sign out
             </button>
           </div>
         )}
+        </div>
       </header>
       {/* Viewing someone else's account is a state you must never be in by
           accident: the banner is always on screen, names the account, and

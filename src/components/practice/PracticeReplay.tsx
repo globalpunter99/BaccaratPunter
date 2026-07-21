@@ -78,11 +78,30 @@ export default function PracticePlayer({ session, onBack, onSave }: {
     });
   }
 
+  /** Full reset — used when a hand is played or skipped, not by Clear Bet. */
   function clearPendingBet() {
     setPendingMain(null);
     setPendingStake(0);
     setPendingSides({});
     setChipTarget("main");
+  }
+
+  /** What the highlighted field currently holds. */
+  const activeAmount = chipTarget === "main"
+    ? pendingStake
+    : (pendingSides[chipTarget] ?? 0);
+
+  /** Clear Bet empties ONLY the gold-highlighted field — see LiveSession. */
+  function clearActiveBet() {
+    if (chipTarget === "main") {
+      setPendingStake(0);
+      return;
+    }
+    setPendingSides(p => {
+      const next = { ...p };
+      delete next[chipTarget];
+      return next;
+    });
   }
 
   function repeatLastBet() {
@@ -486,8 +505,8 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                   <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
                     ↻ Re-bet
                   </button>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!hasPendingBet} onClick={clearPendingBet}>
-                    ✕ Clear bet
+                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={activeAmount <= 0} onClick={clearActiveBet}>
+                    ✕ Clear Bet
                   </button>
                 </div>
 
