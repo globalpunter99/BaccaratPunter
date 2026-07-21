@@ -502,10 +502,10 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                 </button>
 
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
+                  <button className="btn btn-ghost btn-slip-action" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
                     ↻ Re-bet
                   </button>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={activeAmount <= 0} onClick={clearActiveBet}>
+                  <button className="btn btn-ghost btn-slip-action" style={{ flex: 1, fontSize: 11 }} disabled={activeAmount <= 0} onClick={clearActiveBet}>
                     ✕ Clear Bet
                   </button>
                 </div>

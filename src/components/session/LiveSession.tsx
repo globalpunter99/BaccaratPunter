@@ -496,8 +496,8 @@ export default function LiveSession() {
     && cardEntry.banker[0] === cardEntry.banker[1];
 
   // Exotic side-bet detection from the entered cards:
-  // - Sml/Lge Tiger: Banker wins on a total of 6 with two/three cards
-  // - Sml/Big Dragon: Player wins on 7 (two/three cards) v Banker 5 or less
+  // - Small/Large Tiger: Banker wins on a total of 6 with two/three cards
+  // - Small/Big Dragon: Player wins on 7 (two/three cards) v Banker 5 or less
   // - Dragon Tiger: Player 7 beats Banker 6; labelled by total cards (4/5/6)
   const pCardCount = cardEntry.player.filter(c => c !== null).length;
   const bCardCount = cardEntry.banker.filter(c => c !== null).length;
@@ -511,8 +511,8 @@ export default function LiveSession() {
     }
   }
   const VARIANT_LABELS: Record<string, string> = {
-    "sml-tiger": "SML TIGER", "lge-tiger": "LGE TIGER",
-    "sml-dragon": "SML DRAGON", "big-dragon": "BIG DRAGON",
+    "sml-tiger": "SMALL TIGER", "lge-tiger": "LARGE TIGER",
+    "sml-dragon": "SMALL DRAGON", "big-dragon": "BIG DRAGON",
     "dragontiger-4": "DRAGON TIGER (4 CARD)",
     "dragontiger-5": "DRAGON TIGER (5 CARD)",
     "dragontiger-6": "DRAGON TIGER (6 CARD)",
@@ -751,10 +751,10 @@ export default function LiveSession() {
 
                 {/* Slip summary + actions */}
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
+                  <button className="btn btn-ghost btn-slip-action" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
                     ↻ Re-bet
                   </button>
-                  <button className="btn btn-ghost" style={{ flex: 1, fontSize: 11 }} disabled={activeAmount <= 0} onClick={clearActiveBet}>
+                  <button className="btn btn-ghost btn-slip-action" style={{ flex: 1, fontSize: 11 }} disabled={activeAmount <= 0} onClick={clearActiveBet}>
                     ✕ Clear Bet
                   </button>
                 </div>
@@ -869,7 +869,7 @@ export default function LiveSession() {
                     </p>
                     <p style={{ margin: "0 0 4px" }}>
                       <strong style={{ color: "var(--text-primary)" }}>MEDIUM</strong> — adds exotic
-                      results: Tigers (Banker wins on 6), Dragons and DragonTiger variants.
+                      results: Tigers (Banker wins on 6), Dragons and Dragon Tiger variants.
                     </p>
                     <p style={{ margin: "0 0 8px" }}>
                       <strong style={{ color: "var(--text-primary)" }}>ADVANCE</strong> — enter the
@@ -921,17 +921,17 @@ export default function LiveSession() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                   <button className="btn btn-banker medium-btn" onClick={() => addHand("banker")}>庄 BANKER</button>
                   <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { natural: true })}>BANKER<br /><span className="medium-sub">Natural (8/9)</span></button>
-                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "sml-tiger" })}>BANKER<br /><span className="medium-sub">Sml Tiger</span></button>
-                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "lge-tiger" })}>BANKER<br /><span className="medium-sub">Lge Tiger</span></button>
+                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "sml-tiger" })}>BANKER<br /><span className="medium-sub">Small Tiger</span></button>
+                  <button className="btn btn-banker medium-btn" onClick={() => addHand("banker", { variant: "lge-tiger" })}>BANKER<br /><span className="medium-sub">Large Tiger</span></button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player")}>闲 PLAYER</button>
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player", { natural: true })}>PLAYER<br /><span className="medium-sub">Natural (8/9)</span></button>
-                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "sml-dragon" })}>PLAYER<br /><span className="medium-sub">Sml Dragon</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "sml-dragon" })}>PLAYER<br /><span className="medium-sub">Small Dragon</span></button>
                   <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "big-dragon" })}>PLAYER<br /><span className="medium-sub">Big Dragon</span></button>
-                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-4" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (4 Card)</span></button>
-                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-5" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (5 Card)</span></button>
-                  <button className="btn btn-player medium-btn" style={{ gridColumn: "1 / -1" }} onClick={() => addHand("player", { variant: "dragontiger-6" })}>PLAYER<br /><span className="medium-sub small">DragonTiger (6 Card)</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-4" })}>PLAYER<br /><span className="medium-sub small">Dragon Tiger (4 Card)</span></button>
+                  <button className="btn btn-player medium-btn" onClick={() => addHand("player", { variant: "dragontiger-5" })}>PLAYER<br /><span className="medium-sub small">Dragon Tiger (5 Card)</span></button>
+                  <button className="btn btn-player medium-btn" style={{ gridColumn: "1 / -1" }} onClick={() => addHand("player", { variant: "dragontiger-6" })}>PLAYER<br /><span className="medium-sub small">Dragon Tiger (6 Card)</span></button>
                 </div>
                 <button className="btn btn-tie" style={{ padding: "8px 0" }} onClick={() => addHand("tie")}>和 TIE</button>
               </div>

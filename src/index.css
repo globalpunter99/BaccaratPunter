@@ -1617,6 +1617,20 @@ select.input { cursor: pointer; }
 }
 .btn-ghost:hover { border-color: var(--border-accent); color: white; }
 
+/* Re-bet / Clear Bet. The plain ghost grey nearly vanished against the dark
+   teal slip, so these two carry a pale sky blue that keeps enough white in it
+   to read at 11px without competing with the gold of the active stake field. */
+.btn-slip-action {
+  color: #cfe8f7;
+  border-color: rgba(207, 232, 247, 0.38);
+}
+.btn-slip-action:hover:not(:disabled) {
+  color: #fff;
+  border-color: #cfe8f7;
+  background: rgba(207, 232, 247, 0.08);
+}
+.btn-slip-action:disabled { opacity: 0.45; }
+
 /* ── Signal / Playability ── */
 .signal-band {
   border-radius: var(--radius-md);
