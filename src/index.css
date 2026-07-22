@@ -773,7 +773,7 @@ select.input { cursor: pointer; }
   flex: 1;
   min-width: 0;
 }
-.header-stats { display: flex; align-items: center; gap: 14px; }
+.header-stats { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 /* Far-right header group: Focus toggle, Game N key chip, camera control. */
 .road-header-right {
   margin-left: auto;
@@ -977,8 +977,15 @@ select.input { cursor: pointer; }
   display: flex;
   align-items: center;
   opacity: 0.85;
+  /* The icon must never be squeezed to nothing. Without this the eye is a
+     flex child that a tight header can shrink toward zero — which on real
+     iPad Safari (wider text metrics than the emulator) pushed it under the
+     .road-section overflow-hidden clip and made it vanish from the bead-plate
+     header while the wider Big Road header kept it. */
+  flex-shrink: 0;
 }
 .eye-toggle:hover { opacity: 1; }
+.eye-toggle svg { display: block; }
 
 /* Predictor table (ask the road) */
 .predictor-table {
