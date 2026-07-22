@@ -1028,8 +1028,9 @@ export default function RoadsDisplay({
           />
         </RoadSection>
         {/* Stats block, predictor table and side-bet counters share one row on
-            a desktop; they wrap only once the panel is genuinely too narrow. */}
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
+            a desktop; they wrap once the panel is too narrow, and on a phone
+            they stack and centre (see .bottom-stats-row). */}
+        <div className="bottom-stats-row" style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
           <StatsPanel outcomes={viewOutcomes} />
           <PredictorTable
             outcomes={viewOutcomes}

@@ -1648,6 +1648,15 @@ select.input { cursor: pointer; }
   color: #0c3a45;
   cursor: not-allowed;
 }
+/* Three across (Re-bet · ×2 Bet · Clear): equal thirds, one line each, with
+   tighter padding so the labels fit the narrower buttons. */
+.slip-action-3 {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 11px;
+  padding: 5px 4px;
+  white-space: nowrap;
+}
 
 /* ── Signal / Playability ── */
 .signal-band {
@@ -1948,6 +1957,16 @@ select.input { cursor: pointer; }
 @media (max-width: 1000px) {
   .app-header-inner { gap: 16px; }
   .header-user-name { max-width: 120px; }
+}
+
+/* Phone: the games count, predictor table and side-bet counters stack under
+   the bead plate and centre as a column, rather than hugging the left edge. */
+@media (max-width: 1000px) {
+  .bottom-stats-row {
+    justify-content: center;
+    align-items: center;
+  }
+  .bottom-stats-row .side-bet-list { justify-content: center; }
 }
 
 @media (max-width: 760px) {

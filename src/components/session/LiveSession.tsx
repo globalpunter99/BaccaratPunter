@@ -174,6 +174,18 @@ export default function LiveSession() {
     });
   }
 
+  /** Double whatever the gold-highlighted field holds. No-op on an empty one. */
+  function doubleActiveBet() {
+    if (chipTarget === "main") {
+      setPendingStake(s => s * 2);
+      return;
+    }
+    setPendingSides(p => {
+      const cur = p[chipTarget] ?? 0;
+      return cur > 0 ? { ...p, [chipTarget]: cur * 2 } : p;
+    });
+  }
+
   function repeatLastBet() {
     if (!lastSlip) return;
     setPendingMain(lastSlip.main?.side ?? null);
@@ -749,13 +761,18 @@ export default function LiveSession() {
                 {/* Only worth saying once there is more than one place to land */}
                 {sideBetMode && <ChipTargetHint target={chipTarget} />}
 
-                {/* Slip summary + actions */}
+                {/* Slip summary + actions. Bet ×2 doubles whatever the gold
+                    field holds, so a player can climb a progression with one
+                    tap instead of re-stacking chips. */}
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  <button className="btn btn-ghost btn-slip-action" style={{ flex: 1, fontSize: 11 }} disabled={!lastSlip} onClick={repeatLastBet}>
+                  <button className="btn btn-ghost btn-slip-action slip-action-3" disabled={!lastSlip} onClick={repeatLastBet}>
                     ↻ Re-bet
                   </button>
-                  <button className="btn btn-ghost btn-slip-action" style={{ flex: 1, fontSize: 11 }} disabled={activeAmount <= 0} onClick={clearActiveBet}>
-                    ✕ Clear Bet
+                  <button className="btn btn-ghost btn-slip-action slip-action-3" disabled={activeAmount <= 0} onClick={doubleActiveBet}>
+                    ×2 Bet
+                  </button>
+                  <button className="btn btn-ghost btn-slip-action slip-action-3" disabled={activeAmount <= 0} onClick={clearActiveBet}>
+                    ✕ Clear
                   </button>
                 </div>
                 <div style={{ fontSize: 11, marginTop: 6, color: hasPendingBet || hasPendingCall ? "var(--gold)" : "var(--text-muted)" }}>
