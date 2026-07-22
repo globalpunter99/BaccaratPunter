@@ -773,7 +773,11 @@ select.input { cursor: pointer; }
   flex: 1;
   min-width: 0;
 }
-.header-stats { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+/* When the header is too tight for the numbers AND the eye side by side — as
+   on iPad Safari, whose wider text metrics overran the emulator's — the eye
+   wraps to a second line instead of being pushed under the section's clip and
+   lost. It never shrinks (see .eye-toggle), so it stays a full, tappable icon. */
+.header-stats { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; row-gap: 2px; min-width: 0; }
 /* Far-right header group: Focus toggle, Game N key chip, camera control. */
 .road-header-right {
   margin-left: auto;
@@ -1803,7 +1807,12 @@ select.input { cursor: pointer; }
   background: var(--bg-secondary);
   border: 1px solid var(--border-grid);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  /* `clip` still clips the roads to the rounded card, but the clip margin lets
+     the scroll dot sit centred ON the bottom border line — half inside, half
+     out — instead of being cut off by a hard `hidden` edge. Falls back to a
+     hidden-like clip on the rare engine without clip-margin support. */
+  overflow: clip;
+  overflow-clip-margin: 6px;
 }
 .road-section-header {
   background: var(--bg-dark);
@@ -1813,6 +1822,12 @@ select.input { cursor: pointer; }
   align-items: center;
   gap: 7px;
   position: relative;
+  /* Wrap rather than clip: if the stats + eye can't fit beside the title they
+     drop to a second line instead of being pushed under the section's clip
+     edge (the iPad Safari bead-plate bug). On desktop everything fits, so
+     nothing wraps and the header stays a single row. */
+  flex-wrap: wrap;
+  row-gap: 2px;
 }
 /* Roads scroll sideways once a shoe outgrows the panel. No scrollbar — space
    is tight — just a small dot riding the card's bottom border line on the
@@ -1830,11 +1845,13 @@ select.input { cursor: pointer; }
 
 .road-more {
   position: absolute;
-  /* Rides the card's bottom border: the scroller is the section's last child,
-     so its bottom edge is the border line itself. */
-  bottom: 0;
-  width: 7px;
-  height: 7px;
+  /* Centred ON the card's bottom border line: the scroller is the section's
+     last child, so its bottom edge is the border line, and pulling the dot
+     down by half its height sits the line through the dot's middle — the dot
+     riding on top of the line (see .road-section overflow-clip-margin). */
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
   padding: 0;
   border: none;
   border-radius: 50%;
