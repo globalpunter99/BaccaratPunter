@@ -1,0 +1,49 @@
+name: Supabase Keep Alive
+
+# Free-tier Supabase projects pause after about 7 days without database
+# activity, and a paused project cannot wake itself. This workflow runs on
+# GitHub's own infrastructure (independent of Supabase) and makes one
+# lightweight database query per day so the project stays active.
+#
+# The URL and key below are the PUBLISHABLE (anon) Supabase credentials - the
+# same ones already shipped in the public browser bundle at the live site.
+# They are public by design; Row Level Security protects the data, so keeping
+# them here leaks nothing. Do NOT ever put the service_role key here.
+#
+# If you rotate keys later, either edit the fallback values below or add
+# repository secrets named SUPABASE_URL and SUPABASE_ANON_KEY - when those
+# secrets exist they automatically take precedence over the fallbacks.
+
+on:
+  schedule:
+    - cron: '23 7 * * *'   # daily at 07:23 UTC
+  workflow_dispatch: {}     # lets you run it manually from the Actions tab
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://xdjjoxrgthaexwtismma.supabase.co' }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_8-tCNm-10IYYaXsSrhJ3aQ_fiDVKMhF' }}
+    steps:
+      - name: Query database to register activity
+        run: |
+          echo "Pinging $SUPABASE_URL ..."
+          http_code=$(curl --silent --show-error \
+            --retry 3 --retry-delay 10 --retry-all-errors \
+            --max-time 30 \
+            --output /dev/null --write-out '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "HTTP status: $http_code"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 400 ]; then
+            echo "Keep-alive request failed with status $http_code" >&2
+            exit 1
+          fi
+          echo "Supabase keep-alive succeeded."
