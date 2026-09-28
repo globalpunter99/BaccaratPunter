@@ -863,6 +863,19 @@ export default function RoadsDisplay({
   useEffect(() => { setSelectedGame(null); }, [outcomesKey]);
   useEffect(() => { if (selectedGame == null) setFocusView(false); }, [selectedGame]);
   const selectGame = (g: number) => setSelectedGame(prev => (prev === g ? null : g));
+  // Back/Next stepper (Analyse only): walk the highlight through the shoe one
+  // game at a time. Because Focus to here keys off the same selectedGame, when
+  // Focus is on stepping moves the focused end, so the board plays forward/back
+  // from that point. With no game yet selected, Next starts at Game 1 and Back
+  // at the last game.
+  const stepSelection = (delta: number) =>
+    setSelectedGame(prev => {
+      const cur = prev == null ? (delta > 0 ? -1 : outcomes.length) : prev;
+      return Math.min(outcomes.length - 1, Math.max(0, cur + delta));
+    });
+  const noGames = outcomes.length === 0;
+  const atFirstGame = noGames || (selectedGame != null && selectedGame <= 0);
+  const atLastGame = noGames || (selectedGame != null && selectedGame >= outcomes.length - 1);
   // Changing any other view mode also exits Focus (and shows every game).
   const setViewModeExit = (m: "basic" | "detailed") => { setFocusView(false); setViewMode(m); };
   const toggleBetOverlay = () => { setFocusView(false); setShowBetOverlay(p => !p); };
@@ -956,8 +969,30 @@ export default function RoadsDisplay({
             {/* Far-right group: the Focus toggle + Game N highlight key (both
                 only while a game is highlighted) sit just left of the camera
                 control so nothing overlaps. */}
-            {(screenId || selectionActive) && (
+            {(screenId || selectionActive || enableFocusView) && (
               <span className="road-header-right">
+                {enableFocusView && (
+                  <span className="road-nav" role="group" aria-label="Step through games">
+                    <button
+                      className="road-nav-btn"
+                      title="Previous game"
+                      aria-label="Previous game"
+                      disabled={atFirstGame}
+                      onClick={() => stepSelection(-1)}
+                    >
+                      ◀
+                    </button>
+                    <button
+                      className="road-nav-btn"
+                      title="Next game"
+                      aria-label="Next game"
+                      disabled={atLastGame}
+                      onClick={() => stepSelection(1)}
+                    >
+                      ▶
+                    </button>
+                  </span>
+                )}
                 {enableFocusView && selectionActive && (
                   <span className="view-toggle">
                     <button
