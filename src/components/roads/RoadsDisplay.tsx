@@ -863,16 +863,21 @@ export default function RoadsDisplay({
   useEffect(() => { setSelectedGame(null); }, [outcomesKey]);
   useEffect(() => { if (selectedGame == null) setFocusView(false); }, [selectedGame]);
   const selectGame = (g: number) => setSelectedGame(prev => (prev === g ? null : g));
-  // Back/Next stepper (Analyse only): walk the highlight through the shoe one
-  // game at a time. Because Focus to here keys off the same selectedGame, when
-  // Focus is on stepping moves the focused end, so the board plays forward/back
-  // from that point. With no game yet selected, Next starts at Game 1 and Back
-  // at the last game.
-  const stepSelection = (delta: number) =>
+  // Back/Next stepper (Analyse only): play the shoe forward/back one game at a
+  // time. Stepping always drives the focus view, so the board shows only up to
+  // the current game and the white highlight sits on that last tile - it never
+  // reveals the whole shoe. With no game yet selected, Next starts at Game 1
+  // and Back at the last game.
+  const stepSelection = (delta: number) => {
     setSelectedGame(prev => {
       const cur = prev == null ? (delta > 0 ? -1 : outcomes.length) : prev;
       return Math.min(outcomes.length - 1, Math.max(0, cur + delta));
     });
+    if (enableFocusView) setFocusView(true);
+  };
+  // "Show all" fully resets Analyse: drop the focus AND the highlight so the
+  // whole shoe reappears exactly as when Analyse was first opened.
+  const exitFocusReset = () => { setFocusView(false); setSelectedGame(null); };
   const noGames = outcomes.length === 0;
   const atFirstGame = noGames || (selectedGame != null && selectedGame <= 0);
   const atLastGame = noGames || (selectedGame != null && selectedGame >= outcomes.length - 1);
@@ -998,9 +1003,9 @@ export default function RoadsDisplay({
                     <button
                       className={`view-toggle-btn ${focusView ? "active" : ""}`}
                       title={focusView
-                        ? "Show every game again"
+                        ? "Show the whole shoe again and clear the highlight"
                         : `Hide games after Game ${selectedGame! + 1} to study your next play`}
-                      onClick={() => setFocusView(v => !v)}
+                      onClick={() => (focusView ? exitFocusReset() : setFocusView(true))}
                     >
                       {focusView ? "Show all" : "Focus to here"}
                     </button>
