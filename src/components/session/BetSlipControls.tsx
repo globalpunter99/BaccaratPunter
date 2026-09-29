@@ -90,15 +90,20 @@ export function ChipRow({ onAdd, centred }: {
   );
 }
 
-/** Every side bet with its tap-to-target stake field. */
-export function SideBetGrid({ values, target, onSelect }: {
+/**
+ * Side bets with their tap-to-target stake fields. `allowed` limits the grid to
+ * the side bets the chosen game offers; omit it to show every side bet.
+ */
+export function SideBetGrid({ values, target, onSelect, allowed }: {
   values: Partial<Record<SideBetType, number>>;
   target: ChipTarget;
   onSelect: (type: SideBetType) => void;
+  allowed?: SideBetType[];
 }) {
+  const types = allowed ?? SIDE_BET_TYPES;
   return (
     <div className="side-bet-grid">
-      {SIDE_BET_TYPES.map(type => (
+      {types.map(type => (
         <div className="side-bet-stake-row" key={type}>
           <span className="side-bet-stake-label">{SIDE_BET_LABELS[type]}</span>
           <StakeField

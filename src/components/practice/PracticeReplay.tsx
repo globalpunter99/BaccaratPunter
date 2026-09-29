@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Session } from "../../mock/data";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
@@ -9,7 +9,7 @@ import {
 import {
   addStake, ChipRow, ChipTargetHint, MIN_MAIN_BET, SideBetGrid, StakeField, type ChipTarget,
 } from "../session/BetSlipControls";
-import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
+import { commissionForGame, loadPayoutSettings, sideBetsForGame, tableForGame } from "../../lib/payoutSettings";
 import { nextSignal } from "../../game/signals";
 import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
@@ -84,6 +84,12 @@ export default function PracticePlayer({ session, onBack, onSave }: {
   };
   const hasPendingBet = totalStake(pendingSlip) > 0;
 
+  // Side bets offered by this shoe's game (Traditional offers none).
+  const allowedSides = useMemo(
+    () => sideBetsForGame(loadPayoutSettings(), session.venue, session.gameType),
+    [session.venue, session.gameType],
+  );
+
   const netPL = ledger.returned - ledger.staked;
   // Live bankroll balance — only meaningful while bankrollOn.
   const balance = initialBankroll + netPL;
@@ -156,13 +162,15 @@ export default function PracticePlayer({ session, onBack, onSave }: {
   function placeBet() {
     if (!hasPendingBet || overBankroll) return;
     const h = session.hands[handIdx];
-    const table = tableForCasino(loadPayoutSettings(), session.venue);
+    const settings = loadPayoutSettings();
+    const table = tableForGame(settings, session.venue, session.gameType);
+    const commission = commissionForGame(settings, session.venue, session.gameType);
     const result = settle(pendingSlip, {
       outcome: h.outcome,
       natural: h.natural,
       bankerPair: h.bankerPair,
       playerPair: h.playerPair,
-    }, true, table);
+    }, commission, table);
     const newStaked = ledger.staked + result.staked;
     const newReturned = ledger.returned + result.returned;
     setLedger({ staked: newStaked, returned: newReturned });
@@ -700,20 +708,25 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                   </button>
                 </div>
 
-                {/* Side bets */}
-                <button
-                  className="btn btn-ghost"
-                  style={{ width: "100%", fontSize: 11, marginTop: 8, marginBottom: sideBetMode ? 8 : 0 }}
-                  onClick={toggleSideBets}
-                >
-                  {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
-                </button>
-                {sideBetMode && (
-                  <SideBetGrid
-                    values={pendingSides}
-                    target={chipTarget}
-                    onSelect={setChipTarget}
-                  />
+                {/* Side bets — only when this shoe's game offers any */}
+                {allowedSides.length > 0 && (
+                  <>
+                    <button
+                      className="btn btn-ghost"
+                      style={{ width: "100%", fontSize: 11, marginTop: 8, marginBottom: sideBetMode ? 8 : 0 }}
+                      onClick={toggleSideBets}
+                    >
+                      {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
+                    </button>
+                    {sideBetMode && (
+                      <SideBetGrid
+                        values={pendingSides}
+                        target={chipTarget}
+                        onSelect={setChipTarget}
+                        allowed={allowedSides}
+                      />
+                    )}
+                  </>
                 )}
                 </>
                 )}

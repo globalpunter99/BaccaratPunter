@@ -1,19 +1,36 @@
 import { useState } from "react";
-import { PAYOUT_LABELS, DEFAULT_PAYOUTS, type PayoutTable } from "../../game/payouts";
 import {
-  loadPayoutSettings, savePayoutSettings, makeGameType,
+  PAYOUT_LABELS, DEFAULT_PAYOUTS, SIDE_BET_TYPES, SIDE_BET_LABELS,
+  type PayoutTable, type SideBetType,
+} from "../../game/payouts";
+import {
+  loadPayoutSettings, saveDefaults, upsertCasino, removeCasino,
+  makeGameType, newCasino, TRADITIONAL_NAME,
   type PayoutSettings, type CasinoConfig, type GameType,
 } from "../../lib/payoutSettings";
 import { loadAccount, saveAccount, isValidPasscode, type Account } from "../../lib/accountStore";
+import { useAuth } from "../../lib/auth";
 
 const FIELDS = Object.keys(PAYOUT_LABELS) as (keyof PayoutTable)[];
 
+// Which odds fields a side bet needs, so a variant's editor only shows the odds
+// for the side bets it actually offers.
+const SIDE_BET_ODDS_KEYS: Record<SideBetType, (keyof PayoutTable)[]> = {
+  tie: ["tie"],
+  bPair: ["bPair"], pPair: ["pPair"], anyPair: ["anyPair"],
+  smlTiger: ["smlTiger"], bigTiger: ["bigTiger"], anyTiger: ["anyTiger"], tigerTie: ["tigerTie"],
+  smlDragon: ["smlDragon"], bigDragon: ["bigDragon"], dragonTie: ["dragonTie"],
+  dragonTiger: ["dragonTiger4", "dragonTiger5", "dragonTiger6"],
+};
+
+const isTraditional = (name: string) => name.trim().toLowerCase() === TRADITIONAL_NAME.toLowerCase();
+
 function PayoutEditor({
-  table, onChange,
-}: { table: PayoutTable; onChange: (t: PayoutTable) => void }) {
+  table, onChange, fields = FIELDS,
+}: { table: PayoutTable; onChange: (t: PayoutTable) => void; fields?: (keyof PayoutTable)[] }) {
   return (
     <div className="payout-grid">
-      {FIELDS.map(f => (
+      {fields.map(f => (
         <label key={f} className="payout-field">
           <span className="payout-label">{PAYOUT_LABELS[f]}</span>
           <span className="payout-input-wrap">
@@ -65,7 +82,6 @@ function AccountCard() {
         active once the account backend is connected.
       </div>
 
-      {/* Username + email */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, maxWidth: 560, marginBottom: 14 }}>
         <label className="field-col">
           <span className="field-label">Username</span>
@@ -81,7 +97,6 @@ function AccountCard() {
         </label>
       </div>
 
-      {/* Passcode */}
       <div style={{ borderTop: "1px solid var(--border-panel)", paddingTop: 12, marginBottom: 12 }}>
         <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
           <span className="field-label" style={{ marginBottom: 0 }}>4-digit passcode</span>
@@ -125,7 +140,6 @@ function AccountCard() {
         )}
       </div>
 
-      {/* Face ID */}
       <div className="flex items-center justify-between" style={{ borderTop: "1px solid var(--border-panel)", paddingTop: 12, marginBottom: 12 }}>
         <div>
           <div className="field-label" style={{ marginBottom: 2 }}>Face&nbsp;ID / biometric login</div>
@@ -145,7 +159,6 @@ function AccountCard() {
         </button>
       </div>
 
-      {/* Reset password (stub) */}
       <div className="flex items-center justify-between" style={{ borderTop: "1px solid var(--border-panel)", paddingTop: 12 }}>
         <div>
           <div className="field-label" style={{ marginBottom: 2 }}>Password</div>
@@ -174,138 +187,218 @@ function AccountCard() {
   );
 }
 
-// ── Casinos & their baccarat game types ──
-function CasinoManager({
-  settings, onChange,
-}: { settings: PayoutSettings; onChange: (s: PayoutSettings) => void }) {
-  const [newCasino, setNewCasino] = useState("");
+// ── One editable game variant (not Traditional) ──
+function VariantEditor({
+  game, onChange, onRemove,
+}: { game: GameType; onChange: (g: GameType) => void; onRemove: () => void }) {
+  const oddsFields = game.sideBets.flatMap(sb => SIDE_BET_ODDS_KEYS[sb]);
+  function toggleSide(sb: SideBetType) {
+    const has = game.sideBets.includes(sb);
+    onChange({ ...game, sideBets: has ? game.sideBets.filter(s => s !== sb) : [...game.sideBets, sb] });
+  }
+  return (
+    <div style={{ border: "1px solid var(--border-panel)", borderRadius: "var(--radius-sm)", padding: 12, marginBottom: 10 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
+        <label className="field-col" style={{ flex: 1, minWidth: 180 }}>
+          <span className="field-label">Variant name</span>
+          <input className="input" placeholder="e.g. Tiger, Non-Commission"
+            value={game.name}
+            onChange={e => onChange({ ...game, name: e.target.value })} />
+        </label>
+        <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onRemove}>✕ Remove variant</button>
+      </div>
 
-  function addCasino() {
-    const name = newCasino.trim();
-    if (!name) return;
-    if (settings.casinos.some(c => c.name.toLowerCase() === name.toLowerCase())) return;
-    const casino: CasinoConfig = {
-      id: `c-${Date.now()}`,
-      name,
-      games: [makeGameType("Commission", settings.defaults)],
-    };
-    onChange({ ...settings, casinos: [...settings.casinos, casino] });
-    setNewCasino("");
-  }
-  function updateCasino(id: string, patch: Partial<CasinoConfig>) {
-    onChange({
-      ...settings,
-      casinos: settings.casinos.map(c => (c.id === id ? { ...c, ...patch } : c)),
-    });
-  }
-  function removeCasino(id: string) {
-    onChange({ ...settings, casinos: settings.casinos.filter(c => c.id !== id) });
-  }
-  function updateGames(casino: CasinoConfig, games: GameType[]) {
-    updateCasino(casino.id, { games });
+      <div className="flex items-center gap-8" style={{ marginBottom: 10 }}>
+        <span className="field-label" style={{ marginBottom: 0 }}>5% commission on Banker win</span>
+        <button className={`btn ${game.commission ? "btn-secondary" : "btn-ghost"}`}
+          style={{ padding: "4px 14px", fontSize: 12 }} onClick={() => onChange({ ...game, commission: true })}>Yes</button>
+        <button className={`btn ${!game.commission ? "btn-secondary" : "btn-ghost"}`}
+          style={{ padding: "4px 14px", fontSize: 12 }} onClick={() => onChange({ ...game, commission: false })}>No</button>
+      </div>
+
+      <div className="field-label">Side bets offered</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: game.sideBets.length ? 12 : 0 }}>
+        {SIDE_BET_TYPES.map(sb => (
+          <button key={sb}
+            className={`btn ${game.sideBets.includes(sb) ? "btn-secondary" : "btn-ghost"}`}
+            style={{ fontSize: 11, padding: "4px 10px" }}
+            onClick={() => toggleSide(sb)}>
+            {game.sideBets.includes(sb) ? "✓ " : ""}{SIDE_BET_LABELS[sb]}
+          </button>
+        ))}
+      </div>
+
+      {oddsFields.length > 0 && (
+        <>
+          <div className="field-label">Odds for the offered side bets</div>
+          <PayoutEditor table={game.table} fields={oddsFields}
+            onChange={t => onChange({ ...game, table: t })} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── One casino card ──
+function CasinoCard({
+  casino, defaults, canEdit, canSetUniversal, onChange, onRemove,
+}: {
+  casino: CasinoConfig; defaults: PayoutTable; canEdit: boolean; canSetUniversal: boolean;
+  onChange: (c: CasinoConfig) => void; onRemove: () => void;
+}) {
+  const setGames = (games: GameType[]) => onChange({ ...casino, games });
+  const traditional = casino.games.find(g => isTraditional(g.name));
+  const variants = casino.games.filter(g => !isTraditional(g.name));
+
+  if (!canEdit) {
+    // Read-only (a universal casino someone else published)
+    return (
+      <div className="panel" style={{ background: "var(--bg-dark)", marginBottom: 14 }}>
+        <div className="flex items-center gap-8" style={{ marginBottom: 8, flexWrap: "wrap" }}>
+          <span style={{ fontWeight: 700, color: "var(--gold)" }}>{casino.name}</span>
+          <span className="session-badge extra">Universal</span>
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.7 }}>
+          {casino.games.map(g => (
+            <div key={g.id}>
+              • <b>{g.name}</b> — {g.commission ? "5% commission" : "non-commission"}
+              {g.sideBets.length ? ` · side bets: ${g.sideBets.map(s => SIDE_BET_LABELS[s]).join(", ")}` : " · no side bets"}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="panel" style={{ marginBottom: 16 }}>
-      <div className="panel-title">Casinos &amp; Game Types</div>
-      <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
-        Add each casino you play, then name the baccarat game types it offers —
-        Commission, Non-Commission, Even Money and so on. Each game type carries
-        its own odds, used automatically by Live Session and the Session Library
-        when you pick that casino and game. Whether 5% commission applies is set
-        per session in Live Session &gt; Session Details.
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, maxWidth: 460 }}>
-        <input
-          className="input"
-          placeholder="Casino name (e.g. Crown Melbourne)"
-          value={newCasino}
-          onChange={e => setNewCasino(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && addCasino()}
-        />
-        <button className="btn btn-secondary" onClick={addCasino} disabled={!newCasino.trim()}>
-          + Add casino
-        </button>
-      </div>
-
-      {settings.casinos.length === 0 && (
-        <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-          No casinos yet — add one above. Sessions with no matching casino use the default odds below.
+    <div className="panel" style={{ background: "var(--bg-dark)", marginBottom: 14 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
+        <input className="input" style={{ fontWeight: 700, color: "var(--gold)", maxWidth: 300 }}
+          value={casino.name} onChange={e => onChange({ ...casino, name: e.target.value })} />
+        <div className="flex items-center gap-8">
+          {canSetUniversal && (
+            <button
+              className={`btn ${casino.universal ? "btn-secondary" : "btn-ghost"}`}
+              style={{ fontSize: 12 }}
+              title="Universal casinos are shown to every user account"
+              onClick={() => onChange({ ...casino, universal: !casino.universal })}>
+              {casino.universal ? "✓ Universal" : "Make universal"}
+            </button>
+          )}
+          <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onRemove}>✕ Remove casino</button>
         </div>
+      </div>
+
+      {/* Traditional — always present, locked */}
+      <div style={{ border: "1px solid var(--border-panel)", borderRadius: "var(--radius-sm)", padding: "10px 12px", marginBottom: 10, opacity: 0.9 }}>
+        <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
+          <b style={{ color: "var(--text-primary)" }}>{traditional?.name ?? TRADITIONAL_NAME}</b>
+          <span className="session-badge live">Default</span>
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+          5% commission on a Banker win, no side bets. Every casino has this game and it can't be removed.
+        </div>
+      </div>
+
+      {variants.map(game => (
+        <VariantEditor key={game.id} game={game}
+          onChange={g => setGames(casino.games.map(x => (x.id === g.id ? g : x)))}
+          onRemove={() => setGames(casino.games.filter(x => x.id !== game.id))} />
+      ))}
+
+      <button className="btn btn-ghost" style={{ fontSize: 12 }}
+        onClick={() => setGames([...casino.games, makeGameType("New Variant", defaults, { commission: false, sideBets: [] })])}>
+        + Add game variant
+      </button>
+    </div>
+  );
+}
+
+// ── Casinos section ──
+function CasinoManager({
+  settings, ownerId, isSuperAdmin, onUpsert, onRemove,
+}: {
+  settings: PayoutSettings; ownerId: string | null; isSuperAdmin: boolean;
+  onUpsert: (c: CasinoConfig) => void; onRemove: (id: string) => void;
+}) {
+  const [newName, setNewName] = useState("");
+  const [newUniversal, setNewUniversal] = useState(false);
+
+  function addCasino() {
+    const name = newName.trim();
+    if (!name) return;
+    if (settings.casinos.some(c => c.name.toLowerCase() === name.toLowerCase())) return;
+    onUpsert(newCasino(name, { universal: isSuperAdmin && newUniversal, owner: ownerId ?? undefined }));
+    setNewName("");
+    setNewUniversal(false);
+  }
+
+  const canEdit = (c: CasinoConfig) => isSuperAdmin || !c.owner || c.owner === ownerId;
+  const universal = settings.casinos.filter(c => c.universal);
+  const mine = settings.casinos.filter(c => !c.universal);
+
+  return (
+    <div className="panel" style={{ marginBottom: 16 }}>
+      <div className="panel-title">Casinos &amp; Games</div>
+      <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
+        Add each casino you play. Every casino automatically offers <b>Traditional</b> baccarat
+        (5% commission on a Banker win, no side bets). To play a Tiger, Dragon or any side-bet
+        game, add it as a variant and choose its commission and side bets — it then appears as a
+        game option in Live Session.
+        {isSuperAdmin && " As super admin, mark a casino Universal to publish it to every account."}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, maxWidth: 520, flexWrap: "wrap" }}>
+        <input className="input" placeholder="Casino name (e.g. Crown Melbourne)" style={{ flex: 1, minWidth: 200 }}
+          value={newName} onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && addCasino()} />
+        <button className="btn btn-secondary" onClick={addCasino} disabled={!newName.trim()}>+ Add casino</button>
+      </div>
+      {isSuperAdmin && (
+        <label className="flex items-center gap-8" style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 14, cursor: "pointer" }}>
+          <input type="checkbox" checked={newUniversal} onChange={e => setNewUniversal(e.target.checked)} style={{ accentColor: "var(--gold)" }} />
+          Publish to all users (Universal)
+        </label>
       )}
 
-      {settings.casinos.map(casino => (
-        <div key={casino.id} className="panel" style={{ background: "var(--bg-dark)", marginBottom: 14 }}>
-          <div className="flex items-center justify-between" style={{ marginBottom: 10, gap: 8 }}>
-            <input
-              className="input"
-              style={{ fontWeight: 700, color: "var(--gold)", maxWidth: 300 }}
-              value={casino.name}
-              onChange={e => updateCasino(casino.id, { name: e.target.value })}
-            />
-            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => removeCasino(casino.id)}>
-              ✕ Remove casino
-            </button>
-          </div>
-
-          {casino.games.map(game => (
-            <div key={game.id} style={{
-              border: "1px solid var(--border-panel)", borderRadius: "var(--radius-sm)",
-              padding: 12, marginBottom: 10,
-            }}>
-              <div className="flex items-center justify-between" style={{ marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
-                <label className="field-col" style={{ flex: 1, minWidth: 180 }}>
-                  <span className="field-label">Game type name</span>
-                  <input
-                    className="input"
-                    placeholder="e.g. Non-Commission"
-                    value={game.name}
-                    onChange={e => updateGames(casino, casino.games.map(g =>
-                      g.id === game.id ? { ...g, name: e.target.value } : g))}
-                  />
-                </label>
-                {casino.games.length > 1 && (
-                  <button className="btn btn-ghost" style={{ fontSize: 12 }}
-                    onClick={() => updateGames(casino, casino.games.filter(g => g.id !== game.id))}>
-                    ✕ Remove game
-                  </button>
-                )}
-              </div>
-              <PayoutEditor
-                table={game.table}
-                onChange={t => updateGames(casino, casino.games.map(g =>
-                  g.id === game.id ? { ...g, table: t } : g))}
-              />
-            </div>
+      {universal.length > 0 && (
+        <>
+          <div className="field-label" style={{ marginTop: 4 }}>Universal casinos {isSuperAdmin ? "(shown to everyone)" : "(shared with you)"}</div>
+          {universal.map(c => (
+            <CasinoCard key={c.id} casino={c} defaults={settings.defaults}
+              canEdit={canEdit(c)} canSetUniversal={isSuperAdmin}
+              onChange={onUpsert} onRemove={() => onRemove(c.id)} />
           ))}
+        </>
+      )}
 
-          <button
-            className="btn btn-ghost"
-            style={{ fontSize: 12 }}
-            onClick={() => updateGames(casino, [
-              ...casino.games,
-              makeGameType("Non-Commission", settings.defaults),
-            ])}
-          >
-            + Add game type
-          </button>
+      <div className="field-label" style={{ marginTop: universal.length ? 12 : 4 }}>My casinos</div>
+      {mine.length === 0 && (
+        <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+          No casinos of your own yet — add one above. Sessions with no matching casino use the default odds below.
         </div>
+      )}
+      {mine.map(c => (
+        <CasinoCard key={c.id} casino={c} defaults={settings.defaults}
+          canEdit={canEdit(c)} canSetUniversal={isSuperAdmin}
+          onChange={onUpsert} onRemove={() => onRemove(c.id)} />
       ))}
     </div>
   );
 }
 
 export default function SettingsPage() {
+  const { isSuperAdmin, userId } = useAuth();
   const [settings, setSettings] = useState<PayoutSettings>(() => loadPayoutSettings());
   const [savedFlash, setSavedFlash] = useState(false);
 
-  function update(next: PayoutSettings) {
-    setSettings(next);
-    savePayoutSettings(next);
+  function flash() {
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1200);
   }
+  function handleUpsert(c: CasinoConfig) { upsertCasino(c); setSettings(loadPayoutSettings()); flash(); }
+  function handleRemove(id: string) { removeCasino(id); setSettings(loadPayoutSettings()); flash(); }
+  function handleDefaults(defaults: PayoutTable) { saveDefaults(defaults); setSettings(loadPayoutSettings()); flash(); }
 
   return (
     <div className="page">
@@ -316,24 +409,23 @@ export default function SettingsPage() {
 
       <AccountCard />
 
-      <CasinoManager settings={settings} onChange={update} />
+      <CasinoManager
+        settings={settings}
+        ownerId={userId}
+        isSuperAdmin={isSuperAdmin}
+        onUpsert={handleUpsert}
+        onRemove={handleRemove}
+      />
 
-      {/* Default payout table */}
       <div className="panel">
         <div className="panel-title">Default Odds</div>
         <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
           Used for any session whose casino and game type aren't configured above.
           Odds are profit per unit staked — a winning bet also returns its stake.
         </div>
-        <PayoutEditor
-          table={settings.defaults}
-          onChange={t => update({ ...settings, defaults: t })}
-        />
-        <button
-          className="btn btn-ghost"
-          style={{ marginTop: 10, fontSize: 12 }}
-          onClick={() => update({ ...settings, defaults: { ...DEFAULT_PAYOUTS } })}
-        >
+        <PayoutEditor table={settings.defaults} onChange={handleDefaults} />
+        <button className="btn btn-ghost" style={{ marginTop: 10, fontSize: 12 }}
+          onClick={() => handleDefaults({ ...DEFAULT_PAYOUTS })}>
           Reset to market defaults
         </button>
       </div>

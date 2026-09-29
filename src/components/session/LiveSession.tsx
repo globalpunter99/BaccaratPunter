@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Outcome } from "../../game/baccarat";
 import RoadsDisplay from "../roads/RoadsDisplay";
 import {
@@ -8,7 +8,7 @@ import {
 import {
   addStake, ChipRow, ChipTargetHint, SideBetGrid, StakeField, type ChipTarget,
 } from "./BetSlipControls";
-import { loadPayoutSettings, tableForGame } from "../../lib/payoutSettings";
+import { commissionForGame, loadPayoutSettings, sideBetsForGame, tableForGame } from "../../lib/payoutSettings";
 import { nextSignal, type RoadVote } from "../../game/signals";
 import { GRINDER_CONFIG, SNIPER_CONFIG } from "../../game/profile";
 import { loadYouConfig } from "../../lib/profileStore";
@@ -125,6 +125,20 @@ export default function LiveSession() {
     }
     setPendingSides(p => ({ ...p, [chipTarget]: addStake(chipTarget, p[chipTarget] ?? 0, value) }));
   }
+
+  // Side bets offered by the chosen game (Traditional offers none). When the
+  // game changes, drop any staked/targeted side bet it no longer allows.
+  const allowedSides = useMemo(
+    () => sideBetsForGame(payoutSettings, details.casino, details.gameType),
+    [payoutSettings, details.casino, details.gameType],
+  );
+  useEffect(() => {
+    setPendingSides(prev =>
+      Object.fromEntries(Object.entries(prev).filter(([k]) => allowedSides.includes(k as SideBetType))));
+    setChipTarget(t => (t !== "main" && !allowedSides.includes(t) ? "main" : t));
+    if (allowedSides.length === 0) setSideBetMode(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [details.casino, details.gameType]);
 
   /** Collapsing the side bets hands the chips back to the main bet. */
   function toggleSideBets() {
@@ -613,7 +627,8 @@ export default function LiveSession() {
                         return;
                       }
                       const c = payoutSettings.casinos.find(cc => cc.name === v);
-                      setDetails(d => ({ ...d, casino: v, gameType: c?.games[0]?.name ?? "" }));
+                      const g = c?.games[0];
+                      setDetails(d => ({ ...d, casino: v, gameType: g?.name ?? "", commission: g?.commission ?? d.commission }));
                     }}
                   >
                     <option value="" disabled>Select casino / venue</option>
@@ -641,7 +656,10 @@ export default function LiveSession() {
                   <select
                     className="input"
                     value={details.gameType || casinoCfg.games[0].name}
-                    onChange={e => setDetails(d => ({ ...d, gameType: e.target.value }))}
+                    onChange={e => {
+                      const name = e.target.value;
+                      setDetails(d => ({ ...d, gameType: name, commission: commissionForGame(payoutSettings, d.casino, name) }));
+                    }}
                   >
                     {casinoCfg.games.map(g => (
                       <option key={g.id} value={g.name}>{g.name}</option>
@@ -816,20 +834,25 @@ export default function LiveSession() {
                   </div>
                 )}
 
-                {/* Side bets — bottom of the panel */}
-                <button
-                  className="btn btn-ghost"
-                  style={{ width: "100%", fontSize: 11, marginTop: 8, marginBottom: sideBetMode ? 8 : 0 }}
-                  onClick={toggleSideBets}
-                >
-                  {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
-                </button>
-                {sideBetMode && (
-                  <SideBetGrid
-                    values={pendingSides}
-                    target={chipTarget}
-                    onSelect={setChipTarget}
-                  />
+                {/* Side bets — only when the chosen game offers any */}
+                {allowedSides.length > 0 && (
+                  <>
+                    <button
+                      className="btn btn-ghost"
+                      style={{ width: "100%", fontSize: 11, marginTop: 8, marginBottom: sideBetMode ? 8 : 0 }}
+                      onClick={toggleSideBets}
+                    >
+                      {sideBetMode ? "▲ Hide side bets" : "▼ Side bets"}
+                    </button>
+                    {sideBetMode && (
+                      <SideBetGrid
+                        values={pendingSides}
+                        target={chipTarget}
+                        onSelect={setChipTarget}
+                        allowed={allowedSides}
+                      />
+                    )}
+                  </>
                 )}
               </div>
             )}

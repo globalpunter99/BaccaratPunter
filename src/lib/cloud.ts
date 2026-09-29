@@ -6,6 +6,7 @@
 
 import { supabase } from "./supabase";
 import type { Session } from "../mock/data";
+import type { CasinoConfig } from "./payoutSettings";
 
 // The signed-in account, and — for a super admin inspecting someone else's
 // data — the account currently being acted on. Every read and write in this
@@ -86,6 +87,26 @@ export function pushUserState(field: StateField, value: unknown): void {
     .then(({ error }) => { if (error) logPushError(field, error); });
 }
 
+// ── Casinos (shared table) ──────────────────────────────────────────────────
+
+export function pushCasinoRow(c: CasinoConfig): void {
+  if (!ready()) return;
+  supabase!.from("casinos").upsert({
+    id: c.id,
+    owner: c.owner ?? effectiveUserId(),
+    name: c.name,
+    universal: c.universal,
+    games: c.games,
+  }).then(({ error }) => { if (error) logPushError(`casino ${c.name}`, error); });
+}
+
+export function deleteCasinoRow(id: string): void {
+  if (!ready()) return;
+  // RLS decides: an owner may delete their own row, a super admin any row.
+  supabase!.from("casinos").delete().eq("id", id)
+    .then(({ error }) => { if (error) logPushError(`delete casino ${id}`, error); });
+}
+
 // ── Account fields → profiles row ───────────────────────────────────────────
 
 export function pushAccount(fields: {
@@ -108,19 +129,51 @@ export async function hydrateFromCloud(userId: string): Promise<void> {
   // the signed-in admin.
   const viewingOther = userId !== ownUserId;
 
-  const [stateRes, sessionsRes, profileRes] = await Promise.all([
+  const [stateRes, sessionsRes, profileRes, casinosRes] = await Promise.all([
     supabase.from("user_state").select("*").eq("user_id", userId).maybeSingle(),
     supabase.from("sessions").select("*").eq("user_id", userId),
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+    // RLS already limits this, but scope it so a super admin's own hydrate does
+    // not pull every other account's private casinos into their list.
+    supabase.from("casinos").select("*").or(`owner.eq.${userId},universal.eq.true`),
   ]);
 
   const st = stateRes.data;
   if (st) {
-    if (st.payout_settings) localStorage.setItem("bp-payout-settings", JSON.stringify(st.payout_settings));
     if (st.profile_answers) localStorage.setItem("bp-player-profile", JSON.stringify(st.profile_answers));
     if (st.calibration) localStorage.setItem("bp-calibration", JSON.stringify(st.calibration));
     if (Array.isArray(st.favourites)) localStorage.setItem("bp-favourites", JSON.stringify(st.favourites));
     if (Array.isArray(st.hidden_sessions)) localStorage.setItem("bp-hidden-sessions", JSON.stringify(st.hidden_sessions));
+  }
+
+  // Compose the payout-settings cache from user_state (default odds) + the
+  // casinos table (rows). loadPayoutSettings normalises games/Traditional on
+  // read, so raw rows are fine to cache.
+  {
+    const defaults = st?.payout_settings?.defaults;
+    const rows = casinosRes.data ?? [];
+    let casinos = rows.map(r => ({
+      id: r.id, name: r.name, universal: !!r.universal, owner: r.owner, games: r.games ?? [],
+    }));
+    // One-time heal: an account whose casinos still live in the old
+    // user_state.payout_settings blob (and nowhere in the table) gets them
+    // copied into the table now. Never while viewing another account.
+    if (!viewingOther) {
+      const legacy = st?.payout_settings?.casinos;
+      const ownsNone = rows.every((r: { owner?: string }) => r.owner !== userId);
+      if (ownsNone && Array.isArray(legacy) && legacy.length > 0) {
+        const migrated = legacy.map((c: { name: string; games?: unknown }) => ({
+          id: crypto.randomUUID(), owner: userId, name: c.name, universal: false,
+          games: Array.isArray(c.games) ? c.games : [],
+        }));
+        migrated.forEach((row: { id: string; owner: string; name: string; universal: boolean; games: unknown }) => {
+          supabase!.from("casinos").upsert(row)
+            .then(({ error }) => { if (error) logPushError(`migrate casino ${row.name}`, error); });
+        });
+        casinos = [...casinos, ...migrated];
+      }
+    }
+    localStorage.setItem("bp-payout-settings", JSON.stringify({ defaults, casinos }));
   }
 
   const rows = sessionsRes.data;
