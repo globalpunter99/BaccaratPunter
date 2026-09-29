@@ -665,9 +665,9 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                   />
                 </div>
 
-                {/* Casino chips — denominations follow the active field:
-                    $100 units for the main bet, $5 units (from $25) for sides */}
-                <ChipRow onAdd={addChip} centred target={chipTarget} />
+                {/* Casino chips — a field's first chip snaps up to its table
+                    minimum ($100 main / $25 side); see addStake. */}
+                <ChipRow onAdd={addChip} centred />
                 {sideBetMode && <ChipTargetHint target={chipTarget} />}
 
                 {/* Play actions */}

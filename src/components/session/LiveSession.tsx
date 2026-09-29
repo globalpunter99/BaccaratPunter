@@ -757,9 +757,9 @@ export default function LiveSession() {
                 </div>
 
                 {/* Casino chips — each press adds to whichever field is active.
-                    Denominations follow the field: $100 units for the main bet,
-                    $5 units (from the $25 minimum) for a side bet. */}
-                <ChipRow onAdd={addChip} target={chipTarget} />
+                    A field's first chip snaps up to its table minimum ($100
+                    main / $25 side); see addStake. */}
+                <ChipRow onAdd={addChip} />
                 {/* Only worth saying once there is more than one place to land */}
                 {sideBetMode && <ChipTargetHint target={chipTarget} />}
 

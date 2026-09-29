@@ -11,29 +11,27 @@
 import type { SideBetType } from "../../game/payouts";
 import { SIDE_BET_LABELS, SIDE_BET_TYPES } from "../../game/payouts";
 
-export const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
+// One shared chip palette for every field. Table minimums (main $100, side $25)
+// are applied by addStake, not by hiding chips.
+export const CHIPS = [5, 25, 100, 500, 1000];
 
-// Table limits. Main (Banker/Player) bets are $100 minimum in $100 units; side
-// bets are $25 minimum in $5 units. The chip sets and addStake below make any
-// stake built through the slip valid by construction, so no screen has to
-// validate or block — an invalid amount simply cannot be tapped in.
+// Table minimums. The main (Banker/Player) bet is $100 minimum; side bets are
+// $25 minimum. addStake snaps a field's FIRST chip up to its minimum, so a
+// stake below the minimum can never be tapped in — no screen has to block.
 export const MIN_MAIN_BET = 100;
 export const MIN_SIDE_BET = 25;
-export const MAIN_CHIPS = [100, 500, 1000];
-export const SIDE_CHIPS = [25, 5, 50, 100];
 
 /** The field the chips currently add to. */
 export type ChipTarget = "main" | SideBetType;
 
 /**
- * Add a chip to a field, honouring that field's minimum on the first chip.
- * Main chips are already $100 units, so they just sum. A side field's first
- * chip lands at no less than the $25 minimum; every side chip is a $5 unit, so
- * further taps keep it on a valid $5 step.
+ * Add a chip to a field, honouring that field's minimum on the first chip:
+ * the first chip lands at no less than the field's minimum ($100 main / $25
+ * side), and further taps add the chip value on top.
  */
 export function addStake(target: ChipTarget, current: number, value: number): number {
-  if (target === "main") return current + value;
-  return current === 0 ? Math.max(MIN_SIDE_BET, value) : current + value;
+  const min = target === "main" ? MIN_MAIN_BET : MIN_SIDE_BET;
+  return current === 0 ? Math.max(min, value) : current + value;
 }
 
 /** Human name of the field chips are landing on, for the hint line. */
@@ -71,20 +69,14 @@ export function StakeField({
   );
 }
 
-/**
- * The casino chips. Each press adds its value to whichever field is active.
- * The denominations follow the active field: $100 units for the main bet, $5
- * units (from the $25 minimum) for a side bet.
- */
-export function ChipRow({ onAdd, centred, target = "main" }: {
+/** The casino chips. Each press adds its value to whichever field is active. */
+export function ChipRow({ onAdd, centred }: {
   onAdd: (value: number) => void;
   centred?: boolean;
-  target?: ChipTarget;
 }) {
-  const chips = target === "main" ? MAIN_CHIPS : SIDE_CHIPS;
   return (
     <div className="chip-row" style={centred ? { justifyContent: "center" } : undefined}>
-      {chips.map(v => (
+      {CHIPS.map(v => (
         <button
           key={v}
           type="button"
