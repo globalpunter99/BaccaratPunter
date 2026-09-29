@@ -7,7 +7,7 @@ import {
   type BetSlip, type SideBetType, type Settlement,
 } from "../../game/payouts";
 import {
-  ChipRow, ChipTargetHint, SideBetGrid, StakeField, STAKE_PRESETS, type ChipTarget,
+  addStake, ChipRow, ChipTargetHint, MIN_MAIN_BET, SideBetGrid, StakeField, type ChipTarget,
 } from "../session/BetSlipControls";
 import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
 import { nextSignal } from "../../game/signals";
@@ -21,10 +21,10 @@ import { loadYouConfig } from "../../lib/profileStore";
 
 type Phase = "setup" | "active" | "done";
 
-// Smallest chip you can stake — a bankroll below this can't cover any bet, so
-// it counts as exhausted even though it isn't literally zero (5% commission
-// leaves fractional balances like $0.25).
-const MIN_BET = Math.min(...STAKE_PRESETS);
+// A bankroll that can't cover the minimum main bet ($100) counts as exhausted
+// even when it isn't literally zero (5% commission leaves fractional balances
+// like $0.25).
+const MIN_BET = MIN_MAIN_BET;
 
 // Money can be fractional (commission), so show 2dp only when needed.
 function money(n: number): string {
@@ -92,10 +92,10 @@ export default function PracticePlayer({ session, onBack, onSave }: {
 
   function addChip(value: number) {
     if (chipTarget === "main") {
-      setPendingStake(s => s + value);
+      setPendingStake(s => addStake("main", s, value));
       return;
     }
-    setPendingSides(p => ({ ...p, [chipTarget]: (p[chipTarget] ?? 0) + value }));
+    setPendingSides(p => ({ ...p, [chipTarget]: addStake(chipTarget, p[chipTarget] ?? 0, value) }));
   }
 
   /** Collapsing the side bets hands the chips back to the main bet. */
@@ -200,7 +200,8 @@ export default function PracticePlayer({ session, onBack, onSave }: {
     setInitialBankroll(b => b + amount);
     setTopUpInput("");
     setTopUpOpen(false);
-    setExhausted(false);
+    // If the top-up still can't cover the minimum bet, keep the modal up.
+    setExhausted(balance + amount < MIN_BET);
   }
 
   const revealedHands = guesses.filter(g => g.revealed);
@@ -332,7 +333,7 @@ export default function PracticePlayer({ session, onBack, onSave }: {
   // ── Setup phase — choose bankroll before the shoe starts ──
   if (phase === "setup") {
     const amt = Math.max(0, Math.floor(Number(bankrollInput) || 0));
-    const canStart = !bankrollOn || amt > 0;
+    const canStart = !bankrollOn || amt >= MIN_MAIN_BET;
     return (
       <div className="page" style={{ maxWidth: 520 }}>
         <div className="flex items-center justify-between mb-12">
@@ -354,11 +355,14 @@ export default function PracticePlayer({ session, onBack, onSave }: {
               <div style={{ paddingLeft: 26 }}>
                 <div className="field-label">Starting amount ($)</div>
                 <input
-                  className="input" type="number" min={1} inputMode="numeric"
+                  className="input" type="number" min={MIN_MAIN_BET} inputMode="numeric"
                   value={bankrollInput}
                   onChange={e => setBankrollInput(e.target.value)}
                   style={{ width: 160 }}
                 />
+                <div style={{ fontSize: 11, color: amt < MIN_MAIN_BET ? "var(--banker-red)" : "var(--text-muted)", marginTop: 4 }}>
+                  Minimum ${MIN_MAIN_BET} — the table minimum bet is ${MIN_MAIN_BET} on Banker/Player.
+                </div>
                 <div className="flex gap-8" style={{ marginTop: 8, flexWrap: "wrap" }}>
                   {[100, 500, 1000, 5000].map(v => (
                     <button key={v} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}
@@ -661,8 +665,9 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                   />
                 </div>
 
-                {/* Casino chips — each press adds to whichever field is active */}
-                <ChipRow onAdd={addChip} centred />
+                {/* Casino chips — denominations follow the active field:
+                    $100 units for the main bet, $5 units (from $25) for sides */}
+                <ChipRow onAdd={addChip} centred target={chipTarget} />
                 {sideBetMode && <ChipTargetHint target={chipTarget} />}
 
                 {/* Play actions */}

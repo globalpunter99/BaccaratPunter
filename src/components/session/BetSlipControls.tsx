@@ -13,8 +13,28 @@ import { SIDE_BET_LABELS, SIDE_BET_TYPES } from "../../game/payouts";
 
 export const STAKE_PRESETS = [5, 25, 50, 100, 500, 1000];
 
+// Table limits. Main (Banker/Player) bets are $100 minimum in $100 units; side
+// bets are $25 minimum in $5 units. The chip sets and addStake below make any
+// stake built through the slip valid by construction, so no screen has to
+// validate or block — an invalid amount simply cannot be tapped in.
+export const MIN_MAIN_BET = 100;
+export const MIN_SIDE_BET = 25;
+export const MAIN_CHIPS = [100, 500, 1000];
+export const SIDE_CHIPS = [25, 5, 50, 100];
+
 /** The field the chips currently add to. */
 export type ChipTarget = "main" | SideBetType;
+
+/**
+ * Add a chip to a field, honouring that field's minimum on the first chip.
+ * Main chips are already $100 units, so they just sum. A side field's first
+ * chip lands at no less than the $25 minimum; every side chip is a $5 unit, so
+ * further taps keep it on a valid $5 step.
+ */
+export function addStake(target: ChipTarget, current: number, value: number): number {
+  if (target === "main") return current + value;
+  return current === 0 ? Math.max(MIN_SIDE_BET, value) : current + value;
+}
 
 /** Human name of the field chips are landing on, for the hint line. */
 export function chipTargetLabel(target: ChipTarget): string {
@@ -51,14 +71,20 @@ export function StakeField({
   );
 }
 
-/** The casino chips. Each press adds its value to whichever field is active. */
-export function ChipRow({ onAdd, centred }: {
+/**
+ * The casino chips. Each press adds its value to whichever field is active.
+ * The denominations follow the active field: $100 units for the main bet, $5
+ * units (from the $25 minimum) for a side bet.
+ */
+export function ChipRow({ onAdd, centred, target = "main" }: {
   onAdd: (value: number) => void;
   centred?: boolean;
+  target?: ChipTarget;
 }) {
+  const chips = target === "main" ? MAIN_CHIPS : SIDE_CHIPS;
   return (
     <div className="chip-row" style={centred ? { justifyContent: "center" } : undefined}>
-      {STAKE_PRESETS.map(v => (
+      {chips.map(v => (
         <button
           key={v}
           type="button"

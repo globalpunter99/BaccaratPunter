@@ -6,7 +6,7 @@ import {
   type BetSlip, type MainSide, type SideBetType, type Settlement,
 } from "../../game/payouts";
 import {
-  ChipRow, ChipTargetHint, SideBetGrid, StakeField, type ChipTarget,
+  addStake, ChipRow, ChipTargetHint, SideBetGrid, StakeField, type ChipTarget,
 } from "./BetSlipControls";
 import { loadPayoutSettings, tableForGame } from "../../lib/payoutSettings";
 import { nextSignal, type RoadVote } from "../../game/signals";
@@ -120,10 +120,10 @@ export default function LiveSession() {
 
   function addChip(value: number) {
     if (chipTarget === "main") {
-      setPendingStake(s => s + value);
+      setPendingStake(s => addStake("main", s, value));
       return;
     }
-    setPendingSides(p => ({ ...p, [chipTarget]: (p[chipTarget] ?? 0) + value }));
+    setPendingSides(p => ({ ...p, [chipTarget]: addStake(chipTarget, p[chipTarget] ?? 0, value) }));
   }
 
   /** Collapsing the side bets hands the chips back to the main bet. */
@@ -756,8 +756,10 @@ export default function LiveSession() {
                   />
                 </div>
 
-                {/* Casino chips — each press adds to whichever field is active */}
-                <ChipRow onAdd={addChip} />
+                {/* Casino chips — each press adds to whichever field is active.
+                    Denominations follow the field: $100 units for the main bet,
+                    $5 units (from the $25 minimum) for a side bet. */}
+                <ChipRow onAdd={addChip} target={chipTarget} />
                 {/* Only worth saying once there is more than one place to land */}
                 {sideBetMode && <ChipTargetHint target={chipTarget} />}
 
