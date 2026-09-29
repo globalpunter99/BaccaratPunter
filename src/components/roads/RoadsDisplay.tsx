@@ -971,47 +971,66 @@ export default function RoadsDisplay({
               </span>
             )}
             <LegendKey />
-            {/* Far-right group: the Focus toggle + Game N highlight key (both
-                only while a game is highlighted) sit just left of the camera
-                control so nothing overlaps. */}
+            {/* Far-right group. Order matters: the Back/Next arrows sit pinned
+                next to the camera on the right, and every element that comes
+                and goes (the Game N key chip, which is absent on tie games, and
+                the Focus/Show all toggle) sits to their LEFT. A right-anchored
+                flex row only shifts the children to the LEFT of a change, so
+                keeping the arrows rightmost means they never move while the
+                chip toggles - the buttons stay put under a rapidly tapping
+                finger. */}
             {(screenId || selectionActive || enableFocusView) && (
               <span className="road-header-right">
-                {enableFocusView && (
-                  <span className="road-nav" role="group" aria-label="Step through games">
-                    <button
-                      className="road-nav-btn"
-                      title="Previous game"
-                      aria-label="Previous game"
-                      disabled={atFirstGame}
-                      onClick={() => stepSelection(-1)}
-                    >
-                      ◀
-                    </button>
-                    <button
-                      className="road-nav-btn"
-                      title="Next game"
-                      aria-label="Next game"
-                      disabled={atLastGame}
-                      onClick={() => stepSelection(1)}
-                    >
-                      ▶
-                    </button>
-                  </span>
+                {/* Analyse (enableFocusView): the chip and the Focus toggle each
+                    sit in a FIXED-WIDTH slot that is always present, so they can
+                    appear, disappear or relabel without ever moving the Back/Next
+                    arrows to their right - the arrows hold one position in every
+                    state, so a fast tap never lands on empty space. The chip is
+                    keyed on hasSel (any selected game, ties included) so it does
+                    not blink out mid-step. Outside Analyse the header keeps its
+                    original chip, unpadded. */}
+                {enableFocusView ? (
+                  <>
+                    <span className="road-sel-slot">{selKey(hasSel)}</span>
+                    <span className="focus-slot">
+                      {selectionActive && (
+                        <span className="view-toggle">
+                          <button
+                            className={`view-toggle-btn focus-toggle-btn ${focusView ? "active" : ""}`}
+                            title={focusView
+                              ? "Show the whole shoe again and clear the highlight"
+                              : `Hide games after Game ${selectedGame! + 1} to study your next play`}
+                            onClick={() => (focusView ? exitFocusReset() : setFocusView(true))}
+                          >
+                            {focusView ? "Show all" : "Focus to here"}
+                          </button>
+                        </span>
+                      )}
+                    </span>
+                    <span className="road-nav" role="group" aria-label="Step through games">
+                      <button
+                        className="road-nav-btn"
+                        title="Previous game"
+                        aria-label="Previous game"
+                        disabled={atFirstGame}
+                        onClick={() => stepSelection(-1)}
+                      >
+                        ◀
+                      </button>
+                      <button
+                        className="road-nav-btn"
+                        title="Next game"
+                        aria-label="Next game"
+                        disabled={atLastGame}
+                        onClick={() => stepSelection(1)}
+                      >
+                        ▶
+                      </button>
+                    </span>
+                  </>
+                ) : (
+                  selKey(bigRoadHasSel)
                 )}
-                {enableFocusView && selectionActive && (
-                  <span className="view-toggle">
-                    <button
-                      className={`view-toggle-btn ${focusView ? "active" : ""}`}
-                      title={focusView
-                        ? "Show the whole shoe again and clear the highlight"
-                        : `Hide games after Game ${selectedGame! + 1} to study your next play`}
-                      onClick={() => (focusView ? exitFocusReset() : setFocusView(true))}
-                    >
-                      {focusView ? "Show all" : "Focus to here"}
-                    </button>
-                  </span>
-                )}
-                {selKey(bigRoadHasSel)}
                 {screenId && <ScreenPhotos screenId={screenId} canDelete={canDeletePhotos} />}
               </span>
             )}

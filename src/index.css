@@ -325,6 +325,21 @@ body {
   color: var(--text-primary);
   white-space: nowrap;
 }
+/* Analyse header: fixed-width reserved slots for the Game N chip and the
+   Focus/Show all toggle. They stay the same width whether or not their content
+   is showing, so the Back/Next arrows to their right never move. */
+.road-sel-slot {
+  display: inline-flex;
+  align-items: center;
+  min-width: 78px;
+}
+.road-sel-slot .selection-key { justify-content: flex-start; }
+.focus-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 96px;
+}
 .selection-key .sel-square {
   width: 15px;
   height: 15px;
@@ -1353,9 +1368,15 @@ select.input { cursor: pointer; }
   color: var(--text-primary);
 }
 
+/* Fixed width so the label swap (Focus to here <-> Show all) does not resize
+   the button and nudge its neighbours while stepping. */
+.focus-toggle-btn { min-width: 86px; text-align: center; }
+
 /* Big Road back/next stepper (Analyse only) — walks the highlight through the
-   shoe; pairs with Focus to here to play the board forward/back from a point. */
-.road-nav { display: inline-flex; align-items: center; gap: 6px; }
+   shoe; pairs with Focus to here to play the board forward/back from a point.
+   flex-shrink:0 keeps the arrows a fixed size and pinned by the camera so a
+   fast tap never lands on empty space. */
+.road-nav { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .road-nav-btn {
   display: inline-flex;
   align-items: center;
