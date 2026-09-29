@@ -759,21 +759,6 @@ body {
 .field-col { display: flex; flex-direction: column; gap: 4px; }
 .field-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block; }
 
-/* Practice bankroll setup: selectable radio rows */
-.bankroll-choice {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-panel);
-  border-radius: var(--radius-sm);
-  background: var(--bg-dark);
-  font-size: 14px;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-.bankroll-choice[data-on] { border-color: var(--gold); background: rgba(245,200,66,0.08); }
-.bankroll-choice input { accent-color: var(--gold); }
 
 /* Form inputs */
 .input {
