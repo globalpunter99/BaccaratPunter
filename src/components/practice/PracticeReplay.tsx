@@ -7,7 +7,7 @@ import {
   type BetSlip, type SideBetType, type Settlement,
 } from "../../game/payouts";
 import {
-  ChipRow, ChipTargetHint, SideBetGrid, StakeField, type ChipTarget,
+  ChipRow, ChipTargetHint, SideBetGrid, StakeField, STAKE_PRESETS, type ChipTarget,
 } from "../session/BetSlipControls";
 import { loadPayoutSettings, tableForCasino } from "../../lib/payoutSettings";
 import { nextSignal } from "../../game/signals";
@@ -19,7 +19,18 @@ import { loadYouConfig } from "../../lib/profileStore";
 // standalone Practice tab and its picker were retired). A finished or
 // in-progress practice run can be saved back to the Library as a new session.
 
-type Phase = "active" | "done";
+type Phase = "setup" | "active" | "done";
+
+// Smallest chip you can stake — a bankroll below this can't cover any bet, so
+// it counts as exhausted even though it isn't literally zero (5% commission
+// leaves fractional balances like $0.25).
+const MIN_BET = Math.min(...STAKE_PRESETS);
+
+// Money can be fractional (commission), so show 2dp only when needed.
+function money(n: number): string {
+  const r = Math.round(n * 100) / 100;
+  return Number.isInteger(r) ? String(r) : r.toFixed(2);
+}
 
 interface Guess {
   guess: Outcome | null;
@@ -32,7 +43,18 @@ export default function PracticePlayer({ session, onBack, onSave }: {
   onBack: () => void;
   onSave: (draft: Session) => void;
 }) {
-  const [phase, setPhase] = useState<Phase>("active");
+  // Bankroll is chosen up front on the setup screen, so practice starts there.
+  const [phase, setPhase] = useState<Phase>("setup");
+  // ── Bankroll (optional) ──
+  // bankrollOn = play against a finite bankroll; off = unlimited practice.
+  // The live balance is initialBankroll + net P/L; when it hits zero mid-shoe
+  // the exhausted modal offers top up / restart / save and end.
+  const [bankrollOn, setBankrollOn] = useState(true);
+  const [bankrollInput, setBankrollInput] = useState("500");
+  const [initialBankroll, setInitialBankroll] = useState(0);
+  const [exhausted, setExhausted] = useState(false);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpInput, setTopUpInput] = useState("");
   const [handIdx, setHandIdx] = useState(0);
   const [guesses, setGuesses] = useState<Guess[]>(
     () => session.hands.map(h => ({ guess: null, actual: h.outcome, revealed: false })),
@@ -61,6 +83,12 @@ export default function PracticePlayer({ session, onBack, onSave }: {
     side: pendingSides,
   };
   const hasPendingBet = totalStake(pendingSlip) > 0;
+
+  const netPL = ledger.returned - ledger.staked;
+  // Live bankroll balance — only meaningful while bankrollOn.
+  const balance = initialBankroll + netPL;
+  // A pending stake the bankroll cannot cover is blocked in bets mode.
+  const overBankroll = bankrollOn && totalStake(pendingSlip) > balance;
 
   function addChip(value: number) {
     if (chipTarget === "main") {
@@ -126,7 +154,7 @@ export default function PracticePlayer({ session, onBack, onSave }: {
 
   // Place the bet: settles against the hidden result and reveals it
   function placeBet() {
-    if (!hasPendingBet) return;
+    if (!hasPendingBet || overBankroll) return;
     const h = session.hands[handIdx];
     const table = tableForCasino(loadPayoutSettings(), session.venue);
     const result = settle(pendingSlip, {
@@ -135,12 +163,20 @@ export default function PracticePlayer({ session, onBack, onSave }: {
       bankerPair: h.bankerPair,
       playerPair: h.playerPair,
     }, true, table);
-    setLedger(l => ({ staked: l.staked + result.staked, returned: l.returned + result.returned }));
+    const newStaked = ledger.staked + result.staked;
+    const newReturned = ledger.returned + result.returned;
+    setLedger({ staked: newStaked, returned: newReturned });
     setLastSettlement(result);
     setSettledGame(handIdx);
     setLastSlip(pendingSlip);
     playCall(pendingMain);
     clearPendingBet();
+    // Bankroll can no longer cover the smallest bet before the shoe is
+    // finished → surface the exhausted modal.
+    if (bankrollOn && initialBankroll + (newReturned - newStaked) < MIN_BET
+        && handIdx + 1 < session.hands.length) {
+      setExhausted(true);
+    }
   }
 
   function restart() {
@@ -153,7 +189,18 @@ export default function PracticePlayer({ session, onBack, onSave }: {
     setLastSettlement(null);
     setSettledGame(null);
     clearPendingBet();
+    setExhausted(false);
     setPhase("active");
+  }
+
+  /** Add funds to the bankroll from the exhausted modal, then resume play. */
+  function topUp() {
+    const amount = Math.max(0, Math.floor(Number(topUpInput) || 0));
+    if (amount <= 0) return;
+    setInitialBankroll(b => b + amount);
+    setTopUpInput("");
+    setTopUpOpen(false);
+    setExhausted(false);
   }
 
   const revealedHands = guesses.filter(g => g.revealed);
@@ -226,6 +273,43 @@ export default function PracticePlayer({ session, onBack, onSave }: {
     </div>
   ) : null;
 
+  const gamesLeft = session.hands.length - (handIdx + 1);
+  const exhaustedModal = exhausted ? (
+    <div className="info-overlay">
+      <div className="info-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: "var(--banker-red)" }}>
+          Bankroll exhausted
+        </div>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
+          Your bankroll is down to <b style={{ color: "var(--text-primary)" }}>${money(Math.max(0, balance))}</b> with{" "}
+          {gamesLeft} game{gamesLeft === 1 ? "" : "s"} still to play. Top up to keep going, restart from
+          your starting bankroll, or save and end the session here.
+        </div>
+        {topUpOpen ? (
+          <div>
+            <div className="field-label">Top-up amount ($)</div>
+            <input
+              className="input" type="number" min={1} inputMode="numeric" autoFocus
+              value={topUpInput} onChange={e => setTopUpInput(e.target.value)} style={{ width: 160 }}
+            />
+            <div className="flex gap-8" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => { setTopUpOpen(false); setTopUpInput(""); }}>Cancel</button>
+              <button className="btn btn-gold" disabled={Math.floor(Number(topUpInput) || 0) <= 0} onClick={topUp}>
+                Add funds
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-8" style={{ justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <button className="btn btn-ghost" onClick={restart}>↻ Restart session</button>
+            <button className="btn btn-secondary" onClick={() => setTopUpOpen(true)}>＋ Top up</button>
+            <button className="btn btn-gold" onClick={() => onSave(buildDraft())}>💾 Save &amp; end</button>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   // On-demand position jump. Moving forward auto-reveals every game passed
   // over (recorded as no-bet skips) so the roads stay a contiguous sequence;
   // moving back just reviews already-revealed games.
@@ -245,6 +329,61 @@ export default function PracticePlayer({ session, onBack, onSave }: {
     setRevealed(guesses[idx]?.revealed ?? false);
   }
 
+  // ── Setup phase — choose bankroll before the shoe starts ──
+  if (phase === "setup") {
+    const amt = Math.max(0, Math.floor(Number(bankrollInput) || 0));
+    const canStart = !bankrollOn || amt > 0;
+    return (
+      <div className="page" style={{ maxWidth: 520 }}>
+        <div className="flex items-center justify-between mb-12">
+          <div className="page-title">Practice — {session.venue}</div>
+          <button className="btn btn-ghost" onClick={onBack}>← Back to Library</button>
+        </div>
+        <div className="panel" style={{ padding: 24 }}>
+          <div className="panel-title">Set your bankroll</div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
+            Choose whether to practise against a set bankroll. With one, the app tracks your
+            balance as you bet and warns you if you run out before the shoe ends.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+            <label className="bankroll-choice" data-on={bankrollOn || undefined}>
+              <input type="radio" name="bankroll" checked={bankrollOn} onChange={() => setBankrollOn(true)} />
+              <span>Play with a bankroll</span>
+            </label>
+            {bankrollOn && (
+              <div style={{ paddingLeft: 26 }}>
+                <div className="field-label">Starting amount ($)</div>
+                <input
+                  className="input" type="number" min={1} inputMode="numeric"
+                  value={bankrollInput}
+                  onChange={e => setBankrollInput(e.target.value)}
+                  style={{ width: 160 }}
+                />
+                <div className="flex gap-8" style={{ marginTop: 8, flexWrap: "wrap" }}>
+                  {[100, 500, 1000, 5000].map(v => (
+                    <button key={v} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}
+                      onClick={() => setBankrollInput(String(v))}>${v}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <label className="bankroll-choice" data-on={!bankrollOn || undefined}>
+              <input type="radio" name="bankroll" checked={!bankrollOn} onChange={() => setBankrollOn(false)} />
+              <span>No bankroll — unlimited practice</span>
+            </label>
+          </div>
+          <button
+            className="btn btn-gold" style={{ width: "100%" }}
+            disabled={!canStart}
+            onClick={() => { setInitialBankroll(bankrollOn ? amt : 0); setPhase("active"); }}
+          >
+            Start Practice
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ── Done phase ──
   if (phase === "done") {
     // Win rate on decided bets (ties push, so they're excluded)
@@ -258,9 +397,20 @@ export default function PracticePlayer({ session, onBack, onSave }: {
           <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", marginBottom: 4 }}>
             {pct}% Win Rate
           </div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: bankrollOn ? 8 : 20 }}>
             {betHands.length} Bets: {winCount} (W) · {loseCount} (L) · {tieCount} (Tie)
           </div>
+          {bankrollOn && (
+            <div style={{ fontSize: 14, marginBottom: 20 }}>
+              Bankroll:{" "}
+              <b style={{ color: balance >= initialBankroll ? "var(--tie-green)" : "var(--banker-red)" }}>
+                ${money(Math.max(0, balance))}
+              </b>{" "}
+              <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                (started ${initialBankroll}, net {netPL >= 0 ? `+$${money(netPL)}` : `($${money(Math.abs(netPL))})`})
+              </span>
+            </div>
+          )}
           <div className="grid-3" style={{ marginBottom: 24 }}>
             <div className="stat-block">
               <div className="stat-value">{guesses.length}</div>
@@ -336,10 +486,25 @@ export default function PracticePlayer({ session, onBack, onSave }: {
         </div>
       </div>
       {saveModal}
+      {exhaustedModal}
 
       <div className="grid-300-fluid">
         {/* Left controls */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Bankroll balance (only when playing against one) */}
+          {bankrollOn && (
+            <div className="panel" style={{ padding: "10px 14px" }}>
+              <div className="flex items-center justify-between">
+                <div className="panel-title" style={{ marginBottom: 0 }}>Bankroll</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: balance >= MIN_BET ? "var(--gold)" : "var(--banker-red)" }}>
+                  ${money(Math.max(0, balance))}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                Started ${initialBankroll} · net {netPL >= 0 ? `+$${money(netPL)}` : `($${money(Math.abs(netPL))})`}
+              </div>
+            </div>
+          )}
           {/* Game position — compact, usable on demand. Moving forward
               auto-reveals the games passed over (no-bet skips). */}
           <div className="panel" style={{ padding: "10px 14px" }}>
@@ -501,10 +666,15 @@ export default function PracticePlayer({ session, onBack, onSave }: {
                 {sideBetMode && <ChipTargetHint target={chipTarget} />}
 
                 {/* Play actions */}
+                {overBankroll && (
+                  <div style={{ fontSize: 11, color: "var(--banker-red)", textAlign: "center", marginBottom: 6 }}>
+                    Bet exceeds your bankroll (${money(Math.max(0, balance))}).
+                  </div>
+                )}
                 <button
                   className="btn btn-gold"
                   style={{ width: "100%", marginBottom: 6 }}
-                  disabled={!hasPendingBet}
+                  disabled={!hasPendingBet || overBankroll}
                   onClick={placeBet}
                 >
                   Place Bet — Reveal Result

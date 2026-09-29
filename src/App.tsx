@@ -109,7 +109,18 @@ function AppShell() {
     actingProfile, stopViewingUser,
   } = useAuth();
   const [tab, setTab] = useState<Tab>("live");
+  // Bumped every time the Session Library nav is clicked so SessionLibrary
+  // remounts to its list home. Practice and Analyse are internal modes of that
+  // one tab, so without this a click while inside them is a no-op (the tab is
+  // already "library") and the user is stranded. Scoped to library on purpose:
+  // re-clicking Live Session must NOT wipe an in-progress shoe.
+  const [libraryNonce, setLibraryNonce] = useState(0);
   const narrow = useNarrow(700);
+
+  function pickTab(t: Tab) {
+    if (t === "library") setLibraryNonce(n => n + 1);
+    setTab(t);
+  }
 
   // Cloud mode: wait for the session check, then gate behind sign-in.
   if (!localMode) {
@@ -130,7 +141,7 @@ function AppShell() {
   function renderTab() {
     switch (tab) {
       case "live":            return <LiveSession />;
-      case "library":         return <SessionLibrary />;
+      case "library":         return <SessionLibrary key={libraryNonce} />;
       case "upload":          return <UploadSession />;
       case "profile":         return <ProfileHub />;
       case "stats":           return <StatsLeaderboard />;
@@ -153,14 +164,14 @@ function AppShell() {
           <span>v0.1 prototype</span>
         </div>
         {narrow ? (
-          <NavMenu nav={nav} tab={tab} onPick={setTab} />
+          <NavMenu nav={nav} tab={tab} onPick={pickTab} />
         ) : (
           <nav className="nav-tabs">
             {nav.map(n => (
               <button
                 key={n.id}
                 className={`nav-tab${tab === n.id ? " active" : ""}`}
-                onClick={() => setTab(n.id)}
+                onClick={() => pickTab(n.id)}
               >
                 {n.label}
               </button>
